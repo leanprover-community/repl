@@ -37,12 +37,7 @@ The results are of the form
    "pos": {"line": 1, "column": 23},
    "endPos": {"line": 1, "column": 26},
    "data":
-   "type mismatch
-  rfl
-has type
-  f = f : Prop
-but is expected to have type
-  f = 2 : Prop"}],
+   "type mismatch\n  rfl\nhas type\n  f = f : Prop\nbut is expected to have type\n  f = 2 : Prop"}],
  "env": 6}
 ```
 
