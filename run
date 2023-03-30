@@ -1,0 +1,1 @@
+lake env lean --run REPL/Main.lean
