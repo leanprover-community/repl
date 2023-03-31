@@ -67,7 +67,7 @@ variable [Monad m] [MonadLiftT IO m]
 def nextId : M m Nat := do pure (← get).environments.size
 
 /-- Run a command, returning the id of the new environment, and any messages and sorries. -/
-def run (s : Run) : M m Response := do
+unsafe def run (s : Run) : M m Response := do
   let env? := s.env.bind ((← get).environments[·]?)
   let (env, messages, trees) ← IO.processInput s.cmd env? {} ""
   let messages ← messages.mapM fun m => Message.of m
@@ -85,6 +85,7 @@ open REPL
 /-- Get lines from stdin until a blank line is entered. -/
 unsafe def getLines : IO String := do
   match (← (← IO.getStdin).getLine) with
+  | "" => pure ""
   | "\n" => pure "\n"
   | line => pure <| line ++ (← getLines)
 
@@ -93,6 +94,8 @@ unsafe def repl : IO Unit :=
   StateT.run' loop ⟨#[], #[]⟩
 where loop : M IO Unit := do
   let query ← getLines
+  if query = "" then
+    return ()
   let json := Json.parse query
   match json with
   | .error e => IO.println <| toString <| toJson (⟨e⟩ : Error)
