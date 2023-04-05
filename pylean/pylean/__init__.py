@@ -6,7 +6,7 @@ import os
 class LeanServer:
     def __init__(self):
         path_to_repl = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        print(f"PATH TO REPL {path_to_repl}")
+
         self.proc = pexpect.spawn(
             "lake env lean --run REPL/Main.lean", cwd=path_to_repl, encoding="utf-8"
         )
