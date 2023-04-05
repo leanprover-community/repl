@@ -47,7 +47,7 @@ Information is generated for tactic mode sorries,
 but currently not for term mode sorries.
 
 ## Python package
-This repository comes with `pylean`, a package that creates Python bindings for the repl. 
+This repository comes with `pylean`, a package that creates Python bindings for the repl. Currently, the python package depends on `pexpect`, and is therefore is only compatible with MacOS/Linux/FreeBSD systems.
 
 To use the python bindings, first `cd` into the root directory of this repository and run `lake build`. Then, run `pip install pylean`. Now, you should be able to execute python scripts such as 
 ```python
@@ -71,7 +71,7 @@ This should output
 {"sorries": [], "messages": [], "env": 0}
 {'sorries': [], 'messages': [{'severity': 'info', 'pos': {'line': 1, 'column': 0}, 'endPos': {'line': 1, 'column': 6}, 'data': 'rfl : f = f'}], 'env': 2}
 ```
-Running Lean program that `import Mathlib` is a common use case. To enable `mathlib4` imports, simply add the following to `lakefile.lean` and run `lake exe cache get` before running `lake build`.
+Running Lean programs that `import Mathlib` is a common use case. To enable `mathlib4` imports, simply add the following to `lakefile.lean` and run `lake exe cache get` before running `lake build`.
 ```
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4.git"
