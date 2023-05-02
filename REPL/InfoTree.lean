@@ -58,8 +58,16 @@ Finds all appearances of `sorry` in an `InfoTree`, reporting
 * the `MVarId` for the goal that was closed by `sorry`,
 * and the start and end positions of the `sorry` in the file.
 -/
-partial def sorries (t : InfoTree) : List (ContextInfo × MVarId × Position × Position) :=
+def sorries (t : InfoTree) : List (ContextInfo × MVarId × Position × Position) :=
 t.findSorryNodes.map fun ⟨i, ctx⟩ =>
   ({ ctx with mctx := i.mctxBefore }, i.goalsBefore.head!, stxRange ctx.fileMap i.stx)
+  
+def allTacticSteps (t : InfoTree) : IO (List String) :=
+  let infos := t.findAllInfo none (· matches .ofTacticInfo _)
+  let tacticInfos := infos.filterMap fun i =>
+    match i with
+    | (.ofTacticInfo ti, some ctx) => some (ti, ctx)
+    | _ => none
+  tacticInfos.mapM (fun (ti, ctx) => toString <$> ti.format ctx)
 
 end Lean.Elab.InfoTree

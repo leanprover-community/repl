@@ -71,6 +71,7 @@ structure Response where
   env : Nat
   messages : List Message
   sorries : List Sorry
+  allTacticSteps : List String
 deriving ToJson, FromJson
 
 /-- Json wrapper for an error. -/

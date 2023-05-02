@@ -73,10 +73,11 @@ unsafe def run (s : Run) : M m Response := do
   let messages ← messages.mapM fun m => Message.of m
   let sorries ← trees.bind InfoTree.sorries |>.mapM
     fun ⟨ctx, g, pos, endPos⟩ => Sorry.of ctx g pos endPos
+  let allTacticSteps ← liftM $ List.join <$> trees.mapM InfoTree.allTacticSteps
   let lines := s.cmd.splitOn "\n" |>.length
   let id ← nextId
   modify fun s => { environments := s.environments.push env, lines := s.lines.push lines }
-  pure ⟨id, messages, sorries⟩
+  pure ⟨id, messages, sorries, allTacticSteps⟩
 
 end REPL
 
