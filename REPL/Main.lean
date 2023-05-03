@@ -95,7 +95,7 @@ unsafe def repl : IO Unit :=
 where loop : M IO Unit := do
   let query ← getLines
   if query = "" then
-    return ()
+    return
   let json := Json.parse query
   match json with
   | .error e => IO.println <| toString <| toJson (⟨e⟩ : Error)
@@ -104,6 +104,57 @@ where loop : M IO Unit := do
     | .ok (r : Run) => IO.println <| toString <| toJson (← run r)
   loop
 
+instance : ToJson Substring where
+  toJson s := toJson s.toString
+
+instance : ToJson String.Pos where
+  toJson n := toJson n.1
+
+deriving instance ToJson for SourceInfo
+deriving instance ToJson for Syntax.Preresolved
+deriving instance ToJson for Syntax
+
 /-- Main executable function, run as `lake env lean --run Mathlib/Util/REPL.lean`. -/
-unsafe def main (_ : List String) : IO Unit := do
-  repl
+unsafe def main (args : List String) : IO Unit := do
+  let mod :: rest := args | repl
+  let mainModuleName := mod.toName
+  initSearchPath (← findSysroot)
+  let srcSearchPath ← initSrcSearchPath (← findSysroot)
+  let opts := Options.empty.setBool `trace.Elab.info true
+  let some file ← srcSearchPath.findModuleWithExt "lean" mainModuleName
+    | throw (.userError s!"module {mainModuleName} not found")
+  let input ← IO.FS.readFile file
+  enableInitializersExecution
+  let inputCtx := Parser.mkInputContext input file.toString
+  let (header, parserState, messages) ← Parser.parseHeader inputCtx
+  let (env, messages) ← processHeader header opts messages inputCtx
+  if messages.hasErrors then
+    for msg in messages.toList do
+      if msg.severity == .error then
+        println! "ERROR: {← msg.toString}"
+    throw <| IO.userError "Errors during import; aborting"
+  let env := env.setMainModule mainModuleName
+  let commandState := { Command.mkState env messages opts with infoState.enabled := true }
+  match rest with
+  | [] =>
+    let s ← IO.processCommands inputCtx parserState commandState
+    let ilean :=
+      let trees := s.commandState.infoState.trees.toArray
+      let references := Lean.Server.findModuleRefs inputCtx.fileMap trees (localVars := false)
+      { module := mainModuleName, references : Lean.Server.Ilean }
+    let commands := s.commands.pop -- remove EOI command
+    IO.println $ Json.mkObj [
+      ("header", toJson header),
+      ("commands", toJson commands),
+      ("ilean", toJson ilean)
+    ]
+  | arg :: _ =>
+    let some n := arg.toNat? | throw (.userError "usage: ast_export <MOD> [cmd id]")
+    let process : Frontend.FrontendM Unit :=
+      for _ in [0:n] do
+        let done ← Frontend.processCommand
+        if done then throw (.userError "command index out of range")
+    let (_, s) ← (process.run { inputCtx }).run
+      { commandState, parserState, cmdPos := parserState.pos }
+    IO.println "{\"env\": 0}"
+    StateT.run' repl.loop ⟨#[s.commandState.env], #[]⟩
