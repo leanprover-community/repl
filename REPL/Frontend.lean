@@ -37,6 +37,8 @@ unsafe def processInput (input : String) (env? : Option Environment)
   let inputCtx   := Parser.mkInputContext input fileName
   let (parserState, commandState) ← match env? with
   | none => do
+    let leanPath ← Lean.findSysroot
+    Lean.initSearchPath leanPath
     enableInitializersExecution
     let (header, parserState, messages) ← Parser.parseHeader inputCtx
     let (env, messages) ← processHeader header opts messages inputCtx
