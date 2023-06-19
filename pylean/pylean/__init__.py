@@ -14,7 +14,7 @@ class LeanServer:
     def run_code(self, code, env=None, verbose=False):
         if env:
             command = (
-                '{ "cmd" : "' + repr(code)[1:-1] + f'", "env" : {env}' + " }"
+                json.dumps(dict(cmd=code, env=env))
             )  # [1:-1] removes single quotes
         else:
             command = (
