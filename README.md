@@ -43,3 +43,34 @@ showing any messages generated, or sorries with their goal states.
 
 Information is generated for tactic mode sorries,
 but currently not for term mode sorries.
+
+## Python package
+This repository comes with `pylean`, a package that creates Python bindings for the repl. Currently, the python package depends on `pexpect`, and is therefore is only compatible with MacOS/Linux/FreeBSD systems.
+
+To use the python bindings, first `cd` into the root directory of this repository and run `lake build`. Then, run `pip install pylean`. Now, you should be able to execute python scripts such as 
+```python
+from pylean import LeanServer
+
+lean = LeanServer()
+
+out = lean.run_code("example : 2 = 2 := rfl", verbose=True)
+
+out1 = lean.run_code("def f := 37")
+
+env_num = out1["env"]
+out2 = lean.run_code("#check (rfl: f = 37)", env=env_num)
+
+print(out2)
+```
+
+This should output
+```
+{ "cmd" : "example : 2 = 2 := rfl" }
+{"sorries": [], "messages": [], "env": 0}
+{'sorries': [], 'messages': [{'severity': 'info', 'pos': {'line': 1, 'column': 0}, 'endPos': {'line': 1, 'column': 6}, 'data': 'rfl : f = f'}], 'env': 2}
+```
+Running Lean programs that `import Mathlib` is a common use case. To enable `mathlib4` imports, simply add the following to `lakefile.lean` and run `lake exe cache get` before running `lake build`.
+```
+require mathlib from git
+  "https://github.com/leanprover-community/mathlib4.git"
+```
