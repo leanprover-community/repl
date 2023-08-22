@@ -1,2 +1,1 @@
-lake build
-lake env lean --run REPL/Main.lean
+lake exe repl

@@ -6,6 +6,8 @@ Authors: Scott Morrison
 import REPL.JSON
 import REPL.Frontend
 import REPL.InfoTree
+import REPL.Util.Path
+import REPL.Util.TermUnsafe
 
 /-!
 # A REPL for Lean.
@@ -67,7 +69,7 @@ variable [Monad m] [MonadLiftT IO m]
 def nextId : M m Nat := do pure (← get).environments.size
 
 /-- Run a command, returning the id of the new environment, and any messages and sorries. -/
-unsafe def run (s : Run) : M m Response := do
+def run (s : Run) : M m Response := do
   let env? := s.env.bind ((← get).environments[·]?)
   let (env, messages, trees) ← IO.processInput s.cmd env? {} ""
   let messages ← messages.mapM fun m => Message.of m
@@ -83,14 +85,14 @@ end REPL
 open REPL
 
 /-- Get lines from stdin until a blank line is entered. -/
-unsafe def getLines : IO String := do
+partial def getLines : IO String := do
   match (← (← IO.getStdin).getLine) with
   | "" => pure ""
   | "\n" => pure "\n"
   | line => pure <| line ++ (← getLines)
 
 /-- Read-eval-print loop for Lean. -/
-unsafe def repl : IO Unit :=
+partial def repl : IO Unit :=
   StateT.run' loop ⟨#[], #[]⟩
 where loop : M IO Unit := do
   let query ← getLines
@@ -105,5 +107,6 @@ where loop : M IO Unit := do
   loop
 
 /-- Main executable function, run as `lake env lean --run Mathlib/Util/REPL.lean`. -/
-unsafe def main (_ : List String) : IO Unit := do
+def main (_ : List String) : IO Unit := do
+  searchPathRef.set compile_time_search_path%
   repl

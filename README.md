@@ -6,13 +6,11 @@ Commands should be separated by blank lines.
 Commands may be of the form
 
 ```json
-{ "cmd" : "import Mathlib.Data.List.Basic\ndef f := 2" }
+{ "cmd" : "def f := 2" }
 ```
 
-or
-
 ```json
-{ "cmd" : "example : f = 2 := rfl", "env" : 3 }
+{ "cmd" : "example : f = 2 := rfl", "env" : 1 }
 ```
 
 The `env` field, if present,

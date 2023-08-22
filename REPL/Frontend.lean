@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
 import Lean.Elab.Frontend
+import REPL.Util.TermUnsafe
 
 open Lean Elab
 
@@ -30,9 +31,9 @@ Otherwise, we add to the existing environment.
 
 Returns the resulting environment, along with a list of messages and info trees.
 -/
-unsafe def processInput (input : String) (env? : Option Environment)
+def processInput (input : String) (env? : Option Environment)
     (opts : Options) (fileName : Option String := none) :
-    IO (Environment × List Message × List InfoTree) := do
+    IO (Environment × List Message × List InfoTree) := unsafe do
   let fileName   := fileName.getD "<input>"
   let inputCtx   := Parser.mkInputContext input fileName
   let (parserState, commandState) ← match env? with
