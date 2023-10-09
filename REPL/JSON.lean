@@ -41,13 +41,13 @@ deriving ToJson, FromJson
 
 /-- Construct the JSON representation of a Lean message. -/
 def Message.of (m : Lean.Message) : IO Message := do pure <|
-{ pos := ⟨m.pos.line, m.pos.column⟩,
-  endPos := m.endPos.map fun p => ⟨p.line, p.column⟩,
-  severity := match m.severity with
-  | .information => .info
-  | .warning => .warning
-  | .error => .error,
-  data := (← m.data.toString).trim }
+  { pos := ⟨m.pos.line, m.pos.column⟩,
+    endPos := m.endPos.map fun p => ⟨p.line, p.column⟩,
+    severity := match m.severity with
+    | .information => .info
+    | .warning => .warning
+    | .error => .error,
+    data := (← m.data.toString).trim }
 
 /-- A Lean `sorry`. -/
 structure Sorry where
@@ -59,9 +59,9 @@ deriving ToJson, FromJson
 /-- Construct the JSON representation of a Lean sorry. -/
 def Sorry.of (ctx : ContextInfo) (g : MVarId) (pos endPos : Lean.Position) :
     IO Sorry := do pure <|
-{ pos := ⟨pos.line, pos.column⟩,
-  endPos := ⟨endPos.line, endPos.column⟩,
-  goal := s!"{(← ctx.ppGoals [g])}".trim }
+  { pos := ⟨pos.line, pos.column⟩,
+    endPos := ⟨endPos.line, endPos.column⟩,
+    goal := s!"{(← ctx.ppGoals [g])}".trim }
 
 /--
 A response to a Lean command.
