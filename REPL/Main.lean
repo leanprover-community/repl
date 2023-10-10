@@ -57,98 +57,66 @@ open Lean Elab
 
 namespace REPL
 
--- #print Tactic.State -- goals: List MVarId
--- #print Tactic.Context
--- #print Term.State -- pendingMVars, syntheticMVars
--- #print Term.Context
--- #print Meta.State -- MetavarContext
--- #print Meta.Context -- LocalContext, ...
--- #print Core.State -- Environment, MessageLog, Elab.InfoState, ...
--- #print Core.Context
-
+/--
+Bundled structure for the `State` and `Context` objects
+for the `CoreM`, `MetaM`, `TermElabM`, and `TacticM` monads.
+-/
 structure ProofState where
-  tacticSavedState : Tactic.SavedState
+  coreState     : Core.State
+  coreContext   : Core.Context
+  metaState     : Meta.State
+  metaContext   : Meta.Context
+  termState     : Term.State
+  termContext   : Term.Context
+  tacticState   : Tactic.State
   tacticContext : Tactic.Context
-  termContext : Term.Context
-  metaContext : Meta.Context
-  coreContext : Core.Context
-
 namespace ProofState
 
 open Lean Elab Tactic
 
-def tacticState (p : ProofState) : Tactic.State := p.tacticSavedState.tactic
-def termState (p : ProofState) : Term.State := p.tacticSavedState.term.elab
-def metaState (p : ProofState) : Meta.State := p.tacticSavedState.term.meta.meta
-def coreState (p : ProofState) : Core.State := p.tacticSavedState.term.meta.core
-
-def withCoreState (p : ProofState) (core : Core.State) : ProofState :=
-  { p with
-    tacticSavedState :=
-    { p.tacticSavedState with
-      term :=
-      { p.tacticSavedState.term with
-        meta :=
-        { p.tacticSavedState.term.meta with
-          core }}}}
-
-def withMetaState (p : ProofState) (meta : Meta.State) : ProofState :=
-  { p with
-    tacticSavedState :=
-    { p.tacticSavedState with
-      term :=
-      { p.tacticSavedState.term with
-        meta :=
-        { p.tacticSavedState.term.meta with
-          meta }}}}
-
-def withTermState (p : ProofState) («elab» : Term.State) : ProofState :=
-  { p with
-    tacticSavedState :=
-    { p.tacticSavedState with
-      term :=
-      { p.tacticSavedState.term with
-        «elab» }}}
-
-def withTacticState (p : ProofState) (tactic : Tactic.State) : ProofState :=
-  { p with
-    tacticSavedState :=
-    { p.tacticSavedState with
-      tactic }}
-
+/-- Run a `CoreM` monadic function in the current `ProofState`, updating the `Core.State`. -/
 def runCoreM (p : ProofState) (t : CoreM α) : IO (α × ProofState) := do
-  -- let ctx : Core.Context := { fileName := "", options := {}, fileMap := default }
-  -- let state : Core.State := { env := p.env }
-  let (a, state') ← (Lean.Core.CoreM.toIO · p.coreContext p.coreState) do t
-  return (a, p.withCoreState state')
+  let (a, coreState) ← (Lean.Core.CoreM.toIO · p.coreContext p.coreState) do t
+  return (a, { p with coreState })
 
+/-- Run a `MetaM` monadic function in the current `ProofState`, updating the `Meta.State`. -/
 def runMetaM (p : ProofState) (t : MetaM α) : IO (α × ProofState) := do
-  -- let ctx : Meta.Context := { lctx := p.lctx }
-  -- let state : Meta.State := { mctx := p.mctx }
-  let ((a, state'), p') ← p.runCoreM (Lean.Meta.MetaM.run (ctx := p.metaContext) (s := p.metaState) do t)
-  return (a, p'.withMetaState state')
+  let ((a, metaState), p') ← p.runCoreM (Lean.Meta.MetaM.run (ctx := p.metaContext) (s := p.metaState) do t)
+  return (a, { p' with metaState })
 
+/-- Run a `TermElabM` monadic function in the current `ProofState`, updating the `Term.State`. -/
 def runTermElabM (p : ProofState) (t : TermElabM α) : IO (α × ProofState) := do
-  let ((a, state'), p') ← p.runMetaM (Lean.Elab.Term.TermElabM.run (s := p.termState) do t)
-  return (a, p'.withTermState state')
+  let ((a, termState), p') ← p.runMetaM (Lean.Elab.Term.TermElabM.run (s := p.termState) do t)
+  return (a, { p' with termState })
 
+/-- Run a `TacticM` monadic function in the current `ProofState`, updating the `Tactic.State`. -/
 def runTacticM (p : ProofState) (t : TacticM α) : IO (α × ProofState) := do
-  -- let ctx : Tactic.Context := { elaborator := .anonymous }
-  -- let state : Tactic.State := { goals := p.goals }
-  let ((a, state'), p') ← p.runTermElabM (t p.tacticContext |>.run p.tacticState)
-  return (a, p'.withTacticState state')
+  let ((a, tacticState), p') ← p.runTermElabM (t p.tacticContext |>.run p.tacticState)
+  return (a, { p' with tacticState })
 
+/--
+Run a `TacticM` monadic function in the current `ProofState`, updating the `Tactic.State`,
+and discarding the return value.
+-/
 def runTacticM' (p : ProofState) (t : TacticM α) : IO ProofState :=
   Prod.snd <$> p.runTacticM t
 
+/--
+Evaluate a `Syntax` into a `TacticM` tactic, and run it in the current `ProofState`.
+-/
 def runSyntax (p : ProofState) (t : Syntax) : IO ProofState :=
   Prod.snd <$> p.runTacticM (evalTactic t)
 
+/--
+Parse a string into a `Syntax`, evaluate it as a `TacticM` tactic,
+and run it in the current `ProofState`.
+-/
 def runString (p : ProofState) (t : String) : IO ProofState :=
   match Parser.runParserCategory p.coreState.env `tactic t with
   | .error e => throw (IO.userError e)
   | .ok stx => p.runSyntax stx
 
+/-- Pretty print the current goals in the `ProofState`. -/
 def ppGoals (p : ProofState) : IO (List Format) :=
   Prod.fst <$> p.runTacticM do (← getGoals).mapM (Meta.ppGoal ·)
 
@@ -156,48 +124,71 @@ end ProofState
 
 /-- The monadic state for the Lean REPL. -/
 structure State where
+  /--
+  Environment snapshots after complete declarations.
+  The user can run a declaration in a given environment using `{"cmd": "def f := 37", "env": 17}`.
+  -/
   environments : Array Environment := #[]
+  /--
+  Proof states after individual tactics.
+  The user can run a tactic in a given proof state using `{"tactic": "exact 42", "proofState": 5}`.
+  Declarations with containing `sorry` record a proof state at each sorry,
+  and report the numerical index for the recorded state at each sorry.
+  -/
   proofStates : Array ProofState := #[]
-  lines : Array Nat := #[]
 
-/-- The Lean REPL monad. -/
+/--
+The Lean REPL monad.
+
+We only use this with `m := IO`, but it is set up as a monad transformer for flexibility.
+-/
 abbrev M (m : Type → Type) := StateT State m
 
 variable [Monad m] [MonadLiftT IO m]
 
+/-- Record an `Environment` into the REPL state, returning its index for future use. -/
 def recordEnvironment (env : Environment) : M m Nat := do
   let id := (← get).environments.size
   modify fun s => { s with environments := s.environments.push env }
   return id
 
-def recordLines (lines : Nat) : M m Unit :=
-  modify fun s => { s with lines := s.lines.push lines }
-
+/-- Record a `ProofState` into the REPL state, returning its index for future use. -/
 def recordProofState (proofState : ProofState) : M m Nat := do
   let id := (← get).proofStates.size
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
+/--
+Construct a `ProofState` from a `ContextInfo` and optional `LocalContext`, and a list of goals.
+
+For convenience, we also allow a list of `Expr`s, and these are appended to the goals
+as fresh metavariables with the given types.
+-/
 def createProofState (ctx : ContextInfo) (lctx? : Option LocalContext)
     (goals : List MVarId) (types : List Expr := []) : IO ProofState := do
   ctx.runMetaM (lctx?.getD {}) do
     let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
     pure <|
-    { coreContext := ← readThe Core.Context
+    { coreState := ← getThe Core.State
+      coreContext := ← readThe Core.Context
+      metaState := ← getThe Meta.State
       metaContext := ← readThe Meta.Context
+      termState := {}
       termContext := {}
-      tacticContext := { elaborator := .anonymous }
-      tacticSavedState :=
-      { tactic := { goals }
-        term :=
-        { «elab» := {},
-          meta :=
-          { meta := ← getThe Meta.State
-            core := ← getThe Core.State } } } }
+      tacticState := { goals }
+      tacticContext := { elaborator := .anonymous } }
 
-/-- Run a command, returning the id of the new environment, and any messages and sorries. -/
-def runCommand (s : Command) : M m CommandResponse := do
-  let env? := s.env.bind ((← get).environments[·]?)
+/--
+Run a command, returning the id of the new environment, and any messages and sorries.
+-/
+def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
+  let (env?, notFound) ← do match s.env with
+  | none => pure (none, false)
+  | some i => do match (← get).environments[i]? with
+    | some env => pure (some env, false)
+    | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
   let (env, messages, trees) ← IO.processInput s.cmd env? {} ""
   let messages ← messages.mapM fun m => Message.of m
   let sorries ← trees.bind InfoTree.sorries |>.mapM
@@ -210,17 +201,21 @@ def runCommand (s : Command) : M m CommandResponse := do
       | .term _ none => unreachable!
       let proofStateId ← proofState.mapM recordProofState
       return Sorry.of goal pos endPos proofStateId
-  recordLines <| s.cmd.splitOn "\n" |>.length
   let id ← recordEnvironment env
-  pure ⟨id, messages, sorries⟩
+  return .inl ⟨id, messages, sorries⟩
 
+/--
+Run a single tactic, returning the id of the new proof statement, and the new goals.
+-/
+-- TODO return messages?
+-- TODO detect sorries?
 def runProofStep (s : ProofStep) : M m (ProofStepResponse ⊕ Error) := do
   match (← get).proofStates[s.proofState]? with
-  | none => return Sum.inr ⟨"Unknown proof state."⟩
+  | none => return .inr ⟨"Unknown proof state."⟩
   | some proofState =>
     let proofState' ← proofState.runString s.tactic
     let id ← recordProofState proofState'
-    return Sum.inl { proofState := id, goals := (← proofState'.ppGoals).map fun s => s!"{s}" }
+    return .inl { proofState := id, goals := (← proofState'.ppGoals).map fun s => s!"{s}" }
 
 end REPL
 

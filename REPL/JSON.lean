@@ -20,6 +20,9 @@ structure Command where
   cmd : String
 deriving ToJson, FromJson
 
+/--
+Run a tactic in a proof state.
+-/
 structure ProofStep where
   proofState : Nat
   tactic : String
@@ -59,6 +62,10 @@ structure Sorry where
   pos : Pos
   endPos : Pos
   goal : String
+  /--
+  The index of the proof state at the sorry.
+  You can use the `ProofStep` instruction to run a tactic at this state.
+  -/
   proofState : Option Nat
 deriving ToJson, FromJson
 
@@ -79,6 +86,10 @@ structure CommandResponse where
   sorries : List Sorry
 deriving ToJson, FromJson
 
+/--
+A response to a Lean tactic.
+`proofState` can be used in later calls, to run further tactics.
+-/
 structure ProofStepResponse where
   proofState : Nat
   goals : List String

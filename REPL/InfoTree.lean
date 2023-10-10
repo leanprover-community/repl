@@ -6,9 +6,7 @@ Authors: Scott Morrison
 import Lean
 
 /-!
-# Code to move (eventually) to core.
-
-Mostly additional functions to deal with `InfoTree`.
+Additional functions to deal with `InfoTree`.
 -/
 
 open Lean Elab Meta

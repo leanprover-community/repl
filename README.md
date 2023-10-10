@@ -1,8 +1,15 @@
 # A read-eval-print-loop for Lean 4
 
-Run using `./run`.
+Run using `lake exe repl`.
 Communicates via JSON on stdin and stdout.
 Commands should be separated by blank lines.
+
+The REPL works both in "command" mode and "tactic" mode.
+
+## Command mode
+
+In command mode, you send complete commands (e.g. declarations) to the REPL.
+
 Commands may be of the form
 
 ```json
@@ -23,13 +30,22 @@ You can only use `import` commands when you do not specify the `env` field.
 
 You can backtrack simply by using earlier values for `env`.
 
-The results are of the form
+The response includes:
+* A numeric label for the `Environment` after your command,
+  which you can use as the starting point for subsequent commands.
+* Any messages generated while processing your command.
+* A list of the `sorry`s in your command, including
+  * their expected type, and
+  * a numeric label for the proof state at the `sorry`, which you can then use in tactic mode.
+
+Example output:
 
 ```json
 {"sorries":
  [{"pos": {"line": 1, "column": 18},
    "endPos": {"line": 1, "column": 23},
-   "goal": "⊢ Nat"}],
+   "goal": "⊢ Nat",
+   "proofState": 0}],
  "messages":
  [{"severity": "error",
    "pos": {"line": 1, "column": 23},
@@ -39,7 +55,43 @@ The results are of the form
  "env": 6}
 ```
 
-showing any messages generated, or sorries with their goal states.
+showing any messages generated, and sorries with their goal states.
 
-Information is generated for tactic mode sorries,
-but currently not for term mode sorries.
+## Tactic mode (experimental)
+
+The only way to enter tactic mode at present is to first issue a command containing a `sorry`,
+and then using the `proofState` index returned for each `sorry`.
+
+Example usage:
+```json
+{"cmd" : "def f : Nat := by sorry"}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 18},
+   "goal": "⊢ Nat",
+   "endPos": {"line": 1, "column": 23}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 5},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"tactic": "apply Int.natAbs", "proofState": 0}
+
+{"proofState": 1, "goals": ["⊢ Int"]}
+
+{"tactic": "exact -37", "proofState": 1}
+
+{"proofState": 2, "goals": []}
+```
+
+At present there is nothing you can do with a completed proof state:
+we would like to extend this so that you can replace the original `sorry` with your tactic script,
+and obtain the resulting `Environment`
+
+## Future work
+
+* Replay tactic scripts from tactic mode back into the original `sorry`.
+* Serialization and deserialization of environments and proof states
