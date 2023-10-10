@@ -6,8 +6,6 @@ Authors: Scott Morrison
 import Lean.Data.Json
 import Lean.Message
 import Lean.Elab.InfoTree.Main
-import REPL.Lean.ContextInfo
-import REPL.InfoTree
 
 open Lean Elab InfoTree
 
@@ -17,9 +15,17 @@ namespace REPL
 If `env = none`, starts a new session (in which you can use `import`).
 If `env = some n`, builds on the existing environment `n`.
 -/
-structure Run where
+structure Command where
   env : Option Nat
   cmd : String
+deriving ToJson, FromJson
+
+/--
+Run a tactic in a proof state.
+-/
+structure ProofStep where
+  proofState : Nat
+  tactic : String
 deriving ToJson, FromJson
 
 /-- Line and column information for error messages and sorries. -/
@@ -56,26 +62,37 @@ structure Sorry where
   pos : Pos
   endPos : Pos
   goal : String
+  /--
+  The index of the proof state at the sorry.
+  You can use the `ProofStep` instruction to run a tactic at this state.
+  -/
+  proofState : Option Nat
 deriving ToJson, FromJson
 
 /-- Construct the JSON representation of a Lean sorry. -/
-def Sorry.of (ctx : ContextInfo) (g : SorryType) (pos endPos : Lean.Position) :
-    IO Sorry := do pure <|
+def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
-    goal := ← match g with
-    | SorryType.tactic g => do pure s!"{(← ctx.ppGoals [g])}".trim
-    | SorryType.term _ none => unreachable!
-    | SorryType.term lctx (some t) => do pure s!"⊢ {← ctx.ppExpr lctx t}" }
+    goal,
+    proofState }
 
 /--
 A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
 -/
-structure Response where
+structure CommandResponse where
   env : Nat
   messages : List Message
   sorries : List Sorry
+deriving ToJson, FromJson
+
+/--
+A response to a Lean tactic.
+`proofState` can be used in later calls, to run further tactics.
+-/
+structure ProofStepResponse where
+  proofState : Nat
+  goals : List String
 deriving ToJson, FromJson
 
 /-- Json wrapper for an error. -/
