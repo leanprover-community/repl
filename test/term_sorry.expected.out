@@ -1,5 +1,6 @@
 {"sorries":
- [{"pos": {"line": 1, "column": 15},
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 15},
    "goal": "⊢ Nat",
    "endPos": {"line": 1, "column": 20}}],
  "messages":

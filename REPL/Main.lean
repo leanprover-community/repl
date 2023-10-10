@@ -8,6 +8,8 @@ import REPL.Frontend
 import REPL.InfoTree
 import REPL.Util.Path
 import REPL.Util.TermUnsafe
+import REPL.Lean.ContextInfo
+import REPL.InfoTree
 
 /-!
 # A REPL for Lean.
@@ -55,30 +57,121 @@ open Lean Elab
 
 namespace REPL
 
+-- #print Tactic.State -- goals: List MVarId
+-- #print Tactic.Context
+-- #print Term.State -- pendingMVars, syntheticMVars
+-- #print Term.Context
+-- #print Meta.State -- MetavarContext
+-- #print Meta.Context -- LocalContext, ...
+-- #print Core.State -- Environment, MessageLog, Elab.InfoState, ...
+-- #print Core.Context
+
+structure ProofState where
+  goals : List MVarId
+  mctx : MetavarContext
+  lctx : LocalContext
+  env : Environment
+
+namespace ProofState
+
+open Lean Elab Tactic
+
+def runCoreM (p : ProofState) (t : CoreM α) : IO (α × ProofState) := do
+  let ctx : Core.Context := { fileName := "", options := {}, fileMap := default }
+  let state : Core.State := { env := p.env }
+  let (a, state') ← (Lean.Core.CoreM.toIO · ctx state) do t
+  return (a, { p with env := state'.env })
+
+def runMetaM (p : ProofState) (t : MetaM α) : IO (α × ProofState) := do
+  let ctx : Meta.Context := { lctx := p.lctx }
+  let state : Meta.State := { mctx := p.mctx }
+  let ((a, state'), p') ← p.runCoreM (Lean.Meta.MetaM.run (ctx := ctx) (s := state) do t)
+  return (a, { p' with mctx := state'.mctx })
+
+def runTermElabM (p : ProofState) (t : TermElabM α) : IO (α × ProofState) := do
+  let ((a, _), p') ← p.runMetaM (Lean.Elab.Term.TermElabM.run do t)
+  return (a, p')
+
+def runTacticM (p : ProofState) (t : TacticM α) : IO (α × ProofState) := do
+  let ctx : Tactic.Context := { elaborator := .anonymous }
+  let state : Tactic.State := { goals := p.goals }
+  let ((a, state'), p') ← p.runTermElabM (t ctx |>.run state)
+  return (a, { p' with goals := state'.goals })
+
+def runTacticM' (p : ProofState) (t : TacticM α) : IO ProofState :=
+  Prod.snd <$> p.runTacticM t
+
+def runSyntax (p : ProofState) (t : Syntax) : IO ProofState :=
+  Prod.snd <$> p.runTacticM (evalTactic t)
+
+def runString (p : ProofState) (t : String) : IO ProofState :=
+  match Parser.runParserCategory p.env `tactic t with
+  | .error e => throw (IO.userError e)
+  | .ok stx => p.runSyntax stx
+
+def ppGoals (p : ProofState) : IO (List Format) :=
+  Prod.fst <$> p.runTacticM do (← getGoals).mapM (Meta.ppGoal ·)
+
+end ProofState
+
 /-- The monadic state for the Lean REPL. -/
 structure State where
-  environments : Array Environment
-  lines : Array Nat
+  environments : Array Environment := #[]
+  proofStates : Array ProofState := #[]
+  lines : Array Nat := #[]
 
 /-- The Lean REPL monad. -/
 abbrev M (m : Type → Type) := StateT State m
 
 variable [Monad m] [MonadLiftT IO m]
 
-/-- Get the next available id for a new environment. -/
-def nextId : M m Nat := do pure (← get).environments.size
+def recordEnvironment (env : Environment) : M m Nat := do
+  let id := (← get).environments.size
+  modify fun s => { s with environments := s.environments.push env }
+  return id
+
+def recordLines (lines : Nat) : M m Unit :=
+  modify fun s => { s with lines := s.lines.push lines }
+
+def recordProofState (proofState : ProofState) : M m Nat := do
+  let id := (← get).proofStates.size
+  modify fun s => { s with proofStates := s.proofStates.push proofState }
+  return id
+
+def createProofState (ctx : ContextInfo) (lctx? : Option LocalContext) (goals : List MVarId) (types : List Expr := []) :
+    IO ProofState := do
+  ctx.runMetaM (lctx?.getD {}) do pure <|
+    { goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
+      mctx := ← getMCtx
+      lctx := ← getLCtx
+      env := ← getEnv }
 
 /-- Run a command, returning the id of the new environment, and any messages and sorries. -/
-def run (s : Run) : M m Response := do
+def runCommand (s : Command) : M m CommandResponse := do
   let env? := s.env.bind ((← get).environments[·]?)
   let (env, messages, trees) ← IO.processInput s.cmd env? {} ""
   let messages ← messages.mapM fun m => Message.of m
   let sorries ← trees.bind InfoTree.sorries |>.mapM
-    fun ⟨ctx, g, pos, endPos⟩ => Sorry.of ctx g pos endPos
-  let lines := s.cmd.splitOn "\n" |>.length
-  let id ← nextId
-  modify fun s => { environments := s.environments.push env, lines := s.lines.push lines }
+    fun ⟨ctx, g, pos, endPos⟩ => do
+      let (goal, proofState) ← match g with
+      | .tactic g => do
+         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← createProofState ctx none [g]))
+      | .term lctx (some t) => do
+         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← createProofState ctx lctx [] [t]))
+      | .term _ none => unreachable!
+      let proofStateId ← proofState.mapM recordProofState
+      return Sorry.of goal pos endPos proofStateId
+  recordLines <| s.cmd.splitOn "\n" |>.length
+  let id ← recordEnvironment env
   pure ⟨id, messages, sorries⟩
+
+def runProofStep (s : ProofStep) : M m (ProofStepResponse ⊕ Error) := do
+  match (← get).proofStates[s.proofState]? with
+  | none => return Sum.inr ⟨"Unknown proof state."⟩
+  | some proofState =>
+    let proofState' ← proofState.runString s.tactic
+    let id ← recordProofState proofState'
+    return Sum.inl { proofState := id, goals := (← proofState'.ppGoals).map fun s => s!"{s}" }
 
 end REPL
 
@@ -91,9 +184,14 @@ partial def getLines : IO String := do
   | "\n" => pure "\n"
   | line => pure <| line ++ (← getLines)
 
+instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
+  toJson x := match x with
+  | .inl a => toJson a
+  | .inr b => toJson b
+
 /-- Read-eval-print loop for Lean. -/
 partial def repl : IO Unit :=
-  StateT.run' loop ⟨#[], #[]⟩
+  StateT.run' loop {}
 where loop : M IO Unit := do
   let query ← getLines
   if query = "" then
@@ -102,11 +200,13 @@ where loop : M IO Unit := do
   match json with
   | .error e => IO.println <| toString <| toJson (⟨e⟩ : Error)
   | .ok j => match fromJson? j with
-    | .error e => IO.println <| toString <| toJson (⟨e⟩ : Error)
-    | .ok (r : Run) => IO.println <| toString <| toJson (← run r)
+    | .ok (r : REPL.ProofStep) => IO.println <| toString <| toJson (← runProofStep r)
+    | .error _ => match fromJson? j with
+      | .ok (r : REPL.Command) => IO.println <| toString <| toJson (← runCommand r)
+      | .error e => IO.println <| toString <| toJson (⟨e⟩ : Error)
   loop
 
-/-- Main executable function, run as `lake env lean --run Mathlib/Util/REPL.lean`. -/
+/-- Main executable function, run as `lake exe repl`. -/
 def main (_ : List String) : IO Unit := do
   searchPathRef.set compile_time_search_path%
   repl
