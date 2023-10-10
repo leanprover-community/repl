@@ -6,8 +6,10 @@ Authors: Scott Morrison
 import Lean.Data.Json
 import Lean.Message
 import Lean.Elab.InfoTree.Main
+import REPL.Lean.ContextInfo
+import REPL.InfoTree
 
-open Lean Elab
+open Lean Elab InfoTree
 
 namespace REPL
 
@@ -57,11 +59,14 @@ structure Sorry where
 deriving ToJson, FromJson
 
 /-- Construct the JSON representation of a Lean sorry. -/
-def Sorry.of (ctx : ContextInfo) (g : MVarId) (pos endPos : Lean.Position) :
+def Sorry.of (ctx : ContextInfo) (g : SorryType) (pos endPos : Lean.Position) :
     IO Sorry := do pure <|
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
-    goal := s!"{(← ctx.ppGoals [g])}".trim }
+    goal := ← match g with
+    | SorryType.tactic g => do pure s!"{(← ctx.ppGoals [g])}".trim
+    | SorryType.term _ none => unreachable!
+    | SorryType.term lctx (some t) => do pure s!"⊢ {← ctx.ppExpr lctx t}" }
 
 /--
 A response to a Lean command.

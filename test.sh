@@ -4,6 +4,8 @@
 IN_DIR="test"
 EXPECTED_DIR="test"
 
+lake build
+
 # Iterate over each .in file in the test directory
 for infile in $IN_DIR/*.in; do
     # Extract the base filename without the extension
