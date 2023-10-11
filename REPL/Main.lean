@@ -9,6 +9,7 @@ import REPL.InfoTree
 import REPL.Util.Path
 import REPL.Util.TermUnsafe
 import REPL.Lean.ContextInfo
+import REPL.Lean.Environment
 import REPL.InfoTree
 
 /-!
@@ -178,6 +179,18 @@ def createProofState (ctx : ContextInfo) (lctx? : Option LocalContext)
       tacticState := { goals }
       tacticContext := { elaborator := .anonymous } }
 
+def pickleEnvironment (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
+  match (← get).environments[n.env]? with
+  | none => return .inr ⟨"Unknown environment."⟩
+  | some env =>
+    discard <| env.pickle n.pickleTo
+    return .inl { env := n.env }
+
+def unpickleEnvironment (n : UnpickleEnvironment) : M IO CommandResponse := do
+  let (env, _) ← Environment.unpickle n.unpickleFrom
+  let env ← recordEnvironment env
+  return { env }
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -233,24 +246,41 @@ instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   | .inl a => toJson a
   | .inr b => toJson b
 
+inductive Input
+| command : REPL.Command → Input
+| proofStep : REPL.ProofStep → Input
+| pickleEnvironment : REPL.PickleEnvironment → Input
+| unpickleEnvironment : REPL.UnpickleEnvironment → Input
+
+def parse (query : String) : IO Input := do
+  let json := Json.parse query
+  match json with
+  | .error e => throw <| IO.userError <| toString <| toJson (⟨e⟩ : Error)
+  | .ok j => match fromJson? j with
+    | .ok (r : REPL.ProofStep) => return .proofStep r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.PickleEnvironment) => return .pickleEnvironment r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.UnpickleEnvironment) => return .unpickleEnvironment r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.Command) => return .command r
+    | .error e => throw <| IO.userError <| toString <| toJson (⟨e⟩ : Error)
+
 /-- Read-eval-print loop for Lean. -/
-partial def repl : IO Unit :=
+unsafe def repl : IO Unit :=
   StateT.run' loop {}
 where loop : M IO Unit := do
   let query ← getLines
   if query = "" then
     return ()
-  let json := Json.parse query
-  match json with
-  | .error e => IO.println <| toString <| toJson (⟨e⟩ : Error)
-  | .ok j => match fromJson? j with
-    | .ok (r : REPL.ProofStep) => IO.println <| toString <| toJson (← runProofStep r)
-    | .error _ => match fromJson? j with
-      | .ok (r : REPL.Command) => IO.println <| toString <| toJson (← runCommand r)
-      | .error e => IO.println <| toString <| toJson (⟨e⟩ : Error)
+  IO.println <| toString <| ← match ← parse query with
+  | .command r => return toJson (← runCommand r)
+  | .proofStep r => return toJson (← runProofStep r)
+  | .pickleEnvironment r => return toJson (← pickleEnvironment r)
+  | .unpickleEnvironment r => return toJson (← unpickleEnvironment r)
   loop
 
 /-- Main executable function, run as `lake exe repl`. -/
-def main (_ : List String) : IO Unit := do
+unsafe def main (_ : List String) : IO Unit := do
   searchPathRef.set compile_time_search_path%
   repl
