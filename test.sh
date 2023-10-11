@@ -34,3 +34,5 @@ for infile in $IN_DIR/*.in; do
     # Remove the temporary file
     rm "$tmpfile"
 done
+
+rm -f test/*.olean

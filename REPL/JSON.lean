@@ -82,8 +82,8 @@ A response to a Lean command.
 -/
 structure CommandResponse where
   env : Nat
-  messages : List Message
-  sorries : List Sorry
+  messages : List Message := []
+  sorries : List Sorry := []
 deriving ToJson, FromJson
 
 /--
@@ -98,6 +98,15 @@ deriving ToJson, FromJson
 /-- Json wrapper for an error. -/
 structure Error where
   message : String
+deriving ToJson, FromJson
+
+structure PickleEnvironment where
+  env : Nat
+  pickleTo : System.FilePath
+deriving ToJson, FromJson
+
+structure UnpickleEnvironment where
+  unpickleFrom : System.FilePath
 deriving ToJson, FromJson
 
 end REPL
