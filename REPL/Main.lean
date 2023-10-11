@@ -11,6 +11,7 @@ import REPL.Util.TermUnsafe
 import REPL.Lean.ContextInfo
 import REPL.Lean.Environment
 import REPL.InfoTree
+import REPL.ProofState
 
 /-!
 # A REPL for Lean.
@@ -58,71 +59,6 @@ open Lean Elab
 
 namespace REPL
 
-/--
-Bundled structure for the `State` and `Context` objects
-for the `CoreM`, `MetaM`, `TermElabM`, and `TacticM` monads.
--/
-structure ProofState where
-  coreState     : Core.State
-  coreContext   : Core.Context
-  metaState     : Meta.State
-  metaContext   : Meta.Context
-  termState     : Term.State
-  termContext   : Term.Context
-  tacticState   : Tactic.State
-  tacticContext : Tactic.Context
-namespace ProofState
-
-open Lean Elab Tactic
-
-/-- Run a `CoreM` monadic function in the current `ProofState`, updating the `Core.State`. -/
-def runCoreM (p : ProofState) (t : CoreM α) : IO (α × ProofState) := do
-  let (a, coreState) ← (Lean.Core.CoreM.toIO · p.coreContext p.coreState) do t
-  return (a, { p with coreState })
-
-/-- Run a `MetaM` monadic function in the current `ProofState`, updating the `Meta.State`. -/
-def runMetaM (p : ProofState) (t : MetaM α) : IO (α × ProofState) := do
-  let ((a, metaState), p') ← p.runCoreM (Lean.Meta.MetaM.run (ctx := p.metaContext) (s := p.metaState) do t)
-  return (a, { p' with metaState })
-
-/-- Run a `TermElabM` monadic function in the current `ProofState`, updating the `Term.State`. -/
-def runTermElabM (p : ProofState) (t : TermElabM α) : IO (α × ProofState) := do
-  let ((a, termState), p') ← p.runMetaM (Lean.Elab.Term.TermElabM.run (s := p.termState) do t)
-  return (a, { p' with termState })
-
-/-- Run a `TacticM` monadic function in the current `ProofState`, updating the `Tactic.State`. -/
-def runTacticM (p : ProofState) (t : TacticM α) : IO (α × ProofState) := do
-  let ((a, tacticState), p') ← p.runTermElabM (t p.tacticContext |>.run p.tacticState)
-  return (a, { p' with tacticState })
-
-/--
-Run a `TacticM` monadic function in the current `ProofState`, updating the `Tactic.State`,
-and discarding the return value.
--/
-def runTacticM' (p : ProofState) (t : TacticM α) : IO ProofState :=
-  Prod.snd <$> p.runTacticM t
-
-/--
-Evaluate a `Syntax` into a `TacticM` tactic, and run it in the current `ProofState`.
--/
-def runSyntax (p : ProofState) (t : Syntax) : IO ProofState :=
-  Prod.snd <$> p.runTacticM (evalTactic t)
-
-/--
-Parse a string into a `Syntax`, evaluate it as a `TacticM` tactic,
-and run it in the current `ProofState`.
--/
-def runString (p : ProofState) (t : String) : IO ProofState :=
-  match Parser.runParserCategory p.coreState.env `tactic t with
-  | .error e => throw (IO.userError e)
-  | .ok stx => p.runSyntax stx
-
-/-- Pretty print the current goals in the `ProofState`. -/
-def ppGoals (p : ProofState) : IO (List Format) :=
-  Prod.fst <$> p.runTacticM do (← getGoals).mapM (Meta.ppGoal ·)
-
-end ProofState
-
 /-- The monadic state for the Lean REPL. -/
 structure State where
   /--
@@ -159,25 +95,9 @@ def recordProofState (proofState : ProofState) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
-/--
-Construct a `ProofState` from a `ContextInfo` and optional `LocalContext`, and a list of goals.
-
-For convenience, we also allow a list of `Expr`s, and these are appended to the goals
-as fresh metavariables with the given types.
--/
-def createProofState (ctx : ContextInfo) (lctx? : Option LocalContext)
-    (goals : List MVarId) (types : List Expr := []) : IO ProofState := do
-  ctx.runMetaM (lctx?.getD {}) do
-    let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
-    pure <|
-    { coreState := ← getThe Core.State
-      coreContext := ← readThe Core.Context
-      metaState := ← getThe Meta.State
-      metaContext := ← readThe Meta.Context
-      termState := {}
-      termContext := {}
-      tacticState := { goals }
-      tacticContext := { elaborator := .anonymous } }
+def createProofStepReponse (p : ProofState): M m ProofStepResponse := do
+  let id ← recordProofState p
+  return { proofState := id, goals := (← p.ppGoals).map fun s => s!"{s}" }
 
 def pickleEnvironment (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
   match (← get).environments[n.env]? with
@@ -187,9 +107,20 @@ def pickleEnvironment (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) 
     return .inl { env := n.env }
 
 def unpickleEnvironment (n : UnpickleEnvironment) : M IO CommandResponse := do
-  let (env, _) ← Environment.unpickle n.unpickleFrom
+  let (env, _) ← Environment.unpickle n.unpickleEnvFrom
   let env ← recordEnvironment env
   return { env }
+
+def pickleProofState (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
+  match (← get).proofStates[n.proofState]? with
+  | none => return .inr ⟨"Unknown proof State."⟩
+  | some proofState =>
+    discard <| proofState.pickle n.pickleTo
+    return .inl (← createProofStepReponse proofState)
+
+def unpickleProofState (n : UnpickleProofState) : M IO ProofStepResponse := do
+  let (proofState, _) ← ProofState.unpickle n.unpickleProofStateFrom
+  createProofStepReponse proofState
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
@@ -208,9 +139,9 @@ def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
     fun ⟨ctx, g, pos, endPos⟩ => do
       let (goal, proofState) ← match g with
       | .tactic g => do
-         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← createProofState ctx none [g]))
+         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← ProofState.create ctx none [g]))
       | .term lctx (some t) => do
-         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← createProofState ctx lctx [] [t]))
+         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofState.create ctx lctx [] [t]))
       | .term _ none => unreachable!
       let proofStateId ← proofState.mapM recordProofState
       return Sorry.of goal pos endPos proofStateId
@@ -227,8 +158,7 @@ def runProofStep (s : ProofStep) : M m (ProofStepResponse ⊕ Error) := do
   | none => return .inr ⟨"Unknown proof state."⟩
   | some proofState =>
     let proofState' ← proofState.runString s.tactic
-    let id ← recordProofState proofState'
-    return .inl { proofState := id, goals := (← proofState'.ppGoals).map fun s => s!"{s}" }
+    return .inl (← createProofStepReponse proofState')
 
 end REPL
 
@@ -251,6 +181,8 @@ inductive Input
 | proofStep : REPL.ProofStep → Input
 | pickleEnvironment : REPL.PickleEnvironment → Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
+| pickleProofState : REPL.PickleProofState → Input
+| unpickleProofState : REPL.UnpickleProofState → Input
 
 def parse (query : String) : IO Input := do
   let json := Json.parse query
@@ -262,6 +194,10 @@ def parse (query : String) : IO Input := do
     | .ok (r : REPL.PickleEnvironment) => return .pickleEnvironment r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.UnpickleEnvironment) => return .unpickleEnvironment r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.PickleProofState) => return .pickleProofState r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.UnpickleProofState) => return .unpickleProofState r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.Command) => return .command r
     | .error e => throw <| IO.userError <| toString <| toJson (⟨e⟩ : Error)
@@ -278,6 +214,8 @@ where loop : M IO Unit := do
   | .proofStep r => return toJson (← runProofStep r)
   | .pickleEnvironment r => return toJson (← pickleEnvironment r)
   | .unpickleEnvironment r => return toJson (← unpickleEnvironment r)
+  | .pickleProofState r => return toJson (← pickleProofState r)
+  | .unpickleProofState r => return toJson (← unpickleProofState r)
   loop
 
 /-- Main executable function, run as `lake exe repl`. -/
