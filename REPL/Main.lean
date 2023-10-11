@@ -228,5 +228,5 @@ where loop : M IO Unit := do
 
 /-- Main executable function, run as `lake exe repl`. -/
 unsafe def main (_ : List String) : IO Unit := do
-  searchPathRef.set compile_time_search_path%
+  initSearchPath (← Lean.findSysroot)
   repl
