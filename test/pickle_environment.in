@@ -1,6 +1,6 @@
 {"cmd": "def f := 42"}
 
-{"env": 0, "pickleTo": "test/a.olean"}
+{"pickleTo": "test/a.olean", "env": 0}
 
 {"unpickleFrom": "test/a.olean"}
 
