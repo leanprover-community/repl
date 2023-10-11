@@ -95,10 +95,12 @@ def recordProofState (proofState : ProofState) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
+/-- Record a `ProofState` and generate a JSON response for it. -/
 def createProofStepReponse (p : ProofState): M m ProofStepResponse := do
   let id ← recordProofState p
   return { proofState := id, goals := (← p.ppGoals).map fun s => s!"{s}" }
 
+/-- Pickle an `Environment`, generating a JSON response. -/
 def pickleEnvironment (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
   match (← get).environments[n.env]? with
   | none => return .inr ⟨"Unknown environment."⟩
@@ -106,11 +108,14 @@ def pickleEnvironment (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) 
     discard <| env.pickle n.pickleTo
     return .inl { env := n.env }
 
+/-- Unpickle an `Environment`, generating a JSON response. -/
 def unpickleEnvironment (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← Environment.unpickle n.unpickleEnvFrom
   let env ← recordEnvironment env
   return { env }
 
+/-- Pickle a `ProofState`, generating a JSON response. -/
+-- This generates a new identifier, which perhaps is not what we want?
 def pickleProofState (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
   match (← get).proofStates[n.proofState]? with
   | none => return .inr ⟨"Unknown proof State."⟩
@@ -118,6 +123,7 @@ def pickleProofState (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) 
     discard <| proofState.pickle n.pickleTo
     return .inl (← createProofStepReponse proofState)
 
+/-- Unpickle a `ProofState`, generating a JSON response. -/
 def unpickleProofState (n : UnpickleProofState) : M IO ProofStepResponse := do
   let (proofState, _) ← ProofState.unpickle n.unpickleProofStateFrom
   createProofStepReponse proofState
@@ -176,6 +182,7 @@ instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   | .inl a => toJson a
   | .inr b => toJson b
 
+/-- Commands accepted by the REPL. -/
 inductive Input
 | command : REPL.Command → Input
 | proofStep : REPL.ProofStep → Input
@@ -184,6 +191,7 @@ inductive Input
 | pickleProofState : REPL.PickleProofState → Input
 | unpickleProofState : REPL.UnpickleProofState → Input
 
+/-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
   let json := Json.parse query
   match json with

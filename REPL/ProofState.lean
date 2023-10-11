@@ -94,13 +94,16 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext)
       tacticContext := { elaborator := .anonymous } }
 
 open Lean.Meta in
+/-- A copy of `Meta.Context` with closures omitted. -/
 structure CompactableMetaContext where
   config            : Config               := {}
   lctx              : LocalContext         := {}
   localInstances    : LocalInstances       := #[]
   defEqCtx?         : Option DefEqContext  := none
   synthPendingDepth : Nat                  := 0
+  -- canUnfold?        : Option (Config → ConstantInfo → CoreM Bool) := none
 
+/-- A copy of `Term.Context` with closures and a cache omitted. -/
 structure CompactableTermContext where
   declName? : Option Name := none
   auxDeclToFullName : FVarIdMap Name  := {}
@@ -116,11 +119,12 @@ structure CompactableTermContext where
   isNoncomputableSection : Bool        := false
   ignoreTCFailures : Bool := false
   inPattern        : Bool := false
-  tacticCache?     : Option (IO.Ref Tactic.Cache) := none
+  -- tacticCache?     : Option (IO.Ref Tactic.Cache) := none
   saveRecAppSyntax : Bool := true
   holesAsSyntheticOpaque : Bool := false
 
 open Lean.Core in
+/-- A copy of `Core.State` with the `Environment`, caches, and logging omitted. -/
 structure CompactableCoreState where
   -- env             : Environment
   nextMacroScope  : MacroScope     := firstFrontendMacroScope + 1
@@ -132,6 +136,11 @@ structure CompactableCoreState where
 
 open System (FilePath)
 
+/--
+Pickle a `ProofState`, discarding closures and non-essential caches.
+
+When pickling the `Environment`, we do so relative to its imports.
+-/
 def pickle (p : ProofState) (path : FilePath) : IO Unit := do
   let env := p.coreState.env
   let p' := { p with coreState := { p.coreState with env := ← mkEmptyEnvironment }}
@@ -147,9 +156,15 @@ def pickle (p : ProofState) (path : FilePath) : IO Unit := do
      p'.tacticState,
      p'.tacticContext)
 
+/--
+Unpickle a `ProofState`.
+-/
 def unpickle (path : FilePath) : IO (ProofState × CompactedRegion) := unsafe do
-  let ((imports, map₂, coreState, coreContext, metaState, metaContext, termState, termContext, tacticState, tacticContext), region) ←
-    _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState × Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext × Tactic.State × Tactic.Context) path
+  let ((imports, map₂, coreState, coreContext, metaState, metaContext, termState, termContext,
+    tacticState, tacticContext), region) ←
+    _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState ×
+      Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
+      Tactic.State × Tactic.Context) path
   let env ← importModules imports {} 0
   let env := { env with constants := { env.constants with map₂ }}
   let p' :=
