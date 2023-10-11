@@ -34,13 +34,12 @@ Returns the resulting environment, along with a list of messages and info trees.
 def processInput (input : String) (env? : Option Environment)
     (opts : Options) (fileName : Option String := none) :
     IO (Environment × List Message × List InfoTree) := unsafe do
+  Lean.initSearchPath (← Lean.findSysroot)
+  enableInitializersExecution
   let fileName   := fileName.getD "<input>"
   let inputCtx   := Parser.mkInputContext input fileName
   let (parserState, commandState) ← match env? with
   | none => do
-    let leanPath ← Lean.findSysroot
-    Lean.initSearchPath leanPath
-    enableInitializersExecution
     let (header, parserState, messages) ← Parser.parseHeader inputCtx
     let (env, messages) ← processHeader header opts messages inputCtx
     pure (parserState, (Command.mkState env messages opts))
