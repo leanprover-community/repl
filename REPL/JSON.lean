@@ -106,7 +106,16 @@ structure PickleEnvironment where
 deriving ToJson, FromJson
 
 structure UnpickleEnvironment where
-  unpickleFrom : System.FilePath
+  unpickleEnvFrom : System.FilePath
+deriving ToJson, FromJson
+
+structure PickleProofState where
+  proofState : Nat
+  pickleTo : System.FilePath
+deriving ToJson, FromJson
+
+structure UnpickleProofState where
+  unpickleProofStateFrom : System.FilePath
 deriving ToJson, FromJson
 
 end REPL

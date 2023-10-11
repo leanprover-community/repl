@@ -2,3 +2,4 @@
 /lake-packages/*
 /lakefile.olean
 /test/*.olean
+/test/*.olean.tmp

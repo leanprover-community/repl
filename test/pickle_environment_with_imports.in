@@ -4,6 +4,6 @@
 
 {"pickleTo": "test/b.olean", "env": 1}
 
-{"unpickleFrom": "test/b.olean"}
+{"unpickleEnvFrom": "test/b.olean"}
 
 {"cmd": "example : f = 42 := by rfl", "env": 2}
