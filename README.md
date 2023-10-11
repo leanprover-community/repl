@@ -91,7 +91,33 @@ At present there is nothing you can do with a completed proof state:
 we would like to extend this so that you can replace the original `sorry` with your tactic script,
 and obtain the resulting `Environment`
 
+## Pickling
+
+The REPL supports pickling environments and proof states to disk as `.olean` files.
+As long as the same imports are available, it should be possible to move such an `.olean` file
+to another machine and unpickle into a new REPL session.
+
+The commands are
+
+```json
+{"pickleTo": "path/to/file.olean", "env": 7}
+
+{"pickleTo": "path/to/file.olean", "proofState": 17}
+
+{"unpickleEnvFrom": "path/to/file.olean"}
+
+{"unpickleProofStateFrom": "path/to/file.olean"}
+```
+
+The unpickling commands will report the new "env" or "proofState" identifier that
+you can use in subsequent commands.
+
+Pickling is quite efficient:
+* we don't record full `Environment`s, only the changes relative to imports
+* unpickling uses memory mapping
+* file sizes are generally small, but see https://github.com/digama0/leangz if compression is
+  desirable
+
 ## Future work
 
 * Replay tactic scripts from tactic mode back into the original `sorry`.
-* Serialization and deserialization of environments and proof states
