@@ -224,6 +224,7 @@ where loop : M IO Unit := do
   | .unpickleEnvironment r => return toJson (← unpickleEnvironment r)
   | .pickleProofState r => return toJson (← pickleProofState r)
   | .unpickleProofState r => return toJson (← unpickleProofState r)
+  IO.println "" -- easier to parse the output if there are blank lines
   loop
 
 /-- Main executable function, run as `lake exe repl`. -/

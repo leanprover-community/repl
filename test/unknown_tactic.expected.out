@@ -9,4 +9,5 @@
    "endPos": {"line": 1, "column": 5},
    "data": "declaration uses 'sorry'"}],
  "env": 0}
+
 uncaught exception: <input>:1:1: unknown tactic
