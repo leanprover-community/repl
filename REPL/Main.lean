@@ -154,8 +154,11 @@ def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
       | .term _ none => unreachable!
       let proofStateId ← proofState.mapM recordProofState
       return Sorry.of goal pos endPos proofStateId
-  let id ← recordEnvironment env
-  return .inl ⟨id, messages, sorries⟩
+  let env ← recordEnvironment env
+  return .inl
+    { env,
+      messages,
+      sorries }
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.

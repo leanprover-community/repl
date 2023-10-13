@@ -1,4 +1,4 @@
-{"sorries": [], "messages": [], "env": 0}
+{"env": 0}
 
 {"sorries":
  [{"proofState": 0,
@@ -12,15 +12,15 @@
    "data": "declaration uses 'sorry'"}],
  "env": 1}
 
-{"proofState": 1, "messages": [], "goals": ["⊢ Nat"]}
+{"proofState": 1, "goals": ["⊢ Nat"]}
 
-{"proofState": 2, "messages": [], "goals": ["⊢ Nat"]}
+{"proofState": 2, "goals": ["⊢ Nat"]}
 
-{"proofState": 3, "messages": [], "goals": ["t : Nat\n⊢ Nat"]}
+{"proofState": 3, "goals": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 4, "messages": [], "goals": ["t : Nat\n⊢ Nat"]}
+{"proofState": 4, "goals": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 5, "messages": [], "goals": ["t : Nat\n⊢ Nat"]}
+{"proofState": 5, "goals": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 6, "messages": [], "goals": []}
+{"proofState": 6, "goals": []}
 

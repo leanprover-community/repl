@@ -1,7 +1,6 @@
-{"sorries": [], "messages": [], "env": 0}
+{"env": 0}
 
-{"sorries": [],
- "messages":
+{"messages":
  [{"severity": "info",
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 6},

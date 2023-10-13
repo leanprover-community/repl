@@ -1,5 +1,4 @@
-{"sorries": [],
- "messages":
+{"messages":
  [{"severity": "error",
    "pos": {"line": 1, "column": 17},
    "endPos": null,

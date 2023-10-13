@@ -10,9 +10,9 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"proofState": 1, "messages": [], "goals": ["⊢ Int"]}
+{"proofState": 1, "goals": ["⊢ Int"]}
 
-{"proofState": 2, "messages": [], "goals": ["t : Nat\n⊢ Nat"]}
+{"proofState": 2, "goals": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 3, "messages": [], "goals": []}
+{"proofState": 3, "goals": []}
 

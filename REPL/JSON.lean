@@ -76,6 +76,14 @@ def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option N
     goal,
     proofState }
 
+structure Tactic where
+  pos : Pos
+  endPos : Pos
+  goal : String
+  solution : String
+  proofState : Option Nat
+deriving ToJson, FromJson
+
 /--
 A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
@@ -84,7 +92,20 @@ structure CommandResponse where
   env : Nat
   messages : List Message := []
   sorries : List Sorry := []
-deriving ToJson, FromJson
+  tactics : List Tactic := []
+deriving FromJson
+
+def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
+  | [] => []
+  | l  => [⟨k, toJson l⟩]
+
+instance : ToJson CommandResponse where
+  toJson r := Json.mkObj <| .join [
+    [("env", r.env)],
+    Json.nonemptyList "messages" r.messages,
+    Json.nonemptyList "sorries" r.sorries,
+    Json.nonemptyList "tactics" r.tactics
+  ]
 
 /--
 A response to a Lean tactic.
@@ -95,6 +116,13 @@ structure ProofStepResponse where
   goals : List String
   messages : List Message := []
 deriving ToJson, FromJson
+
+instance : ToJson ProofStepResponse where
+  toJson r := Json.mkObj <| .join [
+    [("proofState", r.proofState)],
+    [("goals", toJson r.goals)],
+    Json.nonemptyList "messages" r.messages
+  ]
 
 /-- Json wrapper for an error. -/
 structure Error where
