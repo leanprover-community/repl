@@ -160,14 +160,16 @@ def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
 -/
--- TODO return messages?
 -- TODO detect sorries?
-def runProofStep (s : ProofStep) : M m (ProofStepResponse ⊕ Error) := do
+def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
   match (← get).proofStates[s.proofState]? with
   | none => return .inr ⟨"Unknown proof state."⟩
   | some proofState =>
-    let proofState' ← proofState.runString s.tactic
-    return .inl (← createProofStepReponse proofState' proofState)
+    try
+      let proofState' ← proofState.runString s.tactic
+      return .inl (← createProofStepReponse proofState' proofState)
+    catch ex =>
+      return .inr ⟨ex.toString⟩
 
 end REPL
 
