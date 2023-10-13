@@ -93,6 +93,7 @@ A response to a Lean tactic.
 structure ProofStepResponse where
   proofState : Nat
   goals : List String
+  messages : List Message := []
 deriving ToJson, FromJson
 
 /-- Json wrapper for an error. -/

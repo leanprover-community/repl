@@ -27,6 +27,12 @@ namespace ProofState
 
 open Lean Elab Tactic
 
+/-- New messages in a `ProofState`, relative to an optional previous `ProofState`. -/
+def newMessages (new : ProofState) (old? : Option ProofState := none) : List Lean.Message :=
+  match old? with
+  | none => new.coreState.messages.msgs.toList
+  | some old => new.coreState.messages.msgs.toList.drop (old.coreState.messages.msgs.size)
+
 /-- Run a `CoreM` monadic function in the current `ProofState`, updating the `Core.State`. -/
 def runCoreM (p : ProofState) (t : CoreM α) : IO (α × ProofState) := do
   let (a, coreState) ← (Lean.Core.CoreM.toIO · p.coreContext p.coreState) do t

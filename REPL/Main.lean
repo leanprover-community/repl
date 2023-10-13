@@ -96,9 +96,12 @@ def recordProofState (proofState : ProofState) : M m Nat := do
   return id
 
 /-- Record a `ProofState` and generate a JSON response for it. -/
-def createProofStepReponse (p : ProofState): M m ProofStepResponse := do
-  let id ← recordProofState p
-  return { proofState := id, goals := (← p.ppGoals).map fun s => s!"{s}" }
+def createProofStepReponse (proofState : ProofState) (old? : Option ProofState := none) :
+    M m ProofStepResponse := do
+  let messages := proofState.newMessages old?
+  let messages ← messages.mapM fun m => Message.of m
+  let id ← recordProofState proofState
+  return { proofState := id, goals := (← proofState.ppGoals).map fun s => s!"{s}", messages }
 
 /-- Pickle an `Environment`, generating a JSON response. -/
 def pickleEnvironment (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
@@ -164,7 +167,7 @@ def runProofStep (s : ProofStep) : M m (ProofStepResponse ⊕ Error) := do
   | none => return .inr ⟨"Unknown proof state."⟩
   | some proofState =>
     let proofState' ← proofState.runString s.tactic
-    return .inl (← createProofStepReponse proofState')
+    return .inl (← createProofStepReponse proofState' proofState)
 
 end REPL
 
