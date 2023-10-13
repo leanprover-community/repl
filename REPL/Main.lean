@@ -95,6 +95,33 @@ def recordProofState (proofState : ProofState) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
+def sorries (trees : List InfoTree) : M m (List Sorry) :=
+  trees.bind InfoTree.sorries |>.mapM
+    fun ⟨ctx, g, pos, endPos⟩ => do
+      let (goal, proofState) ← match g with
+      | .tactic g => do
+         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← ProofState.create ctx none [g]))
+      | .term lctx (some t) => do
+         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofState.create ctx lctx [] [t]))
+      | .term _ none => unreachable!
+      let proofStateId ← proofState.mapM recordProofState
+      return Sorry.of goal pos endPos proofStateId
+
+def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
+  ctx.runMetaM {} try
+    Lean.PrettyPrinter.ppTactic ⟨stx⟩
+  catch _ =>
+    pure "<failed to pretty print>"
+
+def tactics (trees : List InfoTree) : M m (List Tactic) :=
+  trees.bind InfoTree.tactics |>.mapM
+    fun ⟨ctx, stx, goals, pos, endPos⟩ => do
+      let proofState := some (← ProofState.create ctx none goals)
+      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let tactic := Format.pretty (← ppTactic ctx stx)
+      let proofStateId ← proofState.mapM recordProofState
+      return Tactic.of goals tactic pos endPos proofStateId
+
 /-- Record a `ProofState` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofState) (old? : Option ProofState := none) :
     M m ProofStepResponse := do
@@ -144,21 +171,16 @@ def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
     return .inr ⟨"Unknown environment."⟩
   let (env, messages, trees) ← IO.processInput s.cmd env? {} ""
   let messages ← messages.mapM fun m => Message.of m
-  let sorries ← trees.bind InfoTree.sorries |>.mapM
-    fun ⟨ctx, g, pos, endPos⟩ => do
-      let (goal, proofState) ← match g with
-      | .tactic g => do
-         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← ProofState.create ctx none [g]))
-      | .term lctx (some t) => do
-         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofState.create ctx lctx [] [t]))
-      | .term _ none => unreachable!
-      let proofStateId ← proofState.mapM recordProofState
-      return Sorry.of goal pos endPos proofStateId
+  let sorries ← sorries trees
+  let tactics ← match s.allTactics with
+  | some true => tactics trees
+  | _ => pure []
   let env ← recordEnvironment env
   return .inl
     { env,
       messages,
-      sorries }
+      sorries,
+      tactics }
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.

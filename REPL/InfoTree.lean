@@ -137,6 +137,16 @@ partial def findAllInfo (t : InfoTree) (ctx : Option ContextInfo) (p : Info → 
   | node i ts  => (if p i then [(i, ctx)] else []) ++ ts.toList.bind (fun t => t.findAllInfo ctx p)
   | _ => []
 
+/-- Return all `TacticInfo` nodes in an `InfoTree` with "original" syntax,
+each equipped with its relevant `ContextInfo`. -/
+def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo) :=
+  let infos := t.findAllInfo none fun i => match i with
+  | .ofTacticInfo i' => i.isOriginal && i'.isSubstantive
+  | _ => false
+  infos.filterMap fun p => match p with
+  | (.ofTacticInfo i, some ctx) => (i, ctx)
+  | _ => none
+
 /-- Return all `TacticInfo` nodes in an `InfoTree`
 corresponding to explicit invocations of the `sorry` tactic,
 each equipped with its relevant `ContextInfo`. -/
@@ -175,5 +185,10 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
     ({ ctx with mctx := i.mctxBefore }, .tactic i.goalsBefore.head!, stxRange ctx.fileMap i.stx)) ++
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
     (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
+
+def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position) :=
+  (t.findTacticNodes.map fun ⟨i, ctx⟩ =>
+    ({ ctx with mctx := i.mctxBefore }, i.stx, i.goalsBefore, stxRange ctx.fileMap i.stx))
+
 
 end Lean.Elab.InfoTree

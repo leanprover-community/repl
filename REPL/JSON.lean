@@ -18,6 +18,7 @@ If `env = some n`, builds on the existing environment `n`.
 structure Command where
   env : Option Nat
   cmd : String
+  allTactics : Option Bool := none
 deriving ToJson, FromJson
 
 /--
@@ -79,10 +80,18 @@ def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option N
 structure Tactic where
   pos : Pos
   endPos : Pos
-  goal : String
-  solution : String
+  goals : String
+  tactic : String
   proofState : Option Nat
 deriving ToJson, FromJson
+
+/-- Construct the JSON representation of a Lean tactic. -/
+def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Tactic :=
+  { pos := ⟨pos.line, pos.column⟩,
+    endPos := ⟨endPos.line, endPos.column⟩,
+    goals,
+    tactic,
+    proofState }
 
 /--
 A response to a Lean command.
