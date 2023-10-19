@@ -1,4 +1,5 @@
 import REPL.Util.Pickle
+import Lean.Replay
 
 open System (FilePath)
 
@@ -25,6 +26,6 @@ and then replace the new constants.
 def unpickle (path : FilePath) : IO (Environment × CompactedRegion) := unsafe do
   let ((imports, map₂), region) ← _root_.unpickle (Array Import × PHashMap Name ConstantInfo) path
   let env ← importModules imports {} 0
-  return ({ env with constants := { env.constants with map₂ }}, region)
+  return (← env.replay (HashMap.ofList map₂.toList), region)
 
 end Lean.Environment

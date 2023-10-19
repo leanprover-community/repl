@@ -3,6 +3,7 @@ Copyright (c) 2023 Lean FRO, LLC. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
+import Lean.Replay
 import REPL.Util.Pickle
 
 open Lean Elab
@@ -171,8 +172,7 @@ def unpickle (path : FilePath) : IO (ProofState × CompactedRegion) := unsafe do
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState ×
       Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
       Tactic.State × Tactic.Context) path
-  let env ← importModules imports {} 0
-  let env := { env with constants := { env.constants with map₂ }}
+  let env ← (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
   let p' :=
   { coreState := { coreState with env }
     coreContext
