@@ -4,6 +4,7 @@
 IN_DIR="test"
 EXPECTED_DIR="test"
 
+lake exe cache get > /dev/null
 lake build
 
 # Iterate over each .in file in the test directory
@@ -22,7 +23,7 @@ for infile in $IN_DIR/*.in; do
 
     # Run the command and store its output in a temporary file
     tmpfile=$(mktemp)
-    build/bin/repl < "$infile" > "$tmpfile" 2>&1
+    lake env ../../build/bin/repl < "$infile" > "$tmpfile" 2>&1
 
     # Compare the output with the expected output
     if diff "$tmpfile" "$expectedfile"; then
@@ -35,5 +36,3 @@ for infile in $IN_DIR/*.in; do
     rm "$tmpfile"
 done
 
-# Run the Mathlib tests
-cd test/Mathlib/ && ./test.sh
