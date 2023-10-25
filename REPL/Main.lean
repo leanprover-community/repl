@@ -11,7 +11,7 @@ import REPL.Util.TermUnsafe
 import REPL.Lean.ContextInfo
 import REPL.Lean.Environment
 import REPL.InfoTree
-import REPL.ProofState
+import REPL.Snapshots
 
 /-!
 # A REPL for Lean.
@@ -65,14 +65,14 @@ structure State where
   Environment snapshots after complete declarations.
   The user can run a declaration in a given environment using `{"cmd": "def f := 37", "env": 17}`.
   -/
-  environments : Array Environment := #[]
+  cmdStates : Array CommandSnapshot := #[]
   /--
   Proof states after individual tactics.
   The user can run a tactic in a given proof state using `{"tactic": "exact 42", "proofState": 5}`.
   Declarations with containing `sorry` record a proof state at each sorry,
   and report the numerical index for the recorded state at each sorry.
   -/
-  proofStates : Array ProofState := #[]
+  proofStates : Array ProofSnapshot := #[]
 
 /--
 The Lean REPL monad.
@@ -83,14 +83,14 @@ abbrev M (m : Type → Type) := StateT State m
 
 variable [Monad m] [MonadLiftT IO m]
 
-/-- Record an `Environment` into the REPL state, returning its index for future use. -/
-def recordEnvironment (env : Environment) : M m Nat := do
-  let id := (← get).environments.size
-  modify fun s => { s with environments := s.environments.push env }
+/-- Record an `CommandSnapshot` into the REPL state, returning its index for future use. -/
+def recordCommandSnapshot (state : CommandSnapshot) : M m Nat := do
+  let id := (← get).cmdStates.size
+  modify fun s => { s with cmdStates := s.cmdStates.push state }
   return id
 
-/-- Record a `ProofState` into the REPL state, returning its index for future use. -/
-def recordProofState (proofState : ProofState) : M m Nat := do
+/-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
+def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   let id := (← get).proofStates.size
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
@@ -100,11 +100,11 @@ def sorries (trees : List InfoTree) : M m (List Sorry) :=
     fun ⟨ctx, g, pos, endPos⟩ => do
       let (goal, proofState) ← match g with
       | .tactic g => do
-         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← ProofState.create ctx none [g]))
+         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← ProofSnapshot.create ctx none [g]))
       | .term lctx (some t) => do
-         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofState.create ctx lctx [] [t]))
+         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofSnapshot.create ctx lctx [] [t]))
       | .term _ none => unreachable!
-      let proofStateId ← proofState.mapM recordProofState
+      let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goal pos endPos proofStateId
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
@@ -116,66 +116,71 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
 def tactics (trees : List InfoTree) : M m (List Tactic) :=
   trees.bind InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, goals, pos, endPos⟩ => do
-      let proofState := some (← ProofState.create ctx none goals)
+      let proofState := some (← ProofSnapshot.create ctx none goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let tactic := Format.pretty (← ppTactic ctx stx)
-      let proofStateId ← proofState.mapM recordProofState
+      let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId
 
-/-- Record a `ProofState` and generate a JSON response for it. -/
-def createProofStepReponse (proofState : ProofState) (old? : Option ProofState := none) :
+/-- Record a `ProofSnapshot` and generate a JSON response for it. -/
+def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m ProofStepResponse := do
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
-  let id ← recordProofState proofState
+  let id ← recordProofSnapshot proofState
   return { proofState := id, goals := (← proofState.ppGoals).map fun s => s!"{s}", messages }
 
-/-- Pickle an `Environment`, generating a JSON response. -/
-def pickleEnvironment (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
-  match (← get).environments[n.env]? with
+/-- Pickle an `CommandSnapshot`, generating a JSON response. -/
+def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
+  match (← get).cmdStates[n.env]? with
   | none => return .inr ⟨"Unknown environment."⟩
   | some env =>
     discard <| env.pickle n.pickleTo
     return .inl { env := n.env }
 
-/-- Unpickle an `Environment`, generating a JSON response. -/
-def unpickleEnvironment (n : UnpickleEnvironment) : M IO CommandResponse := do
-  let (env, _) ← Environment.unpickle n.unpickleEnvFrom
-  let env ← recordEnvironment env
+/-- Unpickle an `CommandSnapshot`, generating a JSON response. -/
+def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
+  let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
+  let env ← recordCommandSnapshot env
   return { env }
 
-/-- Pickle a `ProofState`, generating a JSON response. -/
+/-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
-def pickleProofState (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
+def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
   match (← get).proofStates[n.proofState]? with
   | none => return .inr ⟨"Unknown proof State."⟩
   | some proofState =>
     discard <| proofState.pickle n.pickleTo
     return .inl (← createProofStepReponse proofState)
 
-/-- Unpickle a `ProofState`, generating a JSON response. -/
-def unpickleProofState (n : UnpickleProofState) : M IO ProofStepResponse := do
-  let (proofState, _) ← ProofState.unpickle n.unpickleProofStateFrom
+/-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
+def unpickleProofSnapshot (n : UnpickleProofState) : M IO ProofStepResponse := do
+  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom
   createProofStepReponse proofState
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
 def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
-  let (env?, notFound) ← do match s.env with
+  let (cmdSnapshot?, notFound) ← do match s.env with
   | none => pure (none, false)
-  | some i => do match (← get).environments[i]? with
+  | some i => do match (← get).cmdStates[i]? with
     | some env => pure (some env, false)
     | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown environment."⟩
-  let (env, messages, trees) ← IO.processInput s.cmd env? {} ""
+  let cmdState? := cmdSnapshot?.map fun c => c.cmdState
+  let (cmdState, messages, trees) ← IO.processInput s.cmd cmdState?
   let messages ← messages.mapM fun m => Message.of m
   let sorries ← sorries trees
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []
-  let env ← recordEnvironment env
+  let cmdSnapshot :=
+  { cmdState
+    cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
+      { fileName := "", fileMap := default, tacticCache? := none } }
+  let env ← recordCommandSnapshot cmdSnapshot
   return .inl
     { env,
       messages,
@@ -218,8 +223,8 @@ inductive Input
 | proofStep : REPL.ProofStep → Input
 | pickleEnvironment : REPL.PickleEnvironment → Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
-| pickleProofState : REPL.PickleProofState → Input
-| unpickleProofState : REPL.UnpickleProofState → Input
+| pickleProofSnapshot : REPL.PickleProofState → Input
+| unpickleProofSnapshot : REPL.UnpickleProofState → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -233,9 +238,9 @@ def parse (query : String) : IO Input := do
     | .error _ => match fromJson? j with
     | .ok (r : REPL.UnpickleEnvironment) => return .unpickleEnvironment r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.PickleProofState) => return .pickleProofState r
+    | .ok (r : REPL.PickleProofState) => return .pickleProofSnapshot r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.UnpickleProofState) => return .unpickleProofState r
+    | .ok (r : REPL.UnpickleProofState) => return .unpickleProofSnapshot r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.Command) => return .command r
     | .error e => throw <| IO.userError <| toString <| toJson (⟨e⟩ : Error)
@@ -250,10 +255,10 @@ where loop : M IO Unit := do
   IO.println <| toString <| ← match ← parse query with
   | .command r => return toJson (← runCommand r)
   | .proofStep r => return toJson (← runProofStep r)
-  | .pickleEnvironment r => return toJson (← pickleEnvironment r)
-  | .unpickleEnvironment r => return toJson (← unpickleEnvironment r)
-  | .pickleProofState r => return toJson (← pickleProofState r)
-  | .unpickleProofState r => return toJson (← unpickleProofState r)
+  | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
+  | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
+  | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
+  | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
   IO.println "" -- easier to parse the output if there are blank lines
   loop
 
