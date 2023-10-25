@@ -161,7 +161,7 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO ProofStepResponse := d
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
-def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
+def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let (cmdSnapshot?, notFound) ← do match s.env with
   | none => pure (none, false)
   | some i => do match (← get).cmdStates[i]? with
@@ -170,7 +170,10 @@ def runCommand (s : Command) : M m (CommandResponse ⊕ Error) := do
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let cmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (cmdState, messages, trees) ← IO.processInput s.cmd cmdState?
+  let (cmdState, messages, trees) ← try
+    IO.processInput s.cmd cmdState?
+  catch ex =>
+    return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
   let sorries ← sorries trees
   let tactics ← match s.allTactics with
