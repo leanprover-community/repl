@@ -27,12 +27,15 @@ for infile in $IN_DIR/*.in; do
     # Compare the output with the expected output
     if diff "$tmpfile" "$expectedfile"; then
         echo "$base: PASSED"
+        # Remove the temporary file
+        rm "$tmpfile"
     else
         echo "$base: FAILED"
+        # Remove the temporary file
+        rm "$tmpfile"
+        exit 1
     fi
 
-    # Remove the temporary file
-    rm "$tmpfile"
 done
 
 # Run the Mathlib tests
