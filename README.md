@@ -64,13 +64,13 @@ and then using the `proofState` index returned for each `sorry`.
 
 Example usage:
 ```json
-{"cmd" : "def f : Nat := by sorry"}
+{"cmd" : "def f (x : Unit) : Nat := by sorry"}
 
 {"sorries":
  [{"proofState": 0,
-   "pos": {"line": 1, "column": 18},
-   "goal": "⊢ Nat",
-   "endPos": {"line": 1, "column": 23}}],
+   "pos": {"line": 1, "column": 29},
+   "goal": "x : Unit ⊢ Nat",
+   "endPos": {"line": 1, "column": 34}}],
  "messages":
  [{"severity": "warning",
    "pos": {"line": 1, "column": 4},
@@ -80,7 +80,7 @@ Example usage:
 
 {"tactic": "apply Int.natAbs", "proofState": 0}
 
-{"proofState": 1, "goals": ["⊢ Int"]}
+{"proofState": 1, "goals": ["x : Unit\n⊢ Int"]}
 
 {"tactic": "exact -37", "proofState": 1}
 

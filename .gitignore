@@ -1,5 +1,7 @@
 /build
 /lake-packages/*
 /lakefile.olean
+/.lake
+/test/Mathlib/.lake
 /test/*.olean
 /test/*.olean.tmp

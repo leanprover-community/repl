@@ -23,7 +23,7 @@ for infile in $IN_DIR/*.in; do
 
     # Run the command and store its output in a temporary file
     tmpfile=$(mktemp)
-    lake env ../../build/bin/repl < "$infile" > "$tmpfile" 2>&1
+    lake env ../../.lake/build/bin/repl < "$infile" > "$tmpfile" 2>&1
 
     # Compare the output with the expected output
     if diff "$tmpfile" "$expectedfile"; then

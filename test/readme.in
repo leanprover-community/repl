@@ -1,0 +1,5 @@
+{"cmd" : "def f (x : Unit) : Nat := by sorry"}
+
+{"tactic": "apply Int.natAbs", "proofState": 0}
+
+{"tactic": "exact -37", "proofState": 1}
