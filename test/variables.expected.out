@@ -11,7 +11,7 @@
  [{"proofState": 0,
    "pos": {"line": 3, "column": 2},
    "goal":
-   "x y : Nat f : Nat → Nat h0 : f 5 = 3 h1 : f (4 * x * y) = 2 * y * (f (x + y) + f (x - y)) ⊢ ∃ k, f 2015 = k",
+   "x y : Nat\nf : Nat → Nat\nh0 : f 5 = 3\nh1 : f (4 * x * y) = 2 * y * (f (x + y) + f (x - y))\n⊢ ∃ k, f 2015 = k",
    "endPos": {"line": 3, "column": 7}}],
  "messages":
  [{"severity": "warning",

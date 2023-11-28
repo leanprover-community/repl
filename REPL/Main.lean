@@ -100,7 +100,8 @@ def sorries (trees : List InfoTree) : M m (List Sorry) :=
     fun ⟨ctx, g, pos, endPos⟩ => do
       let (goal, proofState) ← match g with
       | .tactic g => do
-         pure (s!"{(← ctx.ppGoals [g])}".trim, some (← ProofSnapshot.create ctx none [g]))
+         let s ← ProofSnapshot.create ctx none [g]
+         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
       | .term lctx (some t) => do
          pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofSnapshot.create ctx lctx [] [t]))
       | .term _ none => unreachable!

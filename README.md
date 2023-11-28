@@ -69,7 +69,7 @@ Example usage:
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 29},
-   "goal": "x : Unit ⊢ Nat",
+   "goal": "x : Unit\n⊢ Nat",
    "endPos": {"line": 1, "column": 34}}],
  "messages":
  [{"severity": "warning",

@@ -3,11 +3,11 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 3, "column": 12},
-   "goal": "case zero ⊢ Nat.zero + 1 > Nat.zero",
+   "goal": "case zero\n⊢ Nat.zero + 1 > Nat.zero",
    "endPos": {"line": 3, "column": 17}},
   {"proofState": 1,
    "pos": {"line": 3, "column": 12},
-   "goal": "case succ x : Nat hx : x + 1 > x ⊢ Nat.succ x + 1 > Nat.succ x",
+   "goal": "case succ\nx : Nat\nhx : x + 1 > x\n⊢ Nat.succ x + 1 > Nat.succ x",
    "endPos": {"line": 3, "column": 17}}],
  "messages":
  [{"severity": "warning",

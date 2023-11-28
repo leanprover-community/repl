@@ -3,7 +3,7 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 36},
-   "goal": "x : Nat ⊢ x + 1 > x",
+   "goal": "x : Nat\n⊢ x + 1 > x",
    "endPos": {"line": 1, "column": 41}}],
  "messages":
  [{"severity": "warning",
