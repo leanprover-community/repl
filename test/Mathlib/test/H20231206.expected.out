@@ -1,0 +1,19 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 7, "column": 2},
+   "goal": "h0 : ZMod (11 ^ 2)\nh1 : h0 = 24⁻¹\n⊢ ∃ k, h0 = k",
+   "endPos": {"line": 7, "column": 7}}],
+ "messages":
+ [{"severity": "info",
+   "pos": {"line": 6, "column": 2},
+   "endPos": {"line": 6, "column": 14},
+   "data":
+   "theorem extracted_1 (h0 : ZMod (11 ^ 2)) (h1 : h0 = 24⁻¹) : ∃ k, h0 = k := sorry"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 15},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
