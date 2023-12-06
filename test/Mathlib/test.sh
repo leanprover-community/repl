@@ -5,7 +5,7 @@ IN_DIR="test"
 EXPECTED_DIR="test"
 
 lake exe cache get > /dev/null
-lake build
+lake build Mathlib
 
 # Iterate over each .in file in the test directory
 for infile in $IN_DIR/*.in; do
