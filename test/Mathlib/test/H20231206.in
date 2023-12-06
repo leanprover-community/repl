@@ -1,0 +1,4 @@
+{"cmd": "import Mathlib\nimport Mathlib.Tactic.GoalNormalization.NormalizeHyps"}
+
+{"cmd": "theorem problem\n    (b :  ZMod (11^2))\n    (h₀ : b = 24⁻¹) :\n    ∃ (k : ZMod (11^2)), b = k := by\n  normalize_hyps\n  extract_goal\n  sorry",
+  "env": 0 }
