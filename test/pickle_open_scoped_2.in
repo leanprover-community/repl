@@ -1,5 +1,3 @@
 {"unpickleEnvFrom": "test/f.olean"}
 
-{"cmd": "open scoped X", "env": 0}
-
-{"cmd": "example : 39 = X.f 2 := rfl", "env": 1}
+{"cmd": "example : 39 = 2 ! := rfl", "env": 1}
