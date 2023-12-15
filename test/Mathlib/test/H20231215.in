@@ -1,0 +1,4 @@
+{"cmd": "import Mathlib\nopen BigOperators\nopen Real\nopen Nat"}
+
+{"pickleTo": "test/H20231215.olean", "env": 0}
+

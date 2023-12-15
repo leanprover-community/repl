@@ -1,0 +1,3 @@
+{"unpickleEnvFrom": "test/e.olean"}
+
+{"cmd": "example : Y = 37 := rfl", "env": 0}

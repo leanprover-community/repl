@@ -1,0 +1,14 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 2, "column": 29},
+   "goal": "⊢ factorial 9 % 10 = 0",
+   "endPos": {"line": 2, "column": 34}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 30},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+

@@ -1,0 +1,7 @@
+{"cmd": "def X.Y : Nat := 37"}
+
+{"cmd": "open X", "env": 0}
+
+{"cmd": "example : Y = 37 := rfl", "env": 1}
+
+{"pickleTo": "test/e.olean", "env": 1}
