@@ -1,0 +1,9 @@
+{"cmd": "import Mathlib\nopen Real\nopen Nat\nopen BigOperators"}
+
+{"cmd" : "theorem mathd_algebra_35\n  (p q : ℝ → ℝ)\n  (h₀ : ∀ x, p x = 2 - x^2)\n  (h₁ : ∀ x, x ≠ 0 -> q x = 6 / x) :\n  p (q 2) = -7 := by sorry", "env": 0}
+
+{"tactic": "have hQ : ∀ x, p x = 6 / x", "proofState": 0}
+
+{"tactic": "  intro x", "proofState": 1}
+
+{"tactic": "  calc p x = 6 / x * p x := h₀ (x)\n     _ = (6/2) * 6 / x * (6 / x) := sub_sub_sub_cancel sq_ne_zero", "proofState": 2}

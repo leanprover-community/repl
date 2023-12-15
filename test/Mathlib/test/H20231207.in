@@ -1,0 +1,33 @@
+{"cmd": "import Mathlib\n\nopen Nat\nopen Real\nopen BigOperators"}
+
+{"cmd" : "theorem problem (x₁ x₂ x₃ : ℝ)\n  (f : ℝ → ℝ)\n  (h₀ : ∀ x, f x = Real.sqrt 2014 * x^3 - 4029 * x^2 + 2)\n  (h₁ : f x₁ = 0)\n  (h₂ : f x₂ = 0)\n  (h₃ : f x₃ = 0)\n  (h₄ : x₁ < x₂ ∧ x₂ < x₃) :\n  ∃ (k : ℝ), x₂ * (x₁ + x₃) = k := by sorry", "env": 0}
+
+{"tactic": "have h2014 : (2014:ℝ) * Real.sqrt 2014 = (Real.sqrt 2014)^3  := by sorry", "proofState": 0}
+
+{"tactic": "have hfy (x y :ℝ) (hy : x = y / Real.sqrt 2014) : f x = y^3 / 2014 - 4029 * y^2 / 2014 + 2  := by sorry", "proofState": 1}
+
+{"tactic": "let g (y : ℝ) := y^3 - 4029 * y^2 + 4028", "proofState": 2}
+
+{"tactic": "have hfg (y : ℝ) : f (y / Real.sqrt 2014) = 0 ↔ g y = 0  := by sorry", "proofState": 3}
+
+{"tactic": "have hg1 : g 1 = 0  := by sorry", "proofState": 4}
+
+{"tactic": "let g' (y : ℝ) := 1 * y * y + -4028 * y + -4028", "proofState": 5}
+
+{"tactic": "have hg_fac (y : ℝ) : g y = (y-1)*g' y  := by sorry", "proofState": 6}
+
+{"tactic": "let D := 16240896", "proofState": 7}
+
+{"tactic": "have hdiscr : discrim (1:ℝ) (-4028) (-4028) = Real.sqrt D * Real.sqrt D  := by sorry", "proofState": 8}
+
+{"tactic": "let y₁ : ℝ := (4028 - Real.sqrt D)/2", "proofState": 9}
+
+{"tactic": "let y₃ : ℝ := (4028 + Real.sqrt D)/2", "proofState": 10}
+
+{"tactic": "have : g' y₁ = 0  := by sorry", "proofState": 11}
+
+{"tactic": "have hgy₁ : g y₁ = 0  := by sorry", "proofState": 12}
+
+{"tactic": "have : g' y₃ = 0  := by sorry", "proofState": 13}
+
+{"tactic": "sorry", "proofState": 14}
