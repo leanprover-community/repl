@@ -139,3 +139,5 @@ can find needed imports.
 ## Future work
 
 * Replay tactic scripts from tactic mode back into the original `sorry`.
+* Currently if you create scoped environment extensions (e.g. scoped notations) in a session
+  these are not correctly pickled and unpickled in later sessions.
