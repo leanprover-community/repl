@@ -8,6 +8,22 @@ import REPL.Util.Pickle
 
 open Lean Elab
 
+namespace Lean.Elab.Command
+
+@[inline] def CommandElabM.run (x : CommandElabM α) (ctx : Context) (s : State) : EIO Exception (α × State) :=
+  (x ctx).run s
+
+@[inline] def CommandElabM.run' (x : CommandElabM α) (ctx : Context) (s : State) : EIO Exception α :=
+  Prod.fst <$> x.run ctx s
+
+@[inline] def CommandElabM.toIO (x : CommandElabM α) (ctx : Context) (s : State) : IO (α × State) := do
+  match (← (x.run ctx s).toIO') with
+  | Except.error (Exception.error _ msg)   => throw <| IO.userError (← msg.toString)
+  | Except.error (Exception.internal id _) => throw <| IO.userError <| "internal exception #" ++ toString id.idx
+  | Except.ok a                            => return a
+
+end Lean.Elab.Command
+
 namespace REPL
 
 /--
@@ -20,7 +36,8 @@ structure CommandSnapshot where
 
 namespace CommandSnapshot
 
-open Lean.Elab.Command in
+open Lean.Elab.Command
+
 /-- A copy of `Command.State` with the `Environment`, caches, and logging omitted. -/
 structure CompactableCommandSnapshot where
   -- env         : Environment
@@ -34,6 +51,15 @@ structure CompactableCommandSnapshot where
   -- messages    : MessageLog := {}
 
 open System (FilePath)
+
+/--
+Run a `CommandElabM` monadic function in the current `ProofSnapshot`,
+updating the `Command.State`.
+-/
+def runCommandElabM (p : CommandSnapshot) (t : CommandElabM α) : IO (α × CommandSnapshot) := do
+  let (a, cmdState) ← (CommandElabM.toIO · p.cmdContext p.cmdState) do t
+  return (a, { p with cmdState })
+
 
 /--
 Pickle a `CommandSnapshot`, discarding closures and non-essential caches.
@@ -57,10 +83,14 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCommandSnapshot ×
       Command.Context) path
   let env ← (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
-  let p' :=
+  let p' : CommandSnapshot :=
   { cmdState := { cmdState with env }
     cmdContext }
-  return (p', region)
+  let (_, p'') ← p'.runCommandElabM do
+    for o in ← getOpenDecls do
+      if let .simple ns _ := o then do
+        activateScoped ns
+  return (p'', region)
 
 end CommandSnapshot
 
@@ -228,7 +258,7 @@ def unpickle (path : FilePath) : IO (ProofSnapshot × CompactedRegion) := unsafe
       Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
       Tactic.State × Tactic.Context) path
   let env ← (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
-  let p' :=
+  let p' : ProofSnapshot :=
   { coreState := { coreState with env }
     coreContext
     metaState
@@ -237,6 +267,10 @@ def unpickle (path : FilePath) : IO (ProofSnapshot × CompactedRegion) := unsafe
     termContext := { termContext with }
     tacticState
     tacticContext }
-  return (p', region)
+  let (_, p'') ← p'.runCoreM do
+    for o in ← getOpenDecls do
+      if let .simple ns _ := o then
+        activateScoped ns
+  return (p'', region)
 
 end ProofSnapshot

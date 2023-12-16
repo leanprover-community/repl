@@ -1,3 +1,3 @@
 {"unpickleEnvFrom": "test/H20231215.olean"}
 
-{"cmd": "theorem mathd_numbertheory_739 :\n  factorial 9 % 10 = 0 := by sorry", "env": 0}
+{"cmd": "theorem mathd_numbertheory_739 :\n  9! % 10 = 0 := by sorry", "env": 0}

@@ -2,9 +2,9 @@
 
 {"sorries":
  [{"proofState": 0,
-   "pos": {"line": 2, "column": 29},
-   "goal": "⊢ factorial 9 % 10 = 0",
-   "endPos": {"line": 2, "column": 34}}],
+   "pos": {"line": 2, "column": 20},
+   "goal": "⊢ 9! % 10 = 0",
+   "endPos": {"line": 2, "column": 25}}],
  "messages":
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},

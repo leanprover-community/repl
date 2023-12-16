@@ -1,13 +1,8 @@
-{"cmd": "namespace X"}
+{"cmd": "import Lean"}
 
-{"cmd": "def f (x : Nat) := x + 37", "env": 0}
+{"cmd": "open Lean.Compiler", "env": 0}
 
-{"cmd": "scoped notation:10000 n \"!\" => f n", "env": 1}
+{"cmd": "unsafe example : ◾ := sorry", "env": 1}
 
-{"cmd": "end X", "env": 2}
+{"pickleTo": "test/f.olean", "env": 1}
 
-{"cmd": "open X", "env": 3}
-
-{"cmd": "example : 39 = 2 ! := rfl", "env": 4}
-
-{"pickleTo": "test/f.olean", "env": 4}
