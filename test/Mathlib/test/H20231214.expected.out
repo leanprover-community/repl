@@ -1,0 +1,28 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 5, "column": 21},
+   "goal":
+   "p q : ℝ → ℝ\nh₀ : ∀ (x : ℝ), p x = 2 - x ^ 2\nh₁ : ∀ (x : ℝ), x ≠ 0 → q x = 6 / x\n⊢ p (q 2) = -7",
+   "endPos": {"line": 5, "column": 26}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 24},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofState": 1,
+ "goals":
+ ["case hQ\np q : ℝ → ℝ\nh₀ : ∀ (x : ℝ), p x = 2 - x ^ 2\nh₁ : ∀ (x : ℝ), x ≠ 0 → q x = 6 / x\n⊢ ∀ (x : ℝ), p x = 6 / x",
+  "p q : ℝ → ℝ\nh₀ : ∀ (x : ℝ), p x = 2 - x ^ 2\nh₁ : ∀ (x : ℝ), x ≠ 0 → q x = 6 / x\nhQ : ∀ (x : ℝ), p x = 6 / x\n⊢ p (q 2) = -7"]}
+
+{"proofState": 2,
+ "goals":
+ ["case hQ\np q : ℝ → ℝ\nh₀ : ∀ (x : ℝ), p x = 2 - x ^ 2\nh₁ : ∀ (x : ℝ), x ≠ 0 → q x = 6 / x\nx : ℝ\n⊢ p x = 6 / x",
+  "p q : ℝ → ℝ\nh₀ : ∀ (x : ℝ), p x = 2 - x ^ 2\nh₁ : ∀ (x : ℝ), x ≠ 0 → q x = 6 / x\nhQ : ∀ (x : ℝ), p x = 6 / x\n⊢ p (q 2) = -7"]}
+
+{"message":
+ "type mismatch\n  h₀ x\nhas type\n  p x = 2 - x ^ 2 : Prop\nbut is expected to have type\n  p x = 6 / x * p x : Prop"}
+
