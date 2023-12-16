@@ -118,6 +118,24 @@ Pickling is quite efficient:
 * file sizes are generally small, but see https://github.com/digama0/leangz if compression is
   desirable
 
+## Using the REPL from another project
+
+Set up your project as usual using `lake new` or `lake init`
+(or the interactive setup GUI available via the VSCode extension under the `∀` menu).
+
+In that project, add `require` statements in the `lakefile.lean` for any dependencies you need
+(e.g. Mathlib). (You probably should verify that `lake build` works as expected in that project.)
+
+Now you can run the REPL as:
+```shell
+lake env ../path/to/repl/.lake/build/bin/repl < commands.in
+```
+(Here `../path/to/repl/` represents the path to your checkout of this repository,
+in which you've already run `lake build`.)
+
+The `lake env` prefix sets up the environment associated to your local project, so that the REPL
+can find needed imports.
+
 ## Future work
 
 * Replay tactic scripts from tactic mode back into the original `sorry`.
