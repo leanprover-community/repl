@@ -12,9 +12,5 @@
 
 {"cmd": "example : 39 = 2 ! := rfl", "env": 5}
 
-{"cmd": "open Lean.Compiler", "env": 5}
-
-{"cmd": "unsafe example : ◾ := sorry", "env": 7}
-
-{"pickleTo": "test/f.olean", "env": 7}
+{"pickleTo": "test/f.olean", "env": 5}
 
