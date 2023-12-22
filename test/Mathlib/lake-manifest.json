@@ -22,7 +22,11 @@
   {"url": "https://github.com/leanprover-community/aesop",
    "type": "git",
    "subDir": null,
+<<<<<<< HEAD
    "rev": "69404390bdc1de946bf0a2e51b1a69f308e56d7a",
+=======
+   "rev": "646be3a3604d0f2a3c1800cb4279a36493474b18",
+>>>>>>> origin/master
    "name": "aesop",
    "manifestFile": "lake-manifest.json",
    "inputRev": "master",
@@ -49,7 +53,11 @@
   {"url": "https://github.com/leanprover-community/mathlib4",
    "type": "git",
    "subDir": null,
+<<<<<<< HEAD
    "rev": "58eef79b1520d17ff085f58b599690c112a47e6b",
+=======
+   "rev": "cf8e23a62939ed7cc530fbb68e83539730f32f86",
+>>>>>>> origin/master
    "name": "mathlib",
    "manifestFile": "lake-manifest.json",
    "inputRev": "master",
