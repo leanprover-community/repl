@@ -130,11 +130,14 @@ partial def retainSubstantive (tree : InfoTree) : List InfoTree :=
   tree.filter fun | .ofTacticInfo i => i.isSubstantive | _ => true
 
 /-- Analogue of `Lean.Elab.InfoTree.findInfo?`, but that returns all results. -/
-partial def findAllInfo (t : InfoTree) (ctx : Option ContextInfo) (p : Info → Bool) :
+partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info → Bool) :
     List (Info × Option ContextInfo) :=
   match t with
-  | context ctx t => t.findAllInfo ctx p
-  | node i ts  => (if p i then [(i, ctx)] else []) ++ ts.toList.bind (fun t => t.findAllInfo ctx p)
+  | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p
+  | node i ts  =>
+    let info := if p i then [(i, ctx?)] else []
+    let rest := ts.toList.bind (fun t => t.findAllInfo ctx? p)
+    info ++ rest
   | _ => []
 
 /-- Return all `TacticInfo` nodes in an `InfoTree` with "original" syntax,
