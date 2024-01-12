@@ -39,4 +39,5 @@ for infile in $IN_DIR/*.in; do
 done
 
 # Run the Mathlib tests
+cp lean-toolchain test/Mathlib/
 cd test/Mathlib/ && ./test.sh
