@@ -68,7 +68,15 @@ structure Sorry where
   You can use the `ProofStep` instruction to run a tactic at this state.
   -/
   proofState : Option Nat
-deriving ToJson, FromJson
+deriving FromJson
+
+instance : ToJson Sorry where
+  toJson r := Json.mkObj <| .join [
+    [("goal", r.goal)],
+    [("proofState", toJson r.proofState)],
+    if r.pos.line ≠ 0 then [("pos", toJson r.pos)] else [],
+    if r.endPos.line ≠ 0 then [("endPos", toJson r.endPos)] else [],
+  ]
 
 /-- Construct the JSON representation of a Lean sorry. -/
 def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
@@ -124,13 +132,15 @@ structure ProofStepResponse where
   proofState : Nat
   goals : List String
   messages : List Message := []
+  sorries : List Sorry := []
 deriving ToJson, FromJson
 
 instance : ToJson ProofStepResponse where
   toJson r := Json.mkObj <| .join [
     [("proofState", r.proofState)],
     [("goals", toJson r.goals)],
-    Json.nonemptyList "messages" r.messages
+    Json.nonemptyList "messages" r.messages,
+    Json.nonemptyList "sorries" r.sorries
   ]
 
 /-- Json wrapper for an error. -/
