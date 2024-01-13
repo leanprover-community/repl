@@ -128,8 +128,26 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     M m ProofStepResponse := do
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
+  let trees := proofState.newInfoTrees old?
+  let trees := match old? with
+  | some old =>
+    let ctx : ContextInfo :=
+    { env := old.coreState.env
+      ngen := old.coreState.ngen
+      fileMap := old.coreContext.fileMap
+      options := old.coreContext.options
+      currNamespace := old.coreContext.currNamespace
+      openDecls := old.coreContext.openDecls
+      mctx := old.metaState.mctx }
+    trees.map fun t => InfoTree.context ctx t
+  | none => trees
+  let sorries ← sorries trees
   let id ← recordProofSnapshot proofState
-  return { proofState := id, goals := (← proofState.ppGoals).map fun s => s!"{s}", messages }
+  return {
+    proofState := id
+    goals := (← proofState.ppGoals).map fun s => s!"{s}"
+    messages
+    sorries }
 
 /-- Pickle an `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do

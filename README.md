@@ -59,8 +59,8 @@ showing any messages generated, and sorries with their goal states.
 
 ## Tactic mode (experimental)
 
-The only way to enter tactic mode at present is to first issue a command containing a `sorry`,
-and then using the `proofState` index returned for each `sorry`.
+To enter tactic mode issue a command containing a `sorry`,
+and then use the `proofState` index returned for each `sorry`.
 
 Example usage:
 ```json
@@ -86,6 +86,9 @@ Example usage:
 
 {"proofState": 2, "goals": []}
 ```
+
+You can use `sorry` in tactic mode.
+The result will contain additional `proofState` identifiers for the goal at each sorry.
 
 At present there is nothing you can do with a completed proof state:
 we would like to extend this so that you can replace the original `sorry` with your tactic script,
