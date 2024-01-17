@@ -1,0 +1,10 @@
+{"cmd": "import Mathlib"}
+
+{"env" : 0, "cmd": "theorem foo (x : Nat) : x = x := by sorry"}
+
+{"proofState" : 0, "tactic": "induction x"}
+
+{"proofState" : 1, "tactic": "next => rfl"}
+
+{"proofState" : 0, "tactic": "induction x with\n| zero => sorry\n| succ x => sorry"}
+
