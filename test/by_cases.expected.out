@@ -17,3 +17,9 @@
 
 {"proofState": 2, "goals": ["case inr\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
 
+{"sorries":
+ [{"proofState": 3, "goal": "case inl\nx : Int\nh : x < 0\n⊢ x = x"},
+  {"proofState": 4, "goal": "case inr\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
+ "proofState": 5,
+ "goals": []}
+

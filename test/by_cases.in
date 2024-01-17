@@ -4,3 +4,5 @@
 
 {"proofState" : 1, "tactic": "case inl => rfl"}
 
+{"proofState" : 1, "tactic": "all_goals sorry"}
+
