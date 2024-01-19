@@ -103,7 +103,8 @@ def sorries (trees : List InfoTree) : M m (List Sorry) :=
          let s ← ProofSnapshot.create ctx none [g]
          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
       | .term lctx (some t) => do
-         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofSnapshot.create ctx lctx [] [t]))
+         let s ← ProofSnapshot.create ctx lctx [] [t]
+         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
       | .term _ none => unreachable!
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goal pos endPos proofStateId
