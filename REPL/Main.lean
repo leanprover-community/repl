@@ -131,6 +131,7 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   let trees := proofState.newInfoTrees old?
   let trees := match old? with
   | some old =>
+    -- FIXME: I think this should be using `ContextInfo.save`
     let ctx : ContextInfo :=
     { env := old.coreState.env
       ngen := old.coreState.ngen
@@ -141,6 +142,8 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
       mctx := old.metaState.mctx }
     trees.map fun t => InfoTree.context ctx t
   | none => trees
+  -- For debugging purposes, sometimes we print out the trees here:
+  -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees
   let id ← recordProofSnapshot proofState
   return {
@@ -194,6 +197,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
+  -- For debugging purposes, sometimes we print out the trees here:
+  -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees
   let tactics ← match s.allTactics with
   | some true => tactics trees

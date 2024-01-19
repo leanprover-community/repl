@@ -120,9 +120,11 @@ def newMessages (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : Li
 
 /-- New info trees in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
 def newInfoTrees (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : List InfoTree :=
-  match old? with
-  | none => new.coreState.infoState.trees.toList
-  | some old => new.coreState.infoState.trees.toList.drop (old.coreState.infoState.trees.size)
+  let infoState := new.coreState.infoState
+  let trees := match old? with
+  | none => infoState.trees.toList
+  | some old => infoState.trees.toList.drop (old.coreState.infoState.trees.size)
+  trees.map fun t => t.substitute infoState.assignment
 
 /-- Run a `CoreM` monadic function in the current `ProofSnapshot`, updating the `Core.State`. -/
 def runCoreM (p : ProofSnapshot) (t : CoreM α) : IO (α × ProofSnapshot) := do
