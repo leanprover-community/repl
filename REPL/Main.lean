@@ -153,7 +153,7 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     messages
     sorries }
 
-/-- Pickle an `CommandSnapshot`, generating a JSON response. -/
+/-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
   match (← get).cmdStates[n.env]? with
   | none => return .inr ⟨"Unknown environment."⟩
@@ -161,7 +161,7 @@ def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Err
     discard <| env.pickle n.pickleTo
     return .inl { env := n.env }
 
-/-- Unpickle an `CommandSnapshot`, generating a JSON response. -/
+/-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
   let env ← recordCommandSnapshot env

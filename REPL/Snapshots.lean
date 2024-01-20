@@ -265,6 +265,7 @@ def unpickle (path : FilePath) : IO (ProofSnapshot × CompactedRegion) := unsafe
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState ×
       Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
       Tactic.State × Tactic.Context) path
+  enableInitializersExecution
   let env ← (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
   let p' : ProofSnapshot :=
   { coreState := { coreState with env }

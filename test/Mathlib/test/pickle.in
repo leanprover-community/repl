@@ -1,0 +1,6 @@
+{"cmd": "import Mathlib\nopen BigOperators\nopen Real\nopen Nat"}
+
+{"cmd": "theorem mathd_algebra_455\n  (x : Nat)\n  (h : 2 * (2 * (2 * (2 * x))) = 48) :\n  x = 3 := by sorry", "env": 0}
+
+{"pickleTo": "test/pickle.olean", "proofState": 0}
+
