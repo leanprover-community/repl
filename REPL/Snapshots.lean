@@ -259,14 +259,19 @@ def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
 /--
 Unpickle a `ProofSnapshot`.
 -/
-def unpickle (path : FilePath) : IO (ProofSnapshot × CompactedRegion) := unsafe do
+def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
+    IO (ProofSnapshot × CompactedRegion) := unsafe do
   let ((imports, map₂, coreState, coreContext, metaState, metaContext, termState, termContext,
     tacticState, tacticContext), region) ←
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState ×
       Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
       Tactic.State × Tactic.Context) path
-  enableInitializersExecution
-  let env ← (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
+  let env ← match cmd? with
+  | none =>
+    enableInitializersExecution
+    (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
+  | some cmd =>
+    cmd.cmdState.env.replay (HashMap.ofList map₂.toList)
   let p' : ProofSnapshot :=
   { coreState := { coreState with env }
     coreContext

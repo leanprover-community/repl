@@ -164,6 +164,7 @@ deriving ToJson, FromJson
 
 structure UnpickleProofState where
   unpickleProofStateFrom : System.FilePath
+  env : Option Nat
 deriving ToJson, FromJson
 
 end REPL

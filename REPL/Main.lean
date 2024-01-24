@@ -177,9 +177,16 @@ def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Erro
     return .inl (← createProofStepReponse proofState)
 
 /-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
-def unpickleProofSnapshot (n : UnpickleProofState) : M IO ProofStepResponse := do
-  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom
-  createProofStepReponse proofState
+def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕ Error) := do
+  let (cmdSnapshot?, notFound) ← do match n.env with
+  | none => pure (none, false)
+  | some i => do match (← get).cmdStates[i]? with
+    | some env => pure (some env, false)
+    | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
+  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
+  Sum.inl <$> createProofStepReponse proofState
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
