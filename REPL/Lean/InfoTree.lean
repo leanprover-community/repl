@@ -11,6 +11,18 @@ Additional functions to deal with `InfoTree`.
 
 open Lean Elab Meta
 
+namespace Lean.FileMap
+
+/-- Extract the range of a `Syntax` expressed as lines and columns. -/
+-- Extracted from the private declaration `Lean.Elab.formatStxRange`,
+-- in `Lean.Elab.InfoTree.Main`.
+def stxRange (fileMap : FileMap) (stx : Syntax) : Position × Position :=
+  let pos    := stx.getPos?.getD 0
+  let endPos := stx.getTailPos?.getD pos
+  (fileMap.toPosition pos, fileMap.toPosition endPos)
+
+end Lean.FileMap
+
 namespace Lean.Syntax
 
 /-- Check if a `Syntax` is an explicit invocation of the `sorry` tactic. -/
@@ -190,5 +202,60 @@ def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Posit
   (t.findTacticNodes.map fun ⟨i, ctx⟩ =>
     ({ ctx with mctx := i.mctxBefore }, i.stx, i.goalsBefore, stxRange ctx.fileMap i.stx))
 
+end Lean.Elab.InfoTree
+
+namespace Lean.Elab.TacticInfo
+
+/-- Return the range of the tactic, as a pair of file positions. -/
+def range (info : TacticInfo) (ctx : ContextInfo) : Position × Position := ctx.fileMap.stxRange info.stx
+
+/-- Pretty print a tactic. -/
+def pp (info : TacticInfo) (ctx : ContextInfo) : IO Format :=
+  ctx.runMetaM {} try
+    Lean.PrettyPrinter.ppTactic ⟨info.stx⟩
+  catch _ =>
+    pure "<failed to pretty print>"
+
+open Meta
+
+/-- Run a tactic on the goals stored in a `TacticInfo`. -/
+def runMetaMGoalsBefore (info : TacticInfo) (ctx : ContextInfo) (x : List MVarId → MetaM α) : IO α := do
+  ctx.runMetaM {} <| Meta.withMCtx info.mctxBefore <| x info.goalsBefore
+
+/-- Run a tactic on the after goals stored in a `TacticInfo`. -/
+def runMetaMGoalsAfter (info : TacticInfo) (ctx : ContextInfo) (x : List MVarId → MetaM α) : IO α := do
+  ctx.runMetaM {} <| Meta.withMCtx info.mctxAfter <| x info.goalsAfter
+
+/-- Run a tactic on the main goal stored in a `TacticInfo`. -/
+def runMetaM (info : TacticInfo) (ctx : ContextInfo) (x : MVarId → MetaM α) : IO α := do
+  match info.goalsBefore.head? with
+  | none => throw <| IO.userError s!"No goals at {← info.pp ctx}"
+  | some g => info.runMetaMGoalsBefore ctx fun _ => do g.withContext <| x g
+
+def mainGoal (info : TacticInfo) (ctx : ContextInfo) : IO Expr :=
+  info.runMetaM ctx (fun g => do instantiateMVars (← g.getType))
+
+def formatMainGoal (info : TacticInfo) (ctx : ContextInfo) : IO Format :=
+  info.runMetaM ctx (fun g => do ppExpr (← instantiateMVars (← g.getType)))
+
+def goalState (info : TacticInfo) (ctx : ContextInfo) : IO (List Format) := do
+  info.runMetaMGoalsBefore ctx (fun gs => gs.mapM fun g => do Meta.ppGoal g)
+
+def goalStateAfter (info : TacticInfo) (ctx : ContextInfo) : IO (List Format) := do
+  info.runMetaMGoalsAfter ctx (fun gs => gs.mapM fun g => do Meta.ppGoal g)
+
+def ppExpr (info : TacticInfo) (ctx : ContextInfo) (e : Expr) : IO Format :=
+  info.runMetaM ctx (fun _ => do Meta.ppExpr (← instantiateMVars e))
+
+end Lean.Elab.TacticInfo
+
+namespace Lean.Elab.InfoTree
+
+/--
+Finds all tactic invocations in an `InfoTree`,
+ignoring structuring tactics (e.g. `by`, `;`, multiline tactics, parenthesized tactics).
+-/
+def substantiveTactics (t : InfoTree) : List (TacticInfo × ContextInfo) :=
+  t.findTacticNodes.filter fun i => i.1.isSubstantive
 
 end Lean.Elab.InfoTree
