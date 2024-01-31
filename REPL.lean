@@ -1,4 +1,4 @@
 import REPL.Frontend
-import REPL.InfoTree
+import REPL.Lean.InfoTree
 import REPL.JSON
 import REPL.Main

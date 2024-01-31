@@ -1,0 +1,20 @@
+{"messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 7},
+   "endPos": {"line": 1, "column": 8},
+   "data": "unused variable `h` [linter.unusedVariables]"}],
+ "infotree":
+ [{"node":
+   {"stx":
+    {"range":
+     {"synthetic": false,
+      "start": {"line": 1, "column": 28},
+      "finish": {"line": 1, "column": 39}},
+     "pp": "constructor"},
+    "name": "Lean.Parser.Tactic.constructor",
+    "goalsBefore": ["h : Int\n⊢ Nat"],
+    "goalsAfter": []},
+   "kind": "TacticInfo",
+   "children": []}],
+ "env": 0}
+

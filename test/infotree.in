@@ -1,0 +1,2 @@
+{"cmd": "def f (h : Int) : Nat := by constructor", "infotree": "substantive"}
+

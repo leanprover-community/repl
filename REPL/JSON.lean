@@ -19,6 +19,11 @@ structure Command where
   env : Option Nat
   cmd : String
   allTactics : Option Bool := none
+  /--
+  Should be "full", "tactics", "original", or "substantive".
+  Anything else is ignored.
+  -/
+  infotree : Option String
 deriving ToJson, FromJson
 
 /--
@@ -110,6 +115,7 @@ structure CommandResponse where
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
+  infotree : Option Json := none
 deriving FromJson
 
 def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
@@ -121,7 +127,8 @@ instance : ToJson CommandResponse where
     [("env", r.env)],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
-    Json.nonemptyList "tactics" r.tactics
+    Json.nonemptyList "tactics" r.tactics,
+    match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 
 /--

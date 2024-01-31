@@ -5,12 +5,12 @@ Authors: Scott Morrison
 -/
 import REPL.JSON
 import REPL.Frontend
-import REPL.InfoTree
 import REPL.Util.Path
 import REPL.Util.TermUnsafe
 import REPL.Lean.ContextInfo
 import REPL.Lean.Environment
-import REPL.InfoTree
+import REPL.Lean.InfoTree
+import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
 
 /-!
@@ -216,11 +216,22 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
+  let jsonTrees := match s.infotree with
+  | some "full" => trees
+  | some "tactics" => trees.bind InfoTree.retainTacticInfo
+  | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
+  | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
+  | _ => []
+  let infotree := if jsonTrees.isEmpty then
+    none
+  else
+    some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
   return .inl
     { env,
       messages,
       sorries,
-      tactics }
+      tactics
+      infotree }
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
