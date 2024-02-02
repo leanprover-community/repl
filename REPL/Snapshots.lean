@@ -157,11 +157,11 @@ def runTacticM' (p : ProofSnapshot) (t : TacticM α) : IO ProofSnapshot :=
 /-- New traces in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
 def newTraces (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : IO (List String) :=
   match old? with
-  | none => (·.1) <$> new.runTacticM (do
+  | none => (·.1) <$> new.runCoreM (do
      (← getTraces).toList.mapM fun t => do pure (← t.msg.toString).trim)
   | some old => do
-    let oldCount ← (·.1) <$> old.runTacticM (return (← getTraces).size)
-    (·.1) <$> new.runTacticM (do
+    let oldCount ← (·.1) <$> old.runCoreM (return (← getTraces).size)
+    (·.1) <$> new.runCoreM (do
      ((← getTraces).toList.drop oldCount).mapM fun t => do pure (← t.msg.toString).trim)
 
 /--
@@ -181,7 +181,7 @@ def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
 
 /-- Pretty print the current goals in the `ProofSnapshot`. -/
 def ppGoals (p : ProofSnapshot) : IO (List Format) :=
-  Prod.fst <$> p.runTacticM do (← getGoals).mapM (Meta.ppGoal ·)
+  Prod.fst <$> p.runMetaM do p.tacticState.goals.mapM (Meta.ppGoal ·)
 
 /--
 Construct a `ProofSnapshot` from a `ContextInfo` and optional `LocalContext`, and a list of goals.
