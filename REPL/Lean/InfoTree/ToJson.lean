@@ -96,7 +96,7 @@ deriving ToJson
 
 partial def InfoTree.toJson (t : InfoTree) (ctx? : Option ContextInfo) : IO Json := do
   match t with
-  | .context i t => t.toJson i
+  | .context ctx t => t.toJson (ctx.mergeIntoOuter? ctx?)
   | .node info children =>
     if let some ctx := ctx? then
       let node : Option Json ← match info with
