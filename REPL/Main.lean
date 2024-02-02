@@ -240,7 +240,7 @@ def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
       let proofState' ← proofState.runString s.tactic
       return .inl (← createProofStepReponse proofState' proofState)
     catch ex =>
-      return .inr ⟨ex.toString⟩
+      return .inr ⟨"Lean error:\n" ++ ex.toString⟩
 
 end REPL
 
@@ -272,7 +272,8 @@ inductive Input
 def parse (query : String) : IO Input := do
   let json := Json.parse query
   match json with
-  | .error e => throw <| IO.userError <| toString <| toJson (⟨e⟩ : Error)
+  | .error e => throw <| IO.userError <| toString <| toJson <|
+      (⟨"Could not parse JSON:\n" ++ e⟩ : Error)
   | .ok j => match fromJson? j with
     | .ok (r : REPL.ProofStep) => return .proofStep r
     | .error _ => match fromJson? j with
@@ -285,7 +286,8 @@ def parse (query : String) : IO Input := do
     | .ok (r : REPL.UnpickleProofState) => return .unpickleProofSnapshot r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.Command) => return .command r
-    | .error e => throw <| IO.userError <| toString <| toJson (⟨e⟩ : Error)
+    | .error e => throw <| IO.userError <| toString <| toJson <|
+        (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : Error)
 
 /-- Read-eval-print loop for Lean. -/
 unsafe def repl : IO Unit :=
@@ -294,6 +296,7 @@ where loop : M IO Unit := do
   let query ← getLines
   if query = "" then
     return ()
+  if query.startsWith "#" || query.startsWith "--" then loop else
   IO.println <| toString <| ← match ← parse query with
   | .command r => return toJson (← runCommand r)
   | .proofStep r => return toJson (← runProofStep r)

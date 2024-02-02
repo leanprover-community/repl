@@ -182,7 +182,6 @@ def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
 /-- Pretty print the current goals in the `ProofSnapshot`. -/
 def ppGoals (p : ProofSnapshot) : IO (List Format) :=
   Prod.fst <$> p.runMetaM do p.tacticState.goals.mapM (Meta.ppGoal ·)
-
 /--
 Construct a `ProofSnapshot` from a `ContextInfo` and optional `LocalContext`, and a list of goals.
 
@@ -193,6 +192,7 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext)
     (goals : List MVarId) (types : List Expr := []) : IO ProofSnapshot := do
   ctx.runMetaM (lctx?.getD {}) do
     let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
+    goals.head!.withContext do
     pure <|
     { coreState := ← getThe Core.State
       coreContext := ← readThe Core.Context

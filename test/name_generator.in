@@ -1,0 +1,18 @@
+{"cmd": "set_option trace.Meta.Tactic.simp true\nexample {x : Int} (h0 : x > 0) : False := by sorry"}
+
+{"tactic": "have h : x > 0 := by sorry", "proofState": 0}
+
+{"tactic": "exact h0", "proofState": 1}
+
+{"tactic": "assumption", "proofState": 1}
+
+{"tactic": "simp only [of_eq_true (eq_true h0)]", "proofState": 1}
+
+{"tactic": "{ simp [h0] }", "proofState": 1}
+
+{"tactic": "{ simp (config := {memoize := false}) [h0] }", "proofState": 1}
+
+{"tactic": "{ rw (config := {}) [(show x = x from rfl)] }", "proofState": 1}
+
+{"tactic": "{ rw [(show x = x from rfl)] }", "proofState": 1}
+
