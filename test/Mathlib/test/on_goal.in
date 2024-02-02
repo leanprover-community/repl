@@ -1,0 +1,5 @@
+{"cmd": "import Mathlib\nopen Real"}
+
+{"cmd": "example {x : ℝ} (h0: |x| > 1) : (x < 0) ∨ (2 * x > 2) := by sorry", "env": 0}
+
+{"tactic": "on_goal 1 =>\n  have h1 : x = x := by sorry\n  have h2 : x = x := by sorry\n  by_cases h3 : x < 0", "proofState": 0}

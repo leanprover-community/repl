@@ -1,0 +1,15 @@
+{"cmd": "def f := 37"}
+
+{"cmd": "@[simp] theorem f_def : f = 37 := by rfl", "env": 0}
+
+{"cmd": "set_option trace.Meta.Tactic.simp true", "env": 1}
+
+{"cmd": "example : f = 37 := by simp", "env": 2}
+
+{"cmd": "example : f = 37 := by sorry", "env": 2}
+
+{"tactic": "trace \"37\"", "proofState": 0}
+
+{"tactic": "simp", "proofState": 0}
+
+{"cmd": "example : True := by\n  trace \"!\"\n  trivial"}

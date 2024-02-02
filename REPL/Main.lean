@@ -5,12 +5,12 @@ Authors: Scott Morrison
 -/
 import REPL.JSON
 import REPL.Frontend
-import REPL.InfoTree
 import REPL.Util.Path
 import REPL.Util.TermUnsafe
 import REPL.Lean.ContextInfo
 import REPL.Lean.Environment
-import REPL.InfoTree
+import REPL.Lean.InfoTree
+import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
 
 /-!
@@ -103,7 +103,8 @@ def sorries (trees : List InfoTree) : M m (List Sorry) :=
          let s ← ProofSnapshot.create ctx none [g]
          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
       | .term lctx (some t) => do
-         pure (s!"⊢ {← ctx.ppExpr lctx t}", some (← ProofSnapshot.create ctx lctx [] [t]))
+         let s ← ProofSnapshot.create ctx lctx [] [t]
+         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
       | .term _ none => unreachable!
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goal pos endPos proofStateId
@@ -128,10 +129,33 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     M m ProofStepResponse := do
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
+  let traces ← proofState.newTraces old?
+  let trees := proofState.newInfoTrees old?
+  let trees := match old? with
+  | some old =>
+    -- FIXME: I think this should be using `ContextInfo.save`
+    let ctx : ContextInfo :=
+    { env := old.coreState.env
+      ngen := old.coreState.ngen
+      fileMap := old.coreContext.fileMap
+      options := old.coreContext.options
+      currNamespace := old.coreContext.currNamespace
+      openDecls := old.coreContext.openDecls
+      mctx := old.metaState.mctx }
+    trees.map fun t => InfoTree.context ctx t
+  | none => trees
+  -- For debugging purposes, sometimes we print out the trees here:
+  -- trees.forM fun t => do IO.println (← t.format)
+  let sorries ← sorries trees
   let id ← recordProofSnapshot proofState
-  return { proofState := id, goals := (← proofState.ppGoals).map fun s => s!"{s}", messages }
+  return {
+    proofState := id
+    goals := (← proofState.ppGoals).map fun s => s!"{s}"
+    messages
+    sorries
+    traces }
 
-/-- Pickle an `CommandSnapshot`, generating a JSON response. -/
+/-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
   match (← get).cmdStates[n.env]? with
   | none => return .inr ⟨"Unknown environment."⟩
@@ -139,7 +163,7 @@ def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Err
     discard <| env.pickle n.pickleTo
     return .inl { env := n.env }
 
-/-- Unpickle an `CommandSnapshot`, generating a JSON response. -/
+/-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
   let env ← recordCommandSnapshot env
@@ -155,9 +179,16 @@ def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Erro
     return .inl (← createProofStepReponse proofState)
 
 /-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
-def unpickleProofSnapshot (n : UnpickleProofState) : M IO ProofStepResponse := do
-  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom
-  createProofStepReponse proofState
+def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕ Error) := do
+  let (cmdSnapshot?, notFound) ← do match n.env with
+  | none => pure (none, false)
+  | some i => do match (← get).cmdStates[i]? with
+    | some env => pure (some env, false)
+    | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
+  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
+  Sum.inl <$> createProofStepReponse proofState
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
@@ -176,6 +207,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
+  -- For debugging purposes, sometimes we print out the trees here:
+  -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees
   let tactics ← match s.allTactics with
   | some true => tactics trees
@@ -185,11 +218,22 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
+  let jsonTrees := match s.infotree with
+  | some "full" => trees
+  | some "tactics" => trees.bind InfoTree.retainTacticInfo
+  | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
+  | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
+  | _ => []
+  let infotree := if jsonTrees.isEmpty then
+    none
+  else
+    some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
   return .inl
     { env,
       messages,
       sorries,
-      tactics }
+      tactics
+      infotree }
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.

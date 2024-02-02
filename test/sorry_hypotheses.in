@@ -1,0 +1,4 @@
+{"cmd": "theorem foo (x : Int) : x = x := by sorry"}
+
+{"proofState" : 0, "tactic": "have h : x = 1 := sorry"}
+

@@ -1,0 +1,4 @@
+{"proofState": 0, "goals": ["x : ℕ\nh : 2 * (2 * (2 * (2 * x))) = 48\n⊢ x = 3"]}
+
+{"proofState": 1, "goals": ["x : ℕ\nh : 2 * (2 * (2 * (2 * x))) = 48\n⊢ x = 3"]}
+

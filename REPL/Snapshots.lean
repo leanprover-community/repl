@@ -118,6 +118,14 @@ def newMessages (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : Li
   | none => new.coreState.messages.msgs.toList
   | some old => new.coreState.messages.msgs.toList.drop (old.coreState.messages.msgs.size)
 
+/-- New info trees in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
+def newInfoTrees (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : List InfoTree :=
+  let infoState := new.coreState.infoState
+  let trees := match old? with
+  | none => infoState.trees.toList
+  | some old => infoState.trees.toList.drop (old.coreState.infoState.trees.size)
+  trees.map fun t => t.substitute infoState.assignment
+
 /-- Run a `CoreM` monadic function in the current `ProofSnapshot`, updating the `Core.State`. -/
 def runCoreM (p : ProofSnapshot) (t : CoreM α) : IO (α × ProofSnapshot) := do
   let (a, coreState) ← (Lean.Core.CoreM.toIO · p.coreContext p.coreState) do t
@@ -145,6 +153,16 @@ and discarding the return value.
 -/
 def runTacticM' (p : ProofSnapshot) (t : TacticM α) : IO ProofSnapshot :=
   Prod.snd <$> p.runTacticM t
+
+/-- New traces in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
+def newTraces (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : IO (List String) :=
+  match old? with
+  | none => (·.1) <$> new.runTacticM (do
+     (← getTraces).toList.mapM fun t => do pure (← t.msg.toString).trim)
+  | some old => do
+    let oldCount ← (·.1) <$> old.runTacticM (return (← getTraces).size)
+    (·.1) <$> new.runTacticM (do
+     ((← getTraces).toList.drop oldCount).mapM fun t => do pure (← t.msg.toString).trim)
 
 /--
 Evaluate a `Syntax` into a `TacticM` tactic, and run it in the current `ProofSnapshot`.
@@ -251,13 +269,19 @@ def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
 /--
 Unpickle a `ProofSnapshot`.
 -/
-def unpickle (path : FilePath) : IO (ProofSnapshot × CompactedRegion) := unsafe do
+def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
+    IO (ProofSnapshot × CompactedRegion) := unsafe do
   let ((imports, map₂, coreState, coreContext, metaState, metaContext, termState, termContext,
     tacticState, tacticContext), region) ←
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState ×
       Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
       Tactic.State × Tactic.Context) path
-  let env ← (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
+  let env ← match cmd? with
+  | none =>
+    enableInitializersExecution
+    (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
+  | some cmd =>
+    cmd.cmdState.env.replay (HashMap.ofList map₂.toList)
   let p' : ProofSnapshot :=
   { coreState := { coreState with env }
     coreContext
