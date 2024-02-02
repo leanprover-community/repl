@@ -131,19 +131,12 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
   let trees := proofState.newInfoTrees old?
-  let trees := match old? with
-  | some old =>
-    -- FIXME: I think this should be using `ContextInfo.save`
-    let ctx : ContextInfo :=
-    { env := old.coreState.env
-      ngen := old.coreState.ngen
-      fileMap := old.coreContext.fileMap
-      options := old.coreContext.options
-      currNamespace := old.coreContext.currNamespace
-      openDecls := old.coreContext.openDecls
-      mctx := old.metaState.mctx }
-    trees.map fun t => InfoTree.context ctx t
-  | none => trees
+  let trees ← match old? with
+  | some old => do
+    let (ctx, _) ← old.runMetaM do return { ← CommandContextInfo.save with }
+    let ctx := PartialContextInfo.commandCtx ctx
+    pure <| trees.map fun t => InfoTree.context ctx t
+  | none => pure trees
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees
