@@ -42,7 +42,7 @@ deriving ToJson, FromJson
 
 /-- Severity of a message. -/
 inductive Severity
-  | info | warning | error
+  | trace | info | warning | error
 deriving ToJson, FromJson
 
 /-- A Lean message. -/
@@ -140,6 +140,7 @@ structure ProofStepResponse where
   goals : List String
   messages : List Message := []
   sorries : List Sorry := []
+  traces : List String
 deriving ToJson, FromJson
 
 instance : ToJson ProofStepResponse where
@@ -147,7 +148,8 @@ instance : ToJson ProofStepResponse where
     [("proofState", r.proofState)],
     [("goals", toJson r.goals)],
     Json.nonemptyList "messages" r.messages,
-    Json.nonemptyList "sorries" r.sorries
+    Json.nonemptyList "sorries" r.sorries,
+    Json.nonemptyList "traces" r.traces
   ]
 
 /-- Json wrapper for an error. -/

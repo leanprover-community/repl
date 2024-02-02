@@ -1,0 +1,41 @@
+{"env": 0}
+
+{"env": 1}
+
+{"env": 2}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 23},
+   "endPos": {"line": 1, "column": 27},
+   "data":
+   "[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37\n[Meta.Tactic.simp.rewrite] @eq_self:1000, 37 = 37 ==> True"}],
+ "env": 3}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 23},
+   "goal": "⊢ f = 37",
+   "endPos": {"line": 1, "column": 28}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 4}
+
+{"traces": ["37"], "proofState": 1, "goals": ["⊢ f = 37"]}
+
+{"traces":
+ ["[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37",
+  "[Meta.Tactic.simp.rewrite] @eq_self:1000, 37 = 37 ==> True"],
+ "proofState": 2,
+ "goals": []}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 2, "column": 2},
+   "endPos": {"line": 2, "column": 7},
+   "data": "!"}],
+ "env": 5}
+

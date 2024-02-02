@@ -154,6 +154,16 @@ and discarding the return value.
 def runTacticM' (p : ProofSnapshot) (t : TacticM α) : IO ProofSnapshot :=
   Prod.snd <$> p.runTacticM t
 
+/-- New traces in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
+def newTraces (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : IO (List String) :=
+  match old? with
+  | none => (·.1) <$> new.runTacticM (do
+     (← getTraces).toList.mapM fun t => do pure (← t.msg.toString).trim)
+  | some old => do
+    let oldCount ← (·.1) <$> old.runTacticM (return (← getTraces).size)
+    (·.1) <$> new.runTacticM (do
+     ((← getTraces).toList.drop oldCount).mapM fun t => do pure (← t.msg.toString).trim)
+
 /--
 Evaluate a `Syntax` into a `TacticM` tactic, and run it in the current `ProofSnapshot`.
 -/
