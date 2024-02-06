@@ -10,5 +10,5 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"message": "<input>:1:1: unknown tactic"}
+{"message": "Lean error:\n<input>:1:1: unknown tactic"}
 
