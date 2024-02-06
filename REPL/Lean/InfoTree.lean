@@ -189,7 +189,7 @@ def findSorryTermNodes (t : InfoTree) : List (TermInfo × ContextInfo) :=
 inductive SorryType
 | tactic : MVarId → SorryType
 | term : LocalContext → Option Expr → SorryType
-#check MVarId
+
 /--
 Finds all appearances of `sorry` in an `InfoTree`, reporting
 * the `ContextInfo` at that point,
@@ -199,15 +199,18 @@ Finds all appearances of `sorry` in an `InfoTree`, reporting
 -/
 def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Position) :=
   (t.findSorryTacticNodes.map fun ⟨i, ctx⟩ =>
-    let g := i.goalsBefore.head!
-    let ngen := { ctx.ngen with namePrefix := g.name }
-    ({ ctx with mctx := i.mctxBefore, ngen := ngen }, .tactic g, stxRange ctx.fileMap i.stx)) ++
+    -- HACK: creating a child ngen
+    ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, .tactic i.goalsBefore.head!,
+      stxRange ctx.fileMap i.stx)) ++
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
     (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
 
 def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position) :=
   (t.findTacticNodes.map fun ⟨i, ctx⟩ =>
-    ({ ctx with mctx := i.mctxBefore }, i.stx, i.goalsBefore, stxRange ctx.fileMap i.stx))
+    -- HACK: creating a child ngen
+     ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, i.stx, i.goalsBefore,
+       stxRange ctx.fileMap i.stx))
+
 
 end Lean.Elab.InfoTree
 
