@@ -1,0 +1,12 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 2, "column": 2},
+   "goal": "⊢ True",
+   "endPos": {"line": 2, "column": 7}}],
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 3, "column": 2},
+   "endPos": {"line": 3, "column": 7},
+   "data": "no goals to be solved"}],
+ "env": 0}
+
