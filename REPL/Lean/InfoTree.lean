@@ -169,7 +169,7 @@ corresponding to explicit invocations of the `sorry` tactic,
 each equipped with its relevant `ContextInfo`. -/
 def findSorryTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo) :=
   let infos := t.findAllInfo none fun i => match i with
-  | .ofTacticInfo i => i.stx.isSorryTactic
+  | .ofTacticInfo i => i.stx.isSorryTactic && !i.goalsBefore.isEmpty
   | _ => false
   infos.filterMap fun p => match p with
   | (.ofTacticInfo i, some ctx) => (i, ctx)
@@ -189,6 +189,7 @@ def findSorryTermNodes (t : InfoTree) : List (TermInfo × ContextInfo) :=
 inductive SorryType
 | tactic : MVarId → SorryType
 | term : LocalContext → Option Expr → SorryType
+deriving Inhabited
 
 /--
 Finds all appearances of `sorry` in an `InfoTree`, reporting
@@ -199,9 +200,12 @@ Finds all appearances of `sorry` in an `InfoTree`, reporting
 -/
 def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Position) :=
   (t.findSorryTacticNodes.map fun ⟨i, ctx⟩ =>
-    -- HACK: creating a child ngen
-    ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, .tactic i.goalsBefore.head!,
-      stxRange ctx.fileMap i.stx)) ++
+    if i.goalsBefore.isEmpty then
+      dbgTrace "no goals at sorry!" fun _ => (ctx, panic "")
+    else
+      -- HACK: creating a child ngen
+      ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, .tactic i.goalsBefore.head!,
+        stxRange ctx.fileMap i.stx)) ++
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
     (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
 
