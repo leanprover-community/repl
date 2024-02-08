@@ -1,0 +1,1 @@
+{"cmd" : "example : True := by\n  have h : set Nat := by sorry\n  sorry"}

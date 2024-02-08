@@ -1,0 +1,11 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 2, "column": 11},
+   "endPos": {"line": 2, "column": 18},
+   "data": "type expected, got\n  (set Nat : ?m.8 PUnit)"},
+  {"severity": "error",
+   "pos": {"line": 3, "column": 2},
+   "endPos": {"line": 3, "column": 7},
+   "data": "no goals to be solved"}],
+ "env": 0}
+
