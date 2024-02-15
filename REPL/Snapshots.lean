@@ -139,7 +139,8 @@ def runMetaM (p : ProofSnapshot) (t : MetaM α) : IO (α × ProofSnapshot) := do
 
 /-- Run a `TermElabM` monadic function in the current `ProofSnapshot`, updating the `Term.State`. -/
 def runTermElabM (p : ProofSnapshot) (t : TermElabM α) : IO (α × ProofSnapshot) := do
-  let ((a, termState), p') ← p.runMetaM (Lean.Elab.Term.TermElabM.run (s := p.termState) do t)
+  let ((a, termState), p') ← p.runMetaM (Lean.Elab.Term.TermElabM.run (s := p.termState)
+    (do let r ← t; Term.synthesizeSyntheticMVarsNoPostponing; pure r))
   return (a, { p' with termState })
 
 /-- Run a `TacticM` monadic function in the current `ProofSnapshot`, updating the `Tactic.State`. -/

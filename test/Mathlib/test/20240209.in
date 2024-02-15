@@ -1,0 +1,5 @@
+{"cmd": "import Std.Tactic.Simpa"}
+
+{"cmd": "example : False := by sorry", "env": 0}
+
+{"tactic": "simpa using show False by done", "proofState": 0}

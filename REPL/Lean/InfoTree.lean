@@ -200,12 +200,9 @@ Finds all appearances of `sorry` in an `InfoTree`, reporting
 -/
 def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Position) :=
   (t.findSorryTacticNodes.map fun ⟨i, ctx⟩ =>
-    if i.goalsBefore.isEmpty then
-      dbgTrace "no goals at sorry!" fun _ => (ctx, panic "")
-    else
-      -- HACK: creating a child ngen
-      ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, .tactic i.goalsBefore.head!,
-        stxRange ctx.fileMap i.stx)) ++
+    -- HACK: creating a child ngen
+    ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, .tactic i.goalsBefore.head!,
+      stxRange ctx.fileMap i.stx)) ++
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
     (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
 
