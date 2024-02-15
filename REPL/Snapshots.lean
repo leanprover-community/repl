@@ -189,13 +189,17 @@ Construct a `ProofSnapshot` from a `ContextInfo` and optional `LocalContext`, an
 For convenience, we also allow a list of `Expr`s, and these are appended to the goals
 as fresh metavariables with the given types.
 -/
-def create (ctx : ContextInfo) (lctx? : Option LocalContext)
+def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Environment)
     (goals : List MVarId) (types : List Expr := []) : IO ProofSnapshot := do
   ctx.runMetaM (lctx?.getD {}) do
     let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
     goals.head!.withContext do
+    let s ← getThe Core.State
+    let s := match env? with
+    | none => s
+    | some env => { s with env }
     pure <|
-    { coreState := ← getThe Core.State
+    { coreState := s
       coreContext := ← readThe Core.Context
       metaState := ← getThe Meta.State
       metaContext := ← readThe Meta.Context

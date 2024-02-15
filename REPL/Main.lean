@@ -95,15 +95,15 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
-def sorries (trees : List InfoTree) : M m (List Sorry) :=
+def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
   trees.bind InfoTree.sorries |>.mapM
     fun ⟨ctx, g, pos, endPos⟩ => do
       let (goal, proofState) ← match g with
       | .tactic g => do
-         let s ← ProofSnapshot.create ctx none [g]
+         let s ← ProofSnapshot.create ctx none env? [g]
          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
       | .term lctx (some t) => do
-         let s ← ProofSnapshot.create ctx lctx [] [t]
+         let s ← ProofSnapshot.create ctx lctx env? [] [t]
          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
       | .term _ none => unreachable!
       let proofStateId ← proofState.mapM recordProofSnapshot
@@ -118,7 +118,7 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
 def tactics (trees : List InfoTree) : M m (List Tactic) :=
   trees.bind InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, goals, pos, endPos⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none goals)
+      let proofState := some (← ProofSnapshot.create ctx none none goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let tactic := Format.pretty (← ppTactic ctx stx)
       let proofStateId ← proofState.mapM recordProofSnapshot
@@ -139,7 +139,7 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   | none => pure trees
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees
+  let sorries ← sorries trees none
   let id ← recordProofSnapshot proofState
   return {
     proofState := id
@@ -194,15 +194,15 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown environment."⟩
-  let cmdState? := cmdSnapshot?.map fun c => c.cmdState
+  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
   let (cmdState, messages, trees) ← try
-    IO.processInput s.cmd cmdState?
+    IO.processInput s.cmd initialCmdState?
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees
+  let sorries ← sorries trees (initialCmdState?.map (·.env))
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []
