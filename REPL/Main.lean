@@ -6,7 +6,6 @@ Authors: Scott Morrison
 import REPL.JSON
 import REPL.Frontend
 import REPL.Util.Path
-import REPL.Util.TermUnsafe
 import REPL.Lean.ContextInfo
 import REPL.Lean.Environment
 import REPL.Lean.InfoTree

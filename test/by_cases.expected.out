@@ -12,14 +12,14 @@
 
 {"proofState": 1,
  "goals":
- ["case inl\nx : Int\nh : x < 0\n⊢ x = x",
-  "case inr\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
+ ["case pos\nx : Int\nh : x < 0\n⊢ x = x",
+  "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
 
-{"proofState": 2, "goals": ["case inr\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
+{"proofState": 2, "goals": ["case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
 
 {"sorries":
- [{"proofState": 3, "goal": "case inl\nx : Int\nh : x < 0\n⊢ x = x"},
-  {"proofState": 4, "goal": "case inr\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
+ [{"proofState": 3, "goal": "case pos\nx : Int\nh : x < 0\n⊢ x = x"},
+  {"proofState": 4, "goal": "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
  "proofState": 5,
  "goals": []}
 

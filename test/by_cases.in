@@ -2,7 +2,7 @@
 
 {"proofState" : 0, "tactic": "by_cases h : x < 0"}
 
-{"proofState" : 1, "tactic": "case inl => rfl"}
+{"proofState" : 1, "tactic": "case pos => rfl"}
 
 {"proofState" : 1, "tactic": "all_goals sorry"}
 
