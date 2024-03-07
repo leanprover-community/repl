@@ -7,5 +7,6 @@
    "pos": {"line": 1, "column": 15},
    "endPos": {"line": 1, "column": 17},
    "data": "unsolved goals\n⊢ Nat"}],
+ "incr": 0,
  "env": 0}
 

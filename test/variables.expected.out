@@ -1,10 +1,11 @@
-{"env": 0}
+{"incr": 0, "env": 0}
 
 {"messages":
  [{"severity": "warning",
    "pos": {"line": 1, "column": 12},
    "endPos": {"line": 1, "column": 13},
    "data": "unused variable `y` [linter.unusedVariables]"}],
+ "incr": 1,
  "env": 1}
 
 {"sorries":
@@ -15,12 +16,9 @@
    "endPos": {"line": 3, "column": 7}}],
  "messages":
  [{"severity": "warning",
-   "pos": {"line": 1, "column": 12},
-   "endPos": {"line": 1, "column": 13},
-   "data": "unused variable `y` [linter.unusedVariables]"},
-  {"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 15},
    "data": "declaration uses 'sorry'"}],
+ "incr": 2,
  "env": 2}
 

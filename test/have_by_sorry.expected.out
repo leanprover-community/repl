@@ -7,7 +7,12 @@
  [{"severity": "error",
    "pos": {"line": 1, "column": 33},
    "endPos": {"line": 2, "column": 28},
-   "data": "unsolved goals\nx : Int\nh : x = 1\n⊢ x = x"}],
+   "data": "unsolved goals\nx : Int\nh : x = 1\n⊢ x = x"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 11},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 0,
  "env": 0}
 
 {"sorries":
@@ -20,6 +25,7 @@
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 11},
    "data": "declaration uses 'sorry'"}],
+ "incr": 1,
  "env": 1}
 
 {"sorries": [{"proofState": 2, "goal": "x : Int\n⊢ x = 1"}],

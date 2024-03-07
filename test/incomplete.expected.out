@@ -2,7 +2,12 @@
  [{"severity": "error",
    "pos": {"line": 1, "column": 15},
    "endPos": {"line": 1, "column": 32},
-   "data": "unsolved goals\n⊢ Nat"}],
+   "data": "unsolved goals\n⊢ Nat"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 5},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 0,
  "env": 0}
 
 {"messages":
@@ -13,6 +18,11 @@
   {"severity": "error",
    "pos": {"line": 1, "column": 26},
    "endPos": {"line": 3, "column": 20},
-   "data": "unsolved goals\ncase neg\nx : Bool\nh✝ : ¬x = true\n⊢ Nat"}],
+   "data": "unsolved goals\ncase neg\nx : Bool\nh✝ : ¬x = true\n⊢ Nat"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 5},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 1,
  "env": 1}
 

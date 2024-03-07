@@ -65,7 +65,8 @@ structure State where
   The user can run a declaration in a given environment using `{"cmd": "def f := 37", "env": 17}`.
   -/
   cmdStates : Array CommandSnapshot := #[]
-  latestIncrementalitySnapshot : HashMap Nat Nat := {}
+  incrementalStates : Array IncrementalState := #[]
+  latestIncrementalState : HashMap Nat Nat := {}
   /--
   Proof states after individual tactics.
   The user can run a tactic in a given proof state using `{"tactic": "exact 42", "proofState": 5}`.
@@ -87,6 +88,11 @@ variable [Monad m] [MonadLiftT IO m]
 def recordCommandSnapshot (state : CommandSnapshot) : M m Nat := do
   let id := (← get).cmdStates.size
   modify fun s => { s with cmdStates := s.cmdStates.push state }
+  return id
+
+def recordIncrementalState (state : IncrementalState) : M m Nat := do
+  let id := (← get).incrementalStates.size
+  modify fun s => { s with incrementalStates := s.incrementalStates.push state }
   return id
 
 /-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
@@ -194,9 +200,24 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown environment."⟩
+  let (incrementalStateBefore?, notFound) ← do
+    let j? ← match s.incr with
+    | none => match s.env with
+      | none => pure none
+      | some i => match (← get).latestIncrementalState.find? i with
+        | none => pure none
+        | j => pure j
+    | some j => pure j
+    match j? with
+    | none => pure (none, false)
+    | some j => do match (← get).incrementalStates[j]? with
+      | some s => pure (some s, false)
+      | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown incremental state."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (cmdState, messages, trees) ← try
-    IO.processInput s.cmd initialCmdState?
+  let (cmdState, incrementalState, messages, trees) ← try
+    IO.processInput s.cmd initialCmdState? incrementalStateBefore?
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
@@ -211,6 +232,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
+  let incr ← recordIncrementalState incrementalState
+  if let some i := s.env then
+    modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i incr }
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo
@@ -223,6 +247,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
   return .inl
     { env,
+      incr,
       messages,
       sorries,
       tactics

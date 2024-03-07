@@ -1,8 +1,8 @@
-{"env": 0}
+{"incr": 0, "env": 0}
 
-{"env": 1}
+{"incr": 1, "env": 1}
 
-{"env": 2}
+{"incr": 2, "env": 2}
 
 {"messages":
  [{"severity": "info",
@@ -10,6 +10,7 @@
    "endPos": {"line": 1, "column": 27},
    "data":
    "[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37\n[Meta.Tactic.simp.rewrite] @eq_self:1000, 37 = 37 ==> True"}],
+ "incr": 3,
  "env": 3}
 
 {"sorries":
@@ -22,6 +23,7 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
+ "incr": 4,
  "env": 4}
 
 {"traces": ["37"], "proofState": 1, "goals": ["⊢ f = 37"]}
@@ -37,5 +39,6 @@
    "pos": {"line": 2, "column": 2},
    "endPos": {"line": 2, "column": 7},
    "data": "!"}],
+ "incr": 5,
  "env": 5}
 

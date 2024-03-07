@@ -1,0 +1,54 @@
+{"incr": 0, "env": 0}
+
+!1
+!2
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 18},
+   "endPos": {"line": 3, "column": 16},
+   "data": "unsolved goals\n⊢ True"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 1,
+ "env": 1}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 3, "column": 2},
+   "goal": "⊢ True",
+   "endPos": {"line": 3, "column": 7}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 2,
+ "env": 2}
+
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 18},
+   "endPos": {"line": 3, "column": 16},
+   "data": "unsolved goals\n⊢ True"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 3,
+ "env": 3}
+
+!2
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 18},
+   "endPos": {"line": 3, "column": 16},
+   "data": "unsolved goals\n⊢ True"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 4,
+ "env": 4}
+

@@ -17,10 +17,12 @@ Wrapper for `IO.processCommands` that enables info states, and returns
 -/
 def processCommandsWithInfoTrees
     (inputCtx : Parser.InputContext) (parserState : Parser.ModuleParserState)
-    (commandState : Command.State) : IO (Command.State × List Message × List InfoTree) := do
+    (commandState : Command.State) (incrementalState? : Option IncrementalState := none) :
+    IO (Command.State × IncrementalState × List Message × List InfoTree) := do
   let commandState := { commandState with infoState.enabled := true }
-  let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
-  pure (s, s.messages.msgs.toList, s.infoState.trees.toList)
+  let r ← IO.processCommandsIncrementally inputCtx parserState commandState incrementalState?
+  let s := r.commandState
+  pure (s, r, s.messages.msgs.toList, s.infoState.trees.toList)
 
 /--
 Process some text input, with or without an existing command state.
@@ -31,8 +33,9 @@ Otherwise, we add to the existing environment.
 Returns the resulting command state, along with a list of messages and info trees.
 -/
 def processInput (input : String) (cmdState? : Option Command.State)
+     (incrementalState? : Option IncrementalState := none)
     (opts : Options := {}) (fileName : Option String := none) :
-    IO (Command.State × List Message × List InfoTree) := unsafe do
+    IO (Command.State × IncrementalState × List Message × List InfoTree) := unsafe do
   Lean.initSearchPath (← Lean.findSysroot)
   enableInitializersExecution
   let fileName   := fileName.getD "<input>"
@@ -44,4 +47,4 @@ def processInput (input : String) (cmdState? : Option Command.State)
     pure (parserState, (Command.mkState env messages opts))
   | some cmdState => do
     pure ({ : Parser.ModuleParserState }, cmdState)
-  processCommandsWithInfoTrees inputCtx parserState commandState
+  processCommandsWithInfoTrees inputCtx parserState commandState incrementalState?

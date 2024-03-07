@@ -17,6 +17,7 @@ If `env = some n`, builds on the existing environment `n`.
 -/
 structure Command where
   env : Option Nat
+  incr : Option Nat
   cmd : String
   allTactics : Option Bool := none
   /--
@@ -112,6 +113,7 @@ A response to a Lean command.
 -/
 structure CommandResponse where
   env : Nat
+  incr : Option Nat := none
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
@@ -125,6 +127,7 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
 instance : ToJson CommandResponse where
   toJson r := Json.mkObj <| .join [
     [("env", r.env)],
+    match r.incr with | some i => [("incr", i)] | none => [],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
@@ -164,6 +167,15 @@ deriving ToJson, FromJson
 
 structure UnpickleEnvironment where
   unpickleEnvFrom : System.FilePath
+deriving ToJson, FromJson
+
+structure PickleIncrementalState where
+  incr : Nat
+  pickleTo : System.FilePath
+deriving ToJson, FromJson
+
+structure UnpickleIncrementalState where
+  unpickleIncrFrom : System.FilePath
 deriving ToJson, FromJson
 
 structure PickleProofState where

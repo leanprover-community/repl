@@ -1,0 +1,9 @@
+{"cmd": "import Lean\nopen Lean"}
+
+{"cmd": "example : True := by\n  dbg_trace \"!1\"\n  dbg_trace \"!2\"", "env": 0}
+
+{"cmd": "example : True := by\n  dbg_trace \"!1\"\n  sorry", "env": 0}
+
+{"cmd": "example : True := by\n  dbg_trace \"!1\"\n  dbg_trace \"!2\"", "env": 0, "incr": 1}
+
+{"cmd": "example : True := by\n  dbg_trace \"!1\"\n  dbg_trace \"!2\"", "env": 0, "incr": 2}
