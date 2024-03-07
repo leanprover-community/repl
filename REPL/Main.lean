@@ -65,6 +65,7 @@ structure State where
   The user can run a declaration in a given environment using `{"cmd": "def f := 37", "env": 17}`.
   -/
   cmdStates : Array CommandSnapshot := #[]
+  latestIncrementalitySnapshot : HashMap Nat Nat := {}
   /--
   Proof states after individual tactics.
   The user can run a tactic in a given proof state using `{"tactic": "exact 42", "proofState": 5}`.
@@ -208,7 +209,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
-      { fileName := "", fileMap := default, tacticCache? := none } }
+      { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
   let jsonTrees := match s.infotree with
   | some "full" => trees
