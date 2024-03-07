@@ -1,0 +1,7 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 15},
+   "endPos": {"line": 1, "column": 32},
+   "data": "unsolved goals\n⊢ Nat"}],
+ "env": 0}
+

@@ -1,0 +1,37 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 27},
+   "goal": "⊢ 0 < 1",
+   "endPos": {"line": 1, "column": 32}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 12},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofState": 1,
+ "messages":
+ [{"severity": "info",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "Try this: exact Nat.zero_lt_one"}],
+ "goals": []}
+
+{"sorries":
+ [{"proofState": 2,
+   "pos": {"line": 1, "column": 27},
+   "goal": "⊢ 3 = 7",
+   "endPos": {"line": 1, "column": 32}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 12},
+   "data": "declaration uses 'sorry'"}],
+ "env": 2}
+
+{"message":
+ "Lean error:\n`exact?` could not close the goal. Try `apply?` to see partial suggestions."}
+
