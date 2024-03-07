@@ -5,3 +5,14 @@
    "data": "unsolved goals\n⊢ Nat"}],
  "env": 0}
 
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 3, "column": 19},
+   "endPos": {"line": 3, "column": 20},
+   "data": "unsolved goals\ncase pos\nx : Bool\nh✝ : x = true\n⊢ Nat"},
+  {"severity": "error",
+   "pos": {"line": 1, "column": 26},
+   "endPos": {"line": 3, "column": 20},
+   "data": "unsolved goals\ncase neg\nx : Bool\nh✝ : ¬x = true\n⊢ Nat"}],
+ "env": 1}
+
