@@ -66,6 +66,7 @@ structure State where
   -/
   cmdStates : Array CommandSnapshot := #[]
   incrementalStates : Array IncrementalState := #[]
+  latestInitialIncrementalState : Option Nat := none
   latestIncrementalState : HashMap Nat Nat := {}
   /--
   Proof states after individual tactics.
@@ -203,7 +204,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let (incrementalStateBefore?, notFound) ← do
     let j? ← match s.incr with
     | none => match s.env with
-      | none => pure none
+      | none => match (← get).latestInitialIncrementalState with
+        | none => pure none
+        | j => pure j
       | some i => match (← get).latestIncrementalState.find? i with
         | none => pure none
         | j => pure j
@@ -235,6 +238,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let incr ← recordIncrementalState incrementalState
   if let some i := s.env then
     modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i incr }
+  else
+    modify fun c => { c with latestInitialIncrementalState := some incr }
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo

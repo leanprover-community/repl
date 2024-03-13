@@ -1,5 +1,3 @@
-{"incr": 0, "env": 0}
-
 !1
 !2
 {"messages":
@@ -11,8 +9,8 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 1,
- "env": 1}
+ "incr": 0,
+ "env": 0}
 
 {"sorries":
  [{"proofState": 0,
@@ -24,8 +22,8 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 2,
- "env": 2}
+ "incr": 1,
+ "env": 1}
 
 {"messages":
  [{"severity": "error",
@@ -36,8 +34,8 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 3,
- "env": 3}
+ "incr": 2,
+ "env": 2}
 
 !2
 {"messages":
@@ -49,6 +47,6 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 4,
- "env": 4}
+ "incr": 3,
+ "env": 3}
 

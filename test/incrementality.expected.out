@@ -1,8 +1,19 @@
-{"incr": 0, "env": 0}
-
 !
 {"sorries":
  [{"proofState": 0,
+   "pos": {"line": 3, "column": 2},
+   "goal": "⊢ True",
+   "endPos": {"line": 3, "column": 7}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "incr": 0,
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 1,
    "pos": {"line": 3, "column": 2},
    "goal": "⊢ True",
    "endPos": {"line": 3, "column": 7}}],
@@ -15,7 +26,7 @@
  "env": 1}
 
 {"sorries":
- [{"proofState": 1,
+ [{"proofState": 2,
    "pos": {"line": 3, "column": 2},
    "goal": "⊢ True",
    "endPos": {"line": 3, "column": 7}}],
@@ -26,19 +37,6 @@
    "data": "declaration uses 'sorry'"}],
  "incr": 2,
  "env": 2}
-
-{"sorries":
- [{"proofState": 2,
-   "pos": {"line": 3, "column": 2},
-   "goal": "⊢ True",
-   "endPos": {"line": 3, "column": 7}}],
- "messages":
- [{"severity": "warning",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 7},
-   "data": "declaration uses 'sorry'"}],
- "incr": 3,
- "env": 3}
 
 {"message": "Unknown incremental state."}
 
