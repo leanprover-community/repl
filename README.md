@@ -57,6 +57,41 @@ Example output:
 
 showing any messages generated, and sorries with their goal states.
 
+### Incrementality
+
+The REPL now has experimental support for incrementality in command mode.
+If you send two commands which use the same environment,
+the second command will automatically use snapshots of the elaboration of the tactics in the first command.
+
+That is, if you send
+```json
+{ "cmd" : "def f := by expensive_tactic; cheap_tactic" }
+{ "cmd" : "def f := by expensive_tactic; other_cheap_tactic" }
+```
+then the second command should be fast!
+
+By default the REPL tries to use the most recent available snapshot generated from the starting environment.
+It is also possible to control this explicitly, using the `incr` field.
+This should refer to the *result* environment for the tactic elaboration you would like to use.
+
+Thus in
+```json
+{ "cmd" : "import Mathlib" }
+{ "cmd" : "def f := by expensive_tactic; done", "env" : 0 }
+{ "cmd" : "def f := by sorry", "env" : 0 }
+{ "cmd" : "def f := by expensive_tactic; done", "env" : 0 }
+```
+both invocations of `expensive_tactic` will be slow.
+
+However, if the first `def f` command returned `{"env" : 1}`, then we can use
+```json
+{ "cmd" : "import Mathlib" }
+{ "cmd" : "def f := by expensive_tactic; done", "env" : 0 }
+{ "cmd" : "def f := by sorry", "env" : 0 }
+{ "cmd" : "def f := by expensive_tactic; done", "env" : 0, "incr" : 1 }
+```
+and then the second invocation of `expensive_tactic` will be fast again.
+
 ## Tactic mode (experimental)
 
 To enter tactic mode issue a command containing a `sorry`,
