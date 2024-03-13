@@ -9,6 +9,5 @@
    "pos": {"line": 1, "column": 32},
    "goals": "t : Nat ⊢ Nat",
    "endPos": {"line": 1, "column": 39}}],
- "incr": 0,
  "env": 0}
 

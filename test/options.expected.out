@@ -3,10 +3,9 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 6},
    "data": "constructor List.cons.{u} : {α : Type u} → α → List α → List α"}],
- "incr": 0,
  "env": 0}
 
-{"incr": 1, "env": 1}
+{"env": 1}
 
 {"messages":
  [{"severity": "info",
@@ -14,6 +13,5 @@
    "endPos": {"line": 1, "column": 6},
    "data":
    "constructor List.cons.{u} : {α : Type u} → α → List.{u} α → List.{u} α"}],
- "incr": 2,
  "env": 2}
 

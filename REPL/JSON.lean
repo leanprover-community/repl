@@ -113,7 +113,6 @@ A response to a Lean command.
 -/
 structure CommandResponse where
   env : Nat
-  incr : Option Nat := none
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
@@ -127,7 +126,6 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
 instance : ToJson CommandResponse where
   toJson r := Json.mkObj <| .join [
     [("env", r.env)],
-    match r.incr with | some i => [("incr", i)] | none => [],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,

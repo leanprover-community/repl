@@ -3,6 +3,5 @@
    "pos": {"line": 1, "column": 15},
    "endPos": {"line": 1, "column": 16},
    "data": "don't know how to synthesize placeholder\ncontext:\n⊢ Nat"}],
- "incr": 0,
  "env": 0}
 

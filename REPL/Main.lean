@@ -64,8 +64,7 @@ structure State where
   Environment snapshots after complete declarations.
   The user can run a declaration in a given environment using `{"cmd": "def f := 37", "env": 17}`.
   -/
-  cmdStates : Array CommandSnapshot := #[]
-  incrementalStates : Array IncrementalState := #[]
+  cmdStates : Array (CommandSnapshot × Option IncrementalState) := #[]
   latestInitialIncrementalState : Option Nat := none
   latestIncrementalState : HashMap Nat Nat := {}
   /--
@@ -86,14 +85,9 @@ abbrev M (m : Type → Type) := StateT State m
 variable [Monad m] [MonadLiftT IO m]
 
 /-- Record an `CommandSnapshot` into the REPL state, returning its index for future use. -/
-def recordCommandSnapshot (state : CommandSnapshot) : M m Nat := do
+def recordCommandSnapshot (state : CommandSnapshot) (incr : Option IncrementalState): M m Nat := do
   let id := (← get).cmdStates.size
-  modify fun s => { s with cmdStates := s.cmdStates.push state }
-  return id
-
-def recordIncrementalState (state : IncrementalState) : M m Nat := do
-  let id := (← get).incrementalStates.size
-  modify fun s => { s with incrementalStates := s.incrementalStates.push state }
+  modify fun s => { s with cmdStates := s.cmdStates.push (state, incr) }
   return id
 
 /-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
@@ -159,14 +153,14 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
   match (← get).cmdStates[n.env]? with
   | none => return .inr ⟨"Unknown environment."⟩
-  | some env =>
+  | some (env, _) =>
     discard <| env.pickle n.pickleTo
     return .inl { env := n.env }
 
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
-  let env ← recordCommandSnapshot env
+  let env ← recordCommandSnapshot env none
   return { env }
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
@@ -187,14 +181,14 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
     | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown environment."⟩
-  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
+  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom ((·.1) <$> cmdSnapshot?)
   Sum.inl <$> createProofStepReponse proofState
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
 def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
-  let (cmdSnapshot?, notFound) ← do match s.env with
+  let (retrieved?, notFound) ← do match s.env with
   | none => pure (none, false)
   | some i => do match (← get).cmdStates[i]? with
     | some env => pure (some env, false)
@@ -213,11 +207,13 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     | some j => pure j
     match j? with
     | none => pure (none, false)
-    | some j => do match (← get).incrementalStates[j]? with
-      | some s => pure (some s, false)
+    | some j => do match (← get).cmdStates[j]? with
+      | some (_, some s) => pure (some s, false)
+      | some (_, none)
       | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown incremental state."⟩
+  let cmdSnapshot? := (·.1) <$> retrieved?
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
   let (cmdState, incrementalState, messages, trees) ← try
     IO.processInput s.cmd initialCmdState? incrementalStateBefore?
@@ -234,12 +230,11 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
-  let env ← recordCommandSnapshot cmdSnapshot
-  let incr ← recordIncrementalState incrementalState
+  let env ← recordCommandSnapshot cmdSnapshot incrementalState
   if let some i := s.env then
-    modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i incr }
+    modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
   else
-    modify fun c => { c with latestInitialIncrementalState := some incr }
+    modify fun c => { c with latestInitialIncrementalState := some env }
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo
@@ -252,7 +247,6 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
   return .inl
     { env,
-      incr,
       messages,
       sorries,
       tactics

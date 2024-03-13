@@ -1,6 +1,6 @@
-{"incr": 0, "env": 0}
+{"env": 0}
 
-{"incr": 1, "env": 1}
+{"env": 1}
 
 {"sorries":
  [{"proofState": 0,
@@ -12,7 +12,6 @@
    "pos": {"line": 1, "column": 7},
    "endPos": {"line": 1, "column": 14},
    "data": "declaration uses 'sorry'"}],
- "incr": 2,
  "env": 2}
 
 {"env": 1}

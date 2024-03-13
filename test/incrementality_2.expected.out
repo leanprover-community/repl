@@ -9,7 +9,6 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 0,
  "env": 0}
 
 {"sorries":
@@ -22,7 +21,6 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 1,
  "env": 1}
 
 {"messages":
@@ -34,7 +32,6 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 2,
  "env": 2}
 
 !2
@@ -47,6 +44,5 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data": "declaration uses 'sorry'"}],
- "incr": 3,
  "env": 3}
 
