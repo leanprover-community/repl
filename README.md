@@ -61,7 +61,7 @@ showing any messages generated, and sorries with their goal states.
 
 There is a simple wrapper around command mode that allows reading in an entire file.
 
-If `file.lean` contains
+If `test/file.lean` contains
 ```lean
 def f : Nat := 37
 
@@ -70,11 +70,11 @@ def g := 2
 theorem h : f + g = 39 := by exact rfl
 ```
 
-then sending
-```json
-{"path": "test/file.lean", "allTactics": true}
+then
 ```
-to the REPL results in output
+echo '{"path": "test/file.lean", "allTactics": true}' | lake exe repl
+```
+results in output
 ```json
 {"tactics":
  [{"tactic": "exact rfl",
