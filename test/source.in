@@ -6,7 +6,11 @@
 
 {"src": 0}
 
+{"src": 0, "after": true}
+
 {"cmd": "def h := 39", "env": 0}
 
 {"src": 2}
+
+{"src": 2, "before": false}
 

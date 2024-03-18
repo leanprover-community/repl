@@ -328,7 +328,21 @@ def source (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
       | none => i? := none
       | some c =>
         src := c.src ++ "\n" ++ src
-        i? := c.parentId?
+        i? := if s.before' then c.parentId? else none
+  if s.after' then
+    -- Also descend the most recent children.
+    let mut self := true
+    i? := some s.src
+    while i?.isSome do
+      match i? with
+      | none => continue
+      | some i =>
+        match ← lookup? i with
+        | none => i? := none
+        | some c =>
+          if !self then src := src ++ "\n" ++ c.src
+          i? := c.childIds.head?
+          self := false
   return .inl ⟨src⟩
 
 /--

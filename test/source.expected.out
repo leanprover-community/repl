@@ -6,7 +6,11 @@
 
 {"src": "def f := 37\n"}
 
+{"src": "def f := 37\n\ndef g := 38"}
+
 {"env": 2}
 
 {"src": "def f := 37\ndef h := 39\n"}
+
+{"src": "def h := 39\n"}
 

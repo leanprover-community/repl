@@ -37,7 +37,12 @@ deriving FromJson
 /-- Print the source code for a given environment. -/
 structure Source where
   src : Nat
+  before : Option Bool
+  after : Option Bool
 deriving FromJson
+
+def Source.before' (s : Source) := s.before.getD true
+def Source.after' (s : Source) := s.after.getD false
 
 /--
 Run a tactic in a proof state.
