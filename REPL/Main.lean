@@ -251,7 +251,7 @@ Run a command, returning the id of the new environment, and any messages and sor
 -/
 def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
   let (retrieved?, notFound) ← do match s.env with
-  | none => pure (none, false)
+  | none => pure ((← get).commands.back?, false)
   | some i => do match (← get).commands[i]? with
     | some env => pure (some env, false)
     | none => pure (none, true)
