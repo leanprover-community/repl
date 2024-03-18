@@ -1,0 +1,8 @@
+{"tactics":
+ [{"tactic": "exact rfl",
+   "proofState": 0,
+   "pos": {"line": 5, "column": 29},
+   "goals": "⊢ f + g = 39",
+   "endPos": {"line": 5, "column": 38}}],
+ "env": 0}
+

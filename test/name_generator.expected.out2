@@ -1,0 +1,53 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 2, "column": 45},
+   "goal": "x : Int\nh0 : x > 0\n⊢ False",
+   "endPos": {"line": 2, "column": 50}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 2, "column": 0},
+   "endPos": {"line": 2, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"sorries": [{"proofState": 1, "goal": "x : Int\nh0 : x > 0\n⊢ x > 0"}],
+ "proofState": 2,
+ "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
+
+{"proofState": 3, "goals": []}
+
+{"proofState": 4, "goals": []}
+
+{"traces":
+ ["[Meta.Tactic.simp.rewrite] of_eq_true (eq_true h0):1000, x > 0 ==> True"],
+ "proofState": 5,
+ "goals": []}
+
+{"traces":
+ ["[Meta.Tactic.simp.rewrite] @gt_iff_lt:1000, x > 0 ==> 0 < x",
+  "[Meta.Tactic.simp.rewrite] h0:1000, 0 < x ==> True"],
+ "proofState": 6,
+ "goals": []}
+
+{"traces":
+ ["[Meta.Tactic.simp.rewrite] @gt_iff_lt:1000, x > 0 ==> 0 < x",
+  "[Meta.Tactic.simp.rewrite] h0:1000, 0 < x ==> True"],
+ "proofState": 7,
+ "goals": []}
+
+{"proofState": 8,
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
+ "goals": []}
+
+{"proofState": 9,
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
+ "goals": []}
+
