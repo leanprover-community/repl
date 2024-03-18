@@ -11,21 +11,28 @@ open Lean Elab InfoTree
 
 namespace REPL
 
-/-- Run Lean commands.
-If `env = none`, starts a new session (in which you can use `import`).
-If `env = some n`, builds on the existing environment `n`.
--/
-structure Command where
-  env : Option Nat
-  incr : Option Nat
-  cmd : String
+structure CommandOptions where
   allTactics : Option Bool := none
   /--
   Should be "full", "tactics", "original", or "substantive".
   Anything else is ignored.
   -/
   infotree : Option String
+
+/-- Run Lean commands.
+If `env = none`, starts a new session (in which you can use `import`).
+If `env = some n`, builds on the existing environment `n`.
+-/
+structure Command extends CommandOptions where
+  env : Option Nat
+  incr : Option Nat
+  cmd : String
 deriving ToJson, FromJson
+
+/-- Process a Lean file in a fresh environment. -/
+structure File extends CommandOptions where
+  path : System.FilePath
+deriving FromJson
 
 /--
 Run a tactic in a proof state.
