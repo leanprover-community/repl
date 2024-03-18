@@ -9,6 +9,37 @@ open Lean Elab
 
 namespace Lean.Elab.IO
 
+open Language Lean
+
+partial def processCommandsIncrementally' (inputCtx : Parser.InputContext)
+    (parserState : Parser.ModuleParserState) (commandState : Command.State)
+    (old? : Option IncrementalState := none) :
+    BaseIO (List IncrementalState) := do
+  let task ← Language.Lean.processCommands inputCtx parserState commandState
+    (old?.map fun old => (old.inputCtx, old.initialSnap))
+  return go task.get task #[]
+where
+  go initialSnap task commands : List IncrementalState :=
+    let snap := task.get
+    let commands := commands.push snap.data.stx
+    let tree : SnapshotTree := ⟨snap.data.toSnapshot,
+      #[snap.data.headersSnap.map (sync := true) toSnapshotTree,
+        snap.data.finishedSnap.map (sync := true) toSnapshotTree]⟩
+    let messages := tree
+      |>.getAll.map (·.diagnostics.msgLog)
+      |>.foldl (· ++ ·) {}
+    let trees := tree
+      |>.getAll.map (·.infoTree?) |>.filterMap id |>.toPArray'
+    let result :=
+    { commandState := { snap.data.finishedSnap.get.cmdState with messages, infoState.trees := trees }
+      parserState := snap.data.parserState
+      cmdPos := snap.data.parserState.pos
+      inputCtx, initialSnap, commands }
+    if let some next := snap.next? then
+      result :: go initialSnap next commands
+    else
+      [result]
+
 /--
 Wrapper for `IO.processCommands` that enables info states, and returns
 * the new command state
@@ -20,7 +51,11 @@ def processCommandsWithInfoTrees
     (commandState : Command.State) (incrementalState? : Option IncrementalState := none) :
     IO (Command.State × IncrementalState × List Message × List InfoTree) := do
   let commandState := { commandState with infoState.enabled := true }
-  let r ← IO.processCommandsIncrementally inputCtx parserState commandState incrementalState?
+  let r ← IO.processCommandsIncrementally' inputCtx parserState commandState incrementalState?
+  let r ← if h : 0 < r.length then
+    pure r[0]
+  else
+    throw <| IO.userError ""
   let s := r.commandState
   pure (s, r, s.messages.msgs.toList, s.infoState.trees.toList)
 

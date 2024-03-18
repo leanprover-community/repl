@@ -317,8 +317,15 @@ def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   catch e =>
     pure <| .inr ⟨e.toString⟩
 
-def source (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
-  let mut i? := some s.src
+/--
+Retrieves the source code for a given command.
+
+By default this returns the code for all commands up to and including the designated command.
+To retrieve only the source of the command, use `before := false`.
+To also retrieve the source code of the most recent added subsequent commands, use `after := true`.
+-/
+def source (i : Nat) (before := true) (after := false) : M m String := do
+  let mut i? := some i
   let mut src := ""
   while i?.isSome do
     match i? with
@@ -328,11 +335,11 @@ def source (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
       | none => i? := none
       | some c =>
         src := c.src ++ "\n" ++ src
-        i? := if s.before' then c.parentId? else none
-  if s.after' then
+        i? := if before then c.parentId? else none
+  if after then
     -- Also descend the most recent children.
     let mut self := true
-    i? := some s.src
+    i? := some i
     while i?.isSome do
       match i? with
       | none => continue
@@ -343,7 +350,10 @@ def source (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
           if !self then src := src ++ "\n" ++ c.src
           i? := c.childIds.head?
           self := false
-  return .inl ⟨src⟩
+  return src
+
+def processSource (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
+  return .inl ⟨← source s.src s.before' s.after'⟩
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
@@ -423,7 +433,7 @@ where loop : M IO Unit := do
   IO.println <| toString <| ← match ← parse query with
   | .command r => return toJson (← runCommand r)
   | .file r => return toJson (← processFile r)
-  | .source r => return toJson (← source r)
+  | .source r => return toJson (← processSource r)
   | .proofStep r => return toJson (← runProofStep r)
   | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
