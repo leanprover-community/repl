@@ -34,6 +34,11 @@ structure File extends CommandOptions where
   path : System.FilePath
 deriving FromJson
 
+/-- Print the source code for a given environment. -/
+structure Source where
+  src : Nat
+deriving FromJson
+
 /--
 Run a tactic in a proof state.
 -/
@@ -113,6 +118,10 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     goals,
     tactic,
     proofState }
+
+structure SourceResponse where
+  src : String
+deriving ToJson
 
 /--
 A response to a Lean command.

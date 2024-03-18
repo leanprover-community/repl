@@ -250,11 +250,16 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
 def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
-  let (retrieved?, notFound) ← do match s.env with
-  | none => pure ((← get).commands.back?, false)
+  let (retrieved?, parentId?, notFound) ← do match s.env with
+  | none =>
+    let c := (← get).commands
+    if c.isEmpty then
+      pure (none, none, false)
+    else
+      pure (c.back?, some (c.size - 1), false)
   | some i => do match (← get).commands[i]? with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
+    | some env => pure (some env, some i, false)
+    | none => pure (none, none, true)
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let (incrementalStateBefore?, notFound) ← do
@@ -283,7 +288,7 @@ def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
-  let env ← recordCommandSnapshot s.env s.cmd cmdSnapshot incrementalState
+  let env ← recordCommandSnapshot parentId? s.cmd cmdSnapshot incrementalState
   -- if let some i := s.env then
   --   modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
   -- else
@@ -311,6 +316,20 @@ def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
     runCommand { s with env := none, incr := none, cmd }
   catch e =>
     pure <| .inr ⟨e.toString⟩
+
+def source (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
+  let mut i? := some s.src
+  let mut src := ""
+  while i?.isSome do
+    match i? with
+    | none => continue
+    | some i =>
+      match ← lookup? i with
+      | none => i? := none
+      | some c =>
+        src := c.src ++ "\n" ++ src
+        i? := c.parentId?
+  return .inl ⟨src⟩
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
@@ -347,6 +366,7 @@ instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
 inductive Input
 | command : JSON.Command → Input
 | file : JSON.File → Input
+| source : JSON.Source → Input
 | proofStep : JSON.ProofStep → Input
 | pickleEnvironment : JSON.PickleEnvironment → Input
 | unpickleEnvironment : JSON.UnpickleEnvironment → Input
@@ -373,6 +393,8 @@ def parse (query : String) : IO Input := do
     | .ok (r : JSON.Command) => return .command r
     | .error _ => match fromJson? j with
     | .ok (r : JSON.File) => return .file r
+    | .error _ => match fromJson? j with
+    | .ok (r : JSON.Source) => return .source r
     | .error e => throw <| IO.userError <| toString <| toJson <|
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : JSON.Error)
 
@@ -387,6 +409,7 @@ where loop : M IO Unit := do
   IO.println <| toString <| ← match ← parse query with
   | .command r => return toJson (← runCommand r)
   | .file r => return toJson (← processFile r)
+  | .source r => return toJson (← source r)
   | .proofStep r => return toJson (← runProofStep r)
   | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)

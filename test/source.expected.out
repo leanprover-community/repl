@@ -1,0 +1,12 @@
+{"env": 0}
+
+{"env": 1}
+
+{"src": "def f := 37\ndef g := 38\n"}
+
+{"src": "def f := 37\n"}
+
+{"env": 2}
+
+{"src": "def f := 37\ndef h := 39\n"}
+
