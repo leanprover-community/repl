@@ -92,6 +92,34 @@ However, if the first `def f` command returned `{"env" : 1}`, then we can use
 ```
 and then the second invocation of `expensive_tactic` will be fast again.
 
+## File mode
+
+There is a simple wrapper around command mode that allows reading in an entire file.
+
+If `test/file.lean` contains
+```lean
+def f : Nat := 37
+
+def g := 2
+
+theorem h : f + g = 39 := by exact rfl
+```
+
+then
+```
+echo '{"path": "test/file.lean", "allTactics": true}' | lake exe repl
+```
+results in output
+```json
+{"tactics":
+ [{"tactic": "exact rfl",
+   "proofState": 0,
+   "pos": {"line": 5, "column": 29},
+   "goals": "⊢ f + g = 39",
+   "endPos": {"line": 5, "column": 38}}],
+ "env": 0}
+ ```
+
 ## Tactic mode (experimental)
 
 To enter tactic mode issue a command containing a `sorry`,
