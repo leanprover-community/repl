@@ -100,8 +100,10 @@ abbrev M (m : Type → Type) := StateT State m
 
 variable [Monad m] [MonadLiftT IO m]
 
+/-- Find a command from its id. -/
 def lookup? (i : Nat) : M m (Option Command) := return (← get).commands[i]?
 
+/-- Find the ids of children of a command, or the roots if the argument is `none`. -/
 def children (i? : Option Nat) : M m (List Nat) := do
   match i? with
   | none => return (← get).roots
@@ -128,13 +130,14 @@ def findLatestIncrementalState (parent? : Option Nat) : M m (Option IncrementalS
 
 /-- Record an `CommandSnapshot` into the REPL state, returning its index for future use. -/
 def recordCommandSnapshot
-    (parentId? : Option Nat) (state : CommandSnapshot) (incr : Option IncrementalState) :
+    (parentId? : Option Nat) (src : String)
+    (state : CommandSnapshot) (incr : Option IncrementalState) :
     M m Nat := do
   let id := (← get).commands.size
   let cmd : Command :=
   { parentId? := parentId?
     childIds := []
-    src := "" -- FIXME
+    src := src
     stx := .missing -- FIXME
     snapshot := state
     incrementalState? := incr }
@@ -219,7 +222,7 @@ def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Err
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
-  let env ← recordCommandSnapshot none env none
+  let env ← recordCommandSnapshot none "" env none
   return { env }
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
@@ -280,7 +283,7 @@ def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
-  let env ← recordCommandSnapshot s.env cmdSnapshot incrementalState
+  let env ← recordCommandSnapshot s.env s.cmd cmdSnapshot incrementalState
   -- if let some i := s.env then
   --   modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
   -- else
