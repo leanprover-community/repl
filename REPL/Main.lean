@@ -58,15 +58,31 @@ open Lean Elab
 
 namespace REPL
 
+structure Command where
+  parentId? : Option Nat
+  childIds : List Nat
+  src : String
+  stx : Syntax
+  snapshot : CommandSnapshot
+  incrementalState? : Option IncrementalState
+
+-- /--
+-- The internal representation of a document.
+
+-- A document is just a list of command identifiers.
+-- -/
+-- structure Document where
+--   commandIds : List Nat
+
 /-- The monadic state for the Lean REPL. -/
 structure State where
   /--
   Environment snapshots after complete declarations.
   The user can run a declaration in a given environment using `{"cmd": "def f := 37", "env": 17}`.
   -/
-  cmdStates : Array (CommandSnapshot × Option IncrementalState) := #[]
-  latestInitialIncrementalState : Option Nat := none
-  latestIncrementalState : HashMap Nat Nat := {}
+  commands : Array Command := #[]
+  /-- A list of `Command`s that do not have a parent. -/
+  roots : List Nat := []
   /--
   Proof states after individual tactics.
   The user can run a tactic in a given proof state using `{"tactic": "exact 42", "proofState": 5}`.
@@ -84,10 +100,50 @@ abbrev M (m : Type → Type) := StateT State m
 
 variable [Monad m] [MonadLiftT IO m]
 
+def lookup? (i : Nat) : M m (Option Command) := return (← get).commands[i]?
+
+def children (i? : Option Nat) : M m (List Nat) := do
+  match i? with
+  | none => return (← get).roots
+  | some i => match ← lookup? i with
+    | none => return []
+    | some c => return c.childIds
+
+/--
+Automatically determine the best `IncrementalState` for a new command.
+Traverse all the children of `parent?` (or all the roots if `parent? = none`)
+and select the incremental state from the command with the longest common prefix.
+-/
+def findBestIncrementalState (parent? : Option Nat) (src : String) :
+    M m (Option IncrementalState) := do
+  let candidates ← (← children parent?).filterMapM lookup?
+  let pairs := candidates.filterMap fun c =>
+    c.incrementalState?.map fun s => (src.firstDiffPos c.src, s)
+  return (·.2) <$> (pairs.toArray.insertionSort fun c₁ c₂ => c₁.1 < c₂.1).back?
+
+/-- Find the most recently constructed incremental state for a given parent. -/
+def findLatestIncrementalState (parent? : Option Nat) : M m (Option IncrementalState) := do
+  let candidates ← (← children parent?).filterMapM lookup?
+  return (candidates.filterMap fun c => c.incrementalState?).head?
+
 /-- Record an `CommandSnapshot` into the REPL state, returning its index for future use. -/
-def recordCommandSnapshot (state : CommandSnapshot) (incr : Option IncrementalState): M m Nat := do
-  let id := (← get).cmdStates.size
-  modify fun s => { s with cmdStates := s.cmdStates.push (state, incr) }
+def recordCommandSnapshot
+    (parentId? : Option Nat) (state : CommandSnapshot) (incr : Option IncrementalState) :
+    M m Nat := do
+  let id := (← get).commands.size
+  let cmd : Command :=
+  { parentId? := parentId?
+    childIds := []
+    src := "" -- FIXME
+    stx := .missing -- FIXME
+    snapshot := state
+    incrementalState? := incr }
+  modify fun s => match parentId? with
+  | none => { s with roots := id :: s.roots, commands := s.commands.push cmd }
+  | some parentId =>
+      { s with
+        commands := (s.commands.modify parentId fun c => { c with childIds := id :: c.childIds })
+          |>.push cmd }
   return id
 
 /-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
@@ -95,6 +151,8 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   let id := (← get).proofStates.size
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
+
+open JSON
 
 def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
   trees.bind InfoTree.sorries |>.mapM
@@ -149,18 +207,19 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     sorries
     traces }
 
-/-- Pickle a `CommandSnapshot`, generating a JSON response. -/
+/-- Pickle a `Command`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
-  match (← get).cmdStates[n.env]? with
-  | none => return .inr ⟨"Unknown environment."⟩
-  | some (env, _) =>
-    discard <| env.pickle n.pickleTo
+  match (← get).commands[n.env]? with
+  | none => return .inr ⟨"Unknown command."⟩
+  | some cmd =>
+    -- FIXME presumably we want to pickle more!
+    discard <| cmd.snapshot.pickle n.pickleTo
     return .inl { env := n.env }
 
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
-  let env ← recordCommandSnapshot env none
+  let env ← recordCommandSnapshot none env none
   return { env }
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
@@ -176,44 +235,35 @@ def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Erro
 def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕ Error) := do
   let (cmdSnapshot?, notFound) ← do match n.env with
   | none => pure (none, false)
-  | some i => do match (← get).cmdStates[i]? with
+  | some i => do match (← get).commands[i]? with
     | some env => pure (some env, false)
     | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown environment."⟩
-  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom ((·.1) <$> cmdSnapshot?)
+  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom ((·.snapshot) <$> cmdSnapshot?)
   Sum.inl <$> createProofStepReponse proofState
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
-def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
+def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
   let (retrieved?, notFound) ← do match s.env with
   | none => pure (none, false)
-  | some i => do match (← get).cmdStates[i]? with
+  | some i => do match (← get).commands[i]? with
     | some env => pure (some env, false)
     | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let (incrementalStateBefore?, notFound) ← do
-    let j? ← match s.incr with
-    | none => match s.env with
-      | none => match (← get).latestInitialIncrementalState with
-        | none => pure none
-        | j => pure j
-      | some i => match (← get).latestIncrementalState.find? i with
-        | none => pure none
-        | j => pure j
-    | some j => pure j
-    match j? with
-    | none => pure (none, false)
-    | some j => do match (← get).cmdStates[j]? with
-      | some (_, some s) => pure (some s, false)
-      | some (_, none)
+    match s.incr with
+    | none => pure (← findLatestIncrementalState s.env, false)
+    | some j => do match (← get).commands[j]? with
+      | some { incrementalState? := some s, .. } => pure (some s, false)
+      | some _
       | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown incremental state."⟩
-  let cmdSnapshot? := (·.1) <$> retrieved?
+  let cmdSnapshot? := (·.snapshot) <$> retrieved?
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
   let (cmdState, incrementalState, messages, trees) ← try
     IO.processInput s.cmd initialCmdState? incrementalStateBefore?
@@ -230,11 +280,11 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
-  let env ← recordCommandSnapshot cmdSnapshot incrementalState
-  if let some i := s.env then
-    modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
-  else
-    modify fun c => { c with latestInitialIncrementalState := some env }
+  let env ← recordCommandSnapshot s.env cmdSnapshot incrementalState
+  -- if let some i := s.env then
+  --   modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
+  -- else
+  --   modify fun c => { c with latestInitialIncrementalState := some env }
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo
@@ -285,33 +335,33 @@ instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
 
 /-- Commands accepted by the REPL. -/
 inductive Input
-| command : REPL.Command → Input
-| proofStep : REPL.ProofStep → Input
-| pickleEnvironment : REPL.PickleEnvironment → Input
-| unpickleEnvironment : REPL.UnpickleEnvironment → Input
-| pickleProofSnapshot : REPL.PickleProofState → Input
-| unpickleProofSnapshot : REPL.UnpickleProofState → Input
+| command : JSON.Command → Input
+| proofStep : JSON.ProofStep → Input
+| pickleEnvironment : JSON.PickleEnvironment → Input
+| unpickleEnvironment : JSON.UnpickleEnvironment → Input
+| pickleProofSnapshot : JSON.PickleProofState → Input
+| unpickleProofSnapshot : JSON.UnpickleProofState → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
   let json := Json.parse query
   match json with
   | .error e => throw <| IO.userError <| toString <| toJson <|
-      (⟨"Could not parse JSON:\n" ++ e⟩ : Error)
+      (⟨"Could not parse JSON:\n" ++ e⟩ : JSON.Error)
   | .ok j => match fromJson? j with
-    | .ok (r : REPL.ProofStep) => return .proofStep r
+    | .ok (r : JSON.ProofStep) => return .proofStep r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.PickleEnvironment) => return .pickleEnvironment r
+    | .ok (r : JSON.PickleEnvironment) => return .pickleEnvironment r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.UnpickleEnvironment) => return .unpickleEnvironment r
+    | .ok (r : JSON.UnpickleEnvironment) => return .unpickleEnvironment r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.PickleProofState) => return .pickleProofSnapshot r
+    | .ok (r : JSON.PickleProofState) => return .pickleProofSnapshot r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.UnpickleProofState) => return .unpickleProofSnapshot r
+    | .ok (r : JSON.UnpickleProofState) => return .unpickleProofSnapshot r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.Command) => return .command r
+    | .ok (r : JSON.Command) => return .command r
     | .error e => throw <| IO.userError <| toString <| toJson <|
-        (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : Error)
+        (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : JSON.Error)
 
 /-- Read-eval-print loop for Lean. -/
 unsafe def repl : IO Unit :=

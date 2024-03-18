@@ -9,7 +9,7 @@ import Lean.Elab.InfoTree.Main
 
 open Lean Elab InfoTree
 
-namespace REPL
+namespace REPL.JSON
 
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).
@@ -186,4 +186,4 @@ structure UnpickleProofState where
   env : Option Nat
 deriving ToJson, FromJson
 
-end REPL
+end REPL.JSON
