@@ -54,7 +54,7 @@ The results are of the form
  Information is generated for tactic mode sorries, but not for term mode sorries.
 -/
 
-open Lean Elab
+open Lean Elab Command
 
 namespace REPL
 
@@ -65,14 +65,6 @@ structure Command where
   stx : Syntax
   snapshot : CommandSnapshot
   incrementalState? : Option IncrementalState
-
--- /--
--- The internal representation of a document.
-
--- A document is just a list of command identifiers.
--- -/
--- structure Document where
---   commandIds : List Nat
 
 /-- The monadic state for the Lean REPL. -/
 structure State where
@@ -217,13 +209,13 @@ def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Err
   | some cmd =>
     -- FIXME presumably we want to pickle more!
     discard <| cmd.snapshot.pickle n.pickleTo
-    return .inl { env := n.env }
+    return .inl { env := n.env, source := "" }
 
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
   let env ← recordCommandSnapshot none "" env none
-  return { env }
+  return { env, source := "" }
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
@@ -249,7 +241,7 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
-def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
+def runCommand (s : JSON.Command) : M IO (CommandResponses ⊕ Error) := do
   let (retrieved?, parentId?, notFound) ← do match s.env with
   | none =>
     let c := (← get).commands
@@ -271,28 +263,74 @@ def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
       | none => pure (none, true)
   if notFound then
     return .inr ⟨"Unknown incremental state."⟩
-  let cmdSnapshot? := (·.snapshot) <$> retrieved?
-  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (cmdState, incrementalState, messages, trees) ← try
+  let initialCmdSnapshot? := (·.snapshot) <$> retrieved?
+  let initialCmdState? := initialCmdSnapshot?.map fun c => c.cmdState
+  let states ← try
     IO.processInput s.cmd initialCmdState? incrementalStateBefore?
   catch ex =>
     return .inr ⟨ex.toString⟩
+  let states := states.filter fun s => match s.commands.back? with | none => true | some stx => stx.getKind ≠ ``Lean.Parser.Command.eoi
+  let results ← states.mapM fun state => mkResponse parentId? initialCmdSnapshot? s state
+  return .inl { results }
+  -- let incrementalState ← if h : 0 < states.length then
+  --   pure states[0]
+  -- else
+  --   throw <| IO.userError ""
+  -- let cmdState := incrementalState.commandState
+  -- let messages := cmdState.messages.msgs.toList
+  -- let trees := cmdState.infoState.trees.toList
+  -- let messages ← messages.mapM fun m => Message.of m
+  -- -- For debugging purposes, sometimes we print out the trees here:
+  -- -- trees.forM fun t => do IO.println (← t.format)
+  -- let sorries ← sorries trees (initialCmdState?.map (·.env))
+  -- let tactics ← match s.allTactics with
+  -- | some true => tactics trees
+  -- | _ => pure []
+  -- let cmdSnapshot :=
+  -- { cmdState
+  --   cmdContext := (initialCmdSnapshot?.map fun c => c.cmdContext).getD
+  --     { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
+  -- let env ← recordCommandSnapshot parentId? s.cmd cmdSnapshot incrementalState
+  -- -- if let some i := s.env then
+  -- --   modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
+  -- -- else
+  -- --   modify fun c => { c with latestInitialIncrementalState := some env }
+  -- let jsonTrees := match s.infotree with
+  -- | some "full" => trees
+  -- | some "tactics" => trees.bind InfoTree.retainTacticInfo
+  -- | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
+  -- | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
+  -- | _ => []
+  -- let infotree := if jsonTrees.isEmpty then
+  --   none
+  -- else
+  --   some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
+  -- return .inl
+  --   { env,
+  --     messages,
+  --     sorries,
+  --     tactics
+  --     infotree }
+where
+  mkResponse
+    (parentId? : Option Nat) (initialCmdSnapshot? : Option CommandSnapshot) (s : JSON.Command)
+    (incrementalState : IncrementalState) : M IO CommandResponse := do
+  let cmdState := incrementalState.commandState
+  let messages := cmdState.messages.msgs.toList
+  let trees := cmdState.infoState.trees.toList
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdState?.map (·.env))
+  let sorries ← sorries trees (initialCmdSnapshot?.map (·.cmdState.env))
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []
+  let cmdContext := (initialCmdSnapshot?.map fun c => c.cmdContext).getD
+      { fileName := "", fileMap := default, tacticCache? := none, snap? := none }
   let cmdSnapshot :=
   { cmdState
-    cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
-      { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
+    cmdContext }
   let env ← recordCommandSnapshot parentId? s.cmd cmdSnapshot incrementalState
-  -- if let some i := s.env then
-  --   modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
-  -- else
-  --   modify fun c => { c with latestInitialIncrementalState := some env }
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo
@@ -303,14 +341,17 @@ def runCommand (s : JSON.Command) : M IO (CommandResponse ⊕ Error) := do
     none
   else
     some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
-  return .inl
-    { env,
-      messages,
-      sorries,
-      tactics
-      infotree }
+  let stx : Lean.Command := ⟨incrementalState.commands.back?.get!⟩
+  let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand stx) cmdContext cmdState -- FIXME this should be the Command.State before, not after?!
+  return {
+    source := toString format,
+    env,
+    messages,
+    sorries,
+    tactics
+    infotree }
 
-def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
+def processFile (s : File) : M IO (CommandResponses ⊕ Error) := do
   try
     let cmd ← IO.FS.readFile s.path
     runCommand { s with env := none, incr := none, cmd }

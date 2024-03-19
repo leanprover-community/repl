@@ -49,15 +49,15 @@ Wrapper for `IO.processCommands` that enables info states, and returns
 def processCommandsWithInfoTrees
     (inputCtx : Parser.InputContext) (parserState : Parser.ModuleParserState)
     (commandState : Command.State) (incrementalState? : Option IncrementalState := none) :
-    IO (Command.State × IncrementalState × List Message × List InfoTree) := do
+    IO (List IncrementalState) := do
   let commandState := { commandState with infoState.enabled := true }
-  let r ← IO.processCommandsIncrementally' inputCtx parserState commandState incrementalState?
-  let r ← if h : 0 < r.length then
-    pure r[0]
-  else
-    throw <| IO.userError ""
-  let s := r.commandState
-  pure (s, r, s.messages.msgs.toList, s.infoState.trees.toList)
+  IO.processCommandsIncrementally' inputCtx parserState commandState incrementalState?
+  -- let r ← if h : 0 < r.length then
+  --   pure r[0]
+  -- else
+  --   throw <| IO.userError ""
+  -- let s := r.commandState
+  -- pure (s, r, s.messages.msgs.toList, s.infoState.trees.toList)
 
 /--
 Process some text input, with or without an existing command state.
@@ -70,7 +70,7 @@ Returns the resulting command state, along with a list of messages and info tree
 def processInput (input : String) (cmdState? : Option Command.State)
      (incrementalState? : Option IncrementalState := none)
     (opts : Options := {}) (fileName : Option String := none) :
-    IO (Command.State × IncrementalState × List Message × List InfoTree) := unsafe do
+    IO (List IncrementalState) := unsafe do
   Lean.initSearchPath (← Lean.findSysroot)
   enableInitializersExecution
   let fileName   := fileName.getD "<input>"

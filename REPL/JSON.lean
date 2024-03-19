@@ -133,6 +133,7 @@ A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
 -/
 structure CommandResponse where
+  source : String
   env : Nat
   messages : List Message := []
   sorries : List Sorry := []
@@ -146,12 +147,17 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
 
 instance : ToJson CommandResponse where
   toJson r := Json.mkObj <| .join [
+    [("source", r.source)],
     [("env", r.env)],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
+
+structure CommandResponses where
+  results : List CommandResponse
+deriving ToJson
 
 /--
 A response to a Lean tactic.
