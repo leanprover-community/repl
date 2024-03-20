@@ -95,6 +95,76 @@ variable [Monad m] [MonadLiftT IO m]
 /-- Find a command from its id. -/
 def lookup? (i : Nat) : M m (Option Command) := return (← get).commands[i]?
 
+/--
+Retrieves the source code for a given command.
+
+By default this returns the code for all commands up to and including the designated command.
+To retrieve only the source of the command, use `before := false`.
+To also retrieve the source code of the most recent added subsequent commands, use `after := true`.
+-/
+def source (i : Nat) (before := true) (self := true) (after := false) : M m String := do
+  let mut i? := some i
+  let mut src := ""
+  let mut first := true
+  while i?.isSome do
+    match i? with
+    | none => continue
+    | some i =>
+      match ← lookup? i with
+      | none => i? := none
+      | some c =>
+        if (!first) || self then src := c.src ++ "\n" ++ src
+        i? := if before then c.parentId? else none
+        first := false
+  if after then
+    -- Also descend the most recent children.
+    first := true
+    i? := some i
+    while i?.isSome do
+      match i? with
+      | none => continue
+      | some i =>
+        match ← lookup? i with
+        | none => i? := none
+        | some c =>
+          if !first then src := src ++ "\n" ++ c.src
+          i? := c.childIds.head?
+          first := false
+  return if src.startsWith "\n" then src.drop 1 else src
+
+def processSource (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ JSON.Error) := do
+  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
+
+def retrieve (after? : Option Nat) (replace? : Option Nat) :
+    M IO (Option (Command × Nat × String) ⊕ JSON.Error) := do
+  let additionalSource ← match replace? with
+  | none => pure ""
+  | some j => source j (before := false) (self := false) (after := true)
+  let (r, notFound) ← match after? with
+  | none =>
+    match replace? with
+    | none =>
+      let c := (← get).commands
+      if c.isEmpty then
+        pure (none, false)
+      else
+        pure (c.back?.map fun s => (s, c.size - 1, ""), false)
+    | some j => match (← get).commands[j]? with
+      | none => return .inr ⟨"Unknown replace target."⟩
+      | some x => match x.parentId? with
+        | none => pure (none, false)
+        | some p => match (← get).commands[p]? with
+          | none => return .inr ⟨"Unreachable code; could not find parent of replace target."⟩
+          | some c => pure (some (c, p, additionalSource), false)
+  | some i => do match (← get).commands[i]? with
+    | some env =>
+      pure (some (env, i, additionalSource), false)
+    | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
+  else
+    return .inl r
+
 /-- Find the ids of children of a command, or the roots if the argument is `none`. -/
 def children (i? : Option Nat) : M m (List Nat) := do
   match i? with
@@ -238,22 +308,15 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom ((·.snapshot) <$> cmdSnapshot?)
   Sum.inl <$> createProofStepReponse proofState
 
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
 def runCommand (s : JSON.Command) : M IO (CommandResponses ⊕ Error) := do
-  let (retrieved?, parentId?, notFound) ← do match s.env with
-  | none =>
-    let c := (← get).commands
-    if c.isEmpty then
-      pure (none, none, false)
-    else
-      pure (c.back?, some (c.size - 1), false)
-  | some i => do match (← get).commands[i]? with
-    | some env => pure (some env, some i, false)
-    | none => pure (none, none, true)
-  if notFound then
-    return .inr ⟨"Unknown environment."⟩
+  let (retrieved?, parentId?, additionalSource) ← match ← retrieve s.env s.replace with
+  | .inr e => return .inr e
+  | .inl none => pure (none, none, "")
+  | .inl (some x) => pure (some x.1, some x.2.1, x.2.2)
   let (incrementalStateBefore?, notFound) ← do
     match s.incr with
     | none => pure (← findLatestIncrementalState s.env, false)
@@ -266,7 +329,7 @@ def runCommand (s : JSON.Command) : M IO (CommandResponses ⊕ Error) := do
   let initialCmdSnapshot? := (·.snapshot) <$> retrieved?
   let initialCmdState? := initialCmdSnapshot?.map fun c => c.cmdState
   let (header?, states) ← try
-    IO.processInput s.cmd initialCmdState? incrementalStateBefore?
+    IO.processInput (s.cmd ++ "\n" ++ additionalSource) initialCmdState? incrementalStateBefore?
   catch ex =>
     return .inr ⟨ex.toString⟩
   -- Drop the "end of input" state.
@@ -324,49 +387,10 @@ where
 def processFile (s : File) : M IO (CommandResponses ⊕ Error) := do
   try
     let cmd ← IO.FS.readFile s.path
-    runCommand { s with env := none, incr := none, cmd }
+    runCommand { s with env := none, incr := none, replace := none, cmd }
   catch e =>
     pure <| .inr ⟨e.toString⟩
 
-/--
-Retrieves the source code for a given command.
-
-By default this returns the code for all commands up to and including the designated command.
-To retrieve only the source of the command, use `before := false`.
-To also retrieve the source code of the most recent added subsequent commands, use `after := true`.
--/
-def source (i : Nat) (before := true) (self := true) (after := false) : M m String := do
-  let mut i? := some i
-  let mut src := ""
-  let mut first := true
-  while i?.isSome do
-    match i? with
-    | none => continue
-    | some i =>
-      match ← lookup? i with
-      | none => i? := none
-      | some c =>
-        if (!first) || self then src := c.src ++ "\n" ++ src
-        i? := if before then c.parentId? else none
-        first := false
-  if after then
-    -- Also descend the most recent children.
-    first := true
-    i? := some i
-    while i?.isSome do
-      match i? with
-      | none => continue
-      | some i =>
-        match ← lookup? i with
-        | none => i? := none
-        | some c =>
-          if !first then src := src ++ "\n" ++ c.src
-          i? := c.childIds.head?
-          first := false
-  return if src.startsWith "\n" then src.drop 1 else src
-
-def processSource (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
-  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.

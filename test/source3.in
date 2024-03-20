@@ -1,0 +1,14 @@
+{"cmd": "import Lean\ndef f := 1\ndef g := 2\nexample : f + 1 = g := rfl"}
+
+{"cmd": "def f := 3", "replace": 1}
+
+{"src": 4}
+
+{"src": 5}
+
+{"src": 4, "after": true}
+
+{"cmd": "def g := 4", "replace": 5}
+
+{"src": 0, "after": true}
+

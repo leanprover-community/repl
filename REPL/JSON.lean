@@ -25,6 +25,7 @@ If `env = some n`, builds on the existing environment `n`.
 -/
 structure Command extends CommandOptions where
   env : Option Nat
+  replace : Option Nat
   incr : Option Nat
   cmd : String
 deriving ToJson, FromJson

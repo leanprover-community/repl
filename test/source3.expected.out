@@ -1,0 +1,32 @@
+{"results":
+ [{"source": "import Lean\n  \n  ", "env": 0},
+  {"source": "def f :=\n  1", "env": 1},
+  {"source": "def g :=\n  2", "env": 2},
+  {"source": "example : f + 1 = g :=\n  rfl", "env": 3}]}
+
+{"results":
+ [{"source": "def f :=\n  3", "env": 4},
+  {"source": "def g :=\n  2", "env": 5},
+  {"source": "example : f + 1 = g :=\n  rfl",
+   "messages":
+   [{"severity": "error",
+     "pos": {"line": 5, "column": 2},
+     "endPos": {"line": 5, "column": 5},
+     "data":
+     "type mismatch\n  rfl\nhas type\n  f + 1 = f + 1 : Prop\nbut is expected to have type\n  f + 1 = g : Prop"}],
+   "env": 6}]}
+
+{"src": "import Lean\n  \n  \ndef f :=\n  3\n"}
+
+{"src": "import Lean\n  \n  \ndef f :=\n  3\ndef g :=\n  2\n"}
+
+{"src":
+ "import Lean\n  \n  \ndef f :=\n  3\n\ndef g :=\n  2\nexample : f + 1 = g :=\n  rfl"}
+
+{"results":
+ [{"source": "def g :=\n  4", "env": 7},
+  {"source": "example : f + 1 = g :=\n  rfl", "env": 8}]}
+
+{"src":
+ "import Lean\n  \n  \n\ndef f :=\n  3\ndef g :=\n  4\nexample : f + 1 = g :=\n  rfl"}
+
