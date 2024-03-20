@@ -1,0 +1,4 @@
+{"results": [{"source": "import Lean\n  \n  ", "env": 0}]}
+
+{"results": [{"source": "def f :=\n  42", "env": 1}]}
+

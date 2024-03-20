@@ -1,3 +1,5 @@
 {"results":
- [{"source": "open Lake DSL", "env": 0}, {"source": "package REPL", "env": 1}]}
+ [{"source": "import Lake\n  \n  ", "env": 0},
+  {"source": "open Lake DSL", "env": 1},
+  {"source": "package REPL", "env": 2}]}
 

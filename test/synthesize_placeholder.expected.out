@@ -1,7 +1,9 @@
-{"messages":
- [{"severity": "error",
-   "pos": {"line": 1, "column": 15},
-   "endPos": {"line": 1, "column": 16},
-   "data": "don't know how to synthesize placeholder\ncontext:\n⊢ Nat"}],
- "env": 0}
+{"results":
+ [{"source": "def f : Nat :=\n  _",
+   "messages":
+   [{"severity": "error",
+     "pos": {"line": 1, "column": 15},
+     "endPos": {"line": 1, "column": 16},
+     "data": "don't know how to synthesize placeholder\ncontext:\n⊢ Nat"}],
+   "env": 0}]}
 

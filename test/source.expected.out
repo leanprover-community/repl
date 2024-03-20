@@ -1,16 +1,16 @@
-{"env": 0}
+{"results": [{"source": "def f :=\n  37", "env": 0}]}
 
-{"env": 1}
+{"results": [{"source": "def g :=\n  38", "env": 1}]}
 
-{"src": "def f := 37\ndef g := 38\n"}
+{"src": "def f :=\n  37\ndef g :=\n  38\n"}
 
-{"src": "def f := 37\n"}
+{"src": "def f :=\n  37\n"}
 
-{"src": "def f := 37\n\ndef g := 38"}
+{"src": "def f :=\n  37\n\ndef g :=\n  38"}
 
-{"env": 2}
+{"results": [{"source": "def h :=\n  39", "env": 2}]}
 
-{"src": "def f := 37\ndef h := 39\n"}
+{"src": "def f :=\n  37\ndef h :=\n  39\n"}
 
-{"src": "def h := 39\n"}
+{"src": "def h :=\n  39\n"}
 

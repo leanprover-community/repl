@@ -1,0 +1,11 @@
+{"results":
+ [{"source": "import Lean\n  \n  ", "env": 0},
+  {"source": "def f :=\n  1", "env": 1},
+  {"source": "def g :=\n  2", "env": 2}]}
+
+{"src": "import Lean\n  \n  \ndef f :=\n  1\n"}
+
+{"src": "def g :=\n  2"}
+
+{"src": "def f :=\n  1\n\ndef g :=\n  2"}
+

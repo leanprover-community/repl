@@ -1,4 +1,4 @@
-{"env": 0}
+{"source": "", "env": 0}
 
-{"env": 1}
+{"results": [{"source": "example : Y = 37 :=\n  rfl", "env": 1}]}
 

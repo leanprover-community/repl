@@ -1,8 +1,8 @@
-{"env": 0}
+{"results": [{"source": "def X.Y : Nat :=\n  37", "env": 0}]}
 
-{"env": 1}
+{"results": [{"source": "open X", "env": 1}]}
 
-{"env": 2}
+{"results": [{"source": "example : Y = 37 :=\n  rfl", "env": 2}]}
 
-{"env": 1}
+{"source": "", "env": 1}
 

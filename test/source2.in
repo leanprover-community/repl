@@ -1,0 +1,8 @@
+{"cmd": "import Lean\ndef f := 1\ndef g := 2\n"}
+
+{"src": 1}
+
+{"src": 1, "after": true, "self": false, "before": false}
+
+{"src": 1, "after": true, "before": false}
+

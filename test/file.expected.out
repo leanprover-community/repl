@@ -1,0 +1,12 @@
+{"results":
+ [{"source": "def f : Nat :=\n  37", "env": 0},
+  {"source": "def g :=\n  2", "env": 1},
+  {"tactics":
+   [{"tactic": "exact rfl",
+     "proofState": 0,
+     "pos": {"line": 5, "column": 29},
+     "goals": "⊢ f + g = 39",
+     "endPos": {"line": 5, "column": 38}}],
+   "source": "theorem h : f + g = 39 := by exact rfl",
+   "env": 2}]}
+

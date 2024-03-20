@@ -37,10 +37,12 @@ deriving FromJson
 /-- Print the source code for a given environment. -/
 structure Source where
   src : Nat
+  self : Option Bool
   before : Option Bool
   after : Option Bool
 deriving FromJson
 
+def Source.self' (s : Source) := s.self.getD true
 def Source.before' (s : Source) := s.before.getD true
 def Source.after' (s : Source) := s.after.getD false
 

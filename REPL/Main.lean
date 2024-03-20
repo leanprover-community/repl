@@ -269,16 +269,20 @@ def runCommand (s : JSON.Command) : M IO (CommandResponses ⊕ Error) := do
     IO.processInput s.cmd initialCmdState? incrementalStateBefore?
   catch ex =>
     return .inr ⟨ex.toString⟩
-  -- IO.println states.length
-  -- if h : _  then IO.println (states[0]'h).commands
-  -- if h : 0 < s.commands.size then
+  -- Drop the "end of input" state.
   let states := states.filter fun s => match s.commands.back? with | none => true | some stx => stx.getKind ≠ ``Lean.Parser.Command.eoi
   let states : List (Command.State × Syntax × Option IncrementalState) :=
-    (match header? with | none => [] | some h => [(h.1, h.2, none)]) ++
+    (match header? with | none => [] | some (headerState, headerSyntax) => if isEmptyModuleHeader headerSyntax then [] else [(headerState, headerSyntax, none)]) ++
       states.map fun state => (state.commandState, state.commands.back?.get!, some state)
-  let results ← states.mapM fun t => mkResponse parentId? initialCmdSnapshot? s t.1 t.2.1 t.2.2
-  return .inl { results }
+  let (_, results) ← states.foldlM (init := (parentId?, #[])) fun (i, r) t => do
+    let n ← mkResponse i initialCmdSnapshot? s t.1 t.2.1 t.2.2
+    pure (n.env, r.push n)
+  return .inl { results := results.toList }
 where
+  isEmptyModuleHeader (stx : Syntax) : Bool :=
+    stx.isOfKind ``Parser.Module.header && match stx.getArgs with
+    | #[prelude, imports] => prelude.getArgs.size = 0 && imports.getArgs.size = 0
+    | _ => false
   mkResponse
     (parentId? : Option Nat) (initialCmdSnapshot? : Option CommandSnapshot) (s : JSON.Command)
     (cmdState : Command.State) (stx : Syntax) (incrementalState? : Option IncrementalState) : M IO CommandResponse := do
@@ -296,7 +300,9 @@ where
   let cmdSnapshot :=
   { cmdState
     cmdContext }
-  let env ← recordCommandSnapshot parentId? s.cmd cmdSnapshot incrementalState?
+  let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand ⟨stx⟩) cmdContext cmdState -- FIXME this should be the Command.State before, not after?!
+  let source := toString format
+  let env ← recordCommandSnapshot parentId? source cmdSnapshot incrementalState?
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo
@@ -307,9 +313,8 @@ where
     none
   else
     some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
-  let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand ⟨stx⟩) cmdContext cmdState -- FIXME this should be the Command.State before, not after?!
   return {
-    source := toString format,
+    source,
     env,
     messages,
     sorries,
@@ -330,9 +335,10 @@ By default this returns the code for all commands up to and including the design
 To retrieve only the source of the command, use `before := false`.
 To also retrieve the source code of the most recent added subsequent commands, use `after := true`.
 -/
-def source (i : Nat) (before := true) (after := false) : M m String := do
+def source (i : Nat) (before := true) (self := true) (after := false) : M m String := do
   let mut i? := some i
   let mut src := ""
+  let mut first := true
   while i?.isSome do
     match i? with
     | none => continue
@@ -340,11 +346,12 @@ def source (i : Nat) (before := true) (after := false) : M m String := do
       match ← lookup? i with
       | none => i? := none
       | some c =>
-        src := c.src ++ "\n" ++ src
+        if (!first) || self then src := c.src ++ "\n" ++ src
         i? := if before then c.parentId? else none
+        first := false
   if after then
     -- Also descend the most recent children.
-    let mut self := true
+    first := true
     i? := some i
     while i?.isSome do
       match i? with
@@ -353,13 +360,13 @@ def source (i : Nat) (before := true) (after := false) : M m String := do
         match ← lookup? i with
         | none => i? := none
         | some c =>
-          if !self then src := src ++ "\n" ++ c.src
+          if !first then src := src ++ "\n" ++ c.src
           i? := c.childIds.head?
-          self := false
-  return src
+          first := false
+  return if src.startsWith "\n" then src.drop 1 else src
 
 def processSource (s : JSON.Source) : M IO (SourceResponse ⊕ Error) := do
-  return .inl ⟨← source s.src s.before' s.after'⟩
+  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
