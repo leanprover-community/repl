@@ -1,30 +1,34 @@
-{"sorries":
- [{"proofState": 0,
-   "pos": {"line": 2, "column": 23},
-   "goal": "x : Int\n⊢ x = 1",
-   "endPos": {"line": 2, "column": 28}}],
- "messages":
- [{"severity": "error",
-   "pos": {"line": 1, "column": 33},
-   "endPos": {"line": 2, "column": 28},
-   "data": "unsolved goals\nx : Int\nh : x = 1\n⊢ x = x"},
-  {"severity": "warning",
-   "pos": {"line": 1, "column": 8},
-   "endPos": {"line": 1, "column": 11},
-   "data": "declaration uses 'sorry'"}],
- "env": 0}
+{"results":
+ [{"source": "theorem foo (x : Int) : x = x := by have h : x = 1 := by sorry",
+   "sorries":
+   [{"proofState": 0,
+     "pos": {"line": 2, "column": 23},
+     "goal": "x : Int\n⊢ x = 1",
+     "endPos": {"line": 2, "column": 28}}],
+   "messages":
+   [{"severity": "error",
+     "pos": {"line": 1, "column": 33},
+     "endPos": {"line": 2, "column": 28},
+     "data": "unsolved goals\nx : Int\nh : x = 1\n⊢ x = x"},
+    {"severity": "warning",
+     "pos": {"line": 1, "column": 8},
+     "endPos": {"line": 1, "column": 11},
+     "data": "declaration uses 'sorry'"}],
+   "env": 0}]}
 
-{"sorries":
- [{"proofState": 1,
-   "pos": {"line": 1, "column": 36},
-   "goal": "x : Int\n⊢ x = x",
-   "endPos": {"line": 1, "column": 41}}],
- "messages":
- [{"severity": "warning",
-   "pos": {"line": 1, "column": 8},
-   "endPos": {"line": 1, "column": 11},
-   "data": "declaration uses 'sorry'"}],
- "env": 1}
+{"results":
+ [{"source": "theorem bar (x : Int) : x = x := by sorry",
+   "sorries":
+   [{"proofState": 1,
+     "pos": {"line": 1, "column": 36},
+     "goal": "x : Int\n⊢ x = x",
+     "endPos": {"line": 1, "column": 41}}],
+   "messages":
+   [{"severity": "warning",
+     "pos": {"line": 1, "column": 8},
+     "endPos": {"line": 1, "column": 11},
+     "data": "declaration uses 'sorry'"}],
+   "env": 1}]}
 
 {"sorries": [{"proofState": 2, "goal": "x : Int\n⊢ x = 1"}],
  "proofState": 3,

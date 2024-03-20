@@ -1,8 +1,8 @@
-{"env": 0}
+{"results": [{"source": "def f :=\n  42", "env": 0}]}
 
-{"env": 0}
+{"source": "", "env": 0}
 
-{"env": 1}
+{"source": "", "env": 1}
 
-{"env": 2}
+{"results": [{"source": "example : f = 42 := by rfl", "env": 2}]}
 

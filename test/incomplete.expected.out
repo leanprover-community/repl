@@ -1,26 +1,31 @@
-{"messages":
- [{"severity": "error",
-   "pos": {"line": 1, "column": 15},
-   "endPos": {"line": 1, "column": 32},
-   "data": "unsolved goals\n⊢ Nat"},
-  {"severity": "warning",
-   "pos": {"line": 1, "column": 4},
-   "endPos": {"line": 1, "column": 5},
-   "data": "declaration uses 'sorry'"}],
- "env": 0}
+{"results":
+ [{"source": "def f : Nat := by apply Nat.succ",
+   "messages":
+   [{"severity": "error",
+     "pos": {"line": 1, "column": 15},
+     "endPos": {"line": 1, "column": 32},
+     "data": "unsolved goals\n⊢ Nat"},
+    {"severity": "warning",
+     "pos": {"line": 1, "column": 4},
+     "endPos": {"line": 1, "column": 5},
+     "data": "declaration uses 'sorry'"}],
+   "env": 0}]}
 
-{"messages":
- [{"severity": "error",
-   "pos": {"line": 3, "column": 19},
-   "endPos": {"line": 3, "column": 20},
-   "data": "unsolved goals\ncase pos\nx : Bool\nh✝ : x = true\n⊢ Nat"},
-  {"severity": "error",
-   "pos": {"line": 1, "column": 26},
-   "endPos": {"line": 3, "column": 20},
-   "data": "unsolved goals\ncase neg\nx : Bool\nh✝ : ¬x = true\n⊢ Nat"},
-  {"severity": "warning",
-   "pos": {"line": 1, "column": 4},
-   "endPos": {"line": 1, "column": 5},
-   "data": "declaration uses 'sorry'"}],
- "env": 1}
+{"results":
+ [{"source":
+   "def g (x : Bool) : Nat := by\n  by_cases x\n  {apply Nat.succ\n  }",
+   "messages":
+   [{"severity": "error",
+     "pos": {"line": 3, "column": 19},
+     "endPos": {"line": 3, "column": 20},
+     "data": "unsolved goals\ncase pos\nx : Bool\nh✝ : x = true\n⊢ Nat"},
+    {"severity": "error",
+     "pos": {"line": 1, "column": 26},
+     "endPos": {"line": 3, "column": 20},
+     "data": "unsolved goals\ncase neg\nx : Bool\nh✝ : ¬x = true\n⊢ Nat"},
+    {"severity": "warning",
+     "pos": {"line": 1, "column": 4},
+     "endPos": {"line": 1, "column": 5},
+     "data": "declaration uses 'sorry'"}],
+   "env": 1}]}
 

@@ -1,39 +1,45 @@
 !
-{"sorries":
- [{"proofState": 0,
-   "pos": {"line": 3, "column": 2},
-   "goal": "⊢ True",
-   "endPos": {"line": 3, "column": 7}}],
- "messages":
- [{"severity": "warning",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 7},
-   "data": "declaration uses 'sorry'"}],
- "env": 0}
+{"results":
+ [{"source": "example : True := by\n  dbg_trace \"!\"\n  sorry",
+   "sorries":
+   [{"proofState": 0,
+     "pos": {"line": 3, "column": 2},
+     "goal": "⊢ True",
+     "endPos": {"line": 3, "column": 7}}],
+   "messages":
+   [{"severity": "warning",
+     "pos": {"line": 1, "column": 0},
+     "endPos": {"line": 1, "column": 7},
+     "data": "declaration uses 'sorry'"}],
+   "env": 0}]}
 
-{"sorries":
- [{"proofState": 1,
-   "pos": {"line": 3, "column": 2},
-   "goal": "⊢ True",
-   "endPos": {"line": 3, "column": 7}}],
- "messages":
- [{"severity": "warning",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 7},
-   "data": "declaration uses 'sorry'"}],
- "env": 1}
+{"results":
+ [{"source": "example : True := by\n  dbg_trace \"!\"\n  sorry",
+   "sorries":
+   [{"proofState": 1,
+     "pos": {"line": 3, "column": 2},
+     "goal": "⊢ True",
+     "endPos": {"line": 3, "column": 7}}],
+   "messages":
+   [{"severity": "warning",
+     "pos": {"line": 1, "column": 0},
+     "endPos": {"line": 1, "column": 7},
+     "data": "declaration uses 'sorry'"}],
+   "env": 1}]}
 
-{"sorries":
- [{"proofState": 2,
-   "pos": {"line": 3, "column": 2},
-   "goal": "⊢ True",
-   "endPos": {"line": 3, "column": 7}}],
- "messages":
- [{"severity": "warning",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 7},
-   "data": "declaration uses 'sorry'"}],
- "env": 2}
+{"results":
+ [{"source": "example : True := by\n  dbg_trace \"!\"\n  sorry",
+   "sorries":
+   [{"proofState": 2,
+     "pos": {"line": 3, "column": 2},
+     "goal": "⊢ True",
+     "endPos": {"line": 3, "column": 7}}],
+   "messages":
+   [{"severity": "warning",
+     "pos": {"line": 1, "column": 0},
+     "endPos": {"line": 1, "column": 7},
+     "data": "declaration uses 'sorry'"}],
+   "env": 2}]}
 
 {"message": "Unknown incremental state."}
 

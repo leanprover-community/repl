@@ -1,16 +1,18 @@
-{"sorries":
- [{"proofState": 0,
-   "pos": {"line": 2, "column": 2},
-   "goal": "⊢ True",
-   "endPos": {"line": 2, "column": 7}}],
- "messages":
- [{"severity": "error",
-   "pos": {"line": 3, "column": 2},
-   "endPos": {"line": 3, "column": 7},
-   "data": "no goals to be solved"},
-  {"severity": "warning",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 7},
-   "data": "declaration uses 'sorry'"}],
- "env": 0}
+{"results":
+ [{"source": "example : True := by\n  sorry\n  sorry",
+   "sorries":
+   [{"proofState": 0,
+     "pos": {"line": 2, "column": 2},
+     "goal": "⊢ True",
+     "endPos": {"line": 2, "column": 7}}],
+   "messages":
+   [{"severity": "error",
+     "pos": {"line": 3, "column": 2},
+     "endPos": {"line": 3, "column": 7},
+     "data": "no goals to be solved"},
+    {"severity": "warning",
+     "pos": {"line": 1, "column": 0},
+     "endPos": {"line": 1, "column": 7},
+     "data": "declaration uses 'sorry'"}],
+   "env": 0}]}
 

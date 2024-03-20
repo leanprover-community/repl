@@ -1,15 +1,17 @@
-{"messages":
- [{"severity": "error",
-   "pos": {"line": 2, "column": 11},
-   "endPos": {"line": 2, "column": 18},
-   "data": "type expected, got\n  (set Nat : ?m.8 PUnit)"},
-  {"severity": "error",
-   "pos": {"line": 3, "column": 2},
-   "endPos": {"line": 3, "column": 7},
-   "data": "no goals to be solved"},
-  {"severity": "warning",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 7},
-   "data": "declaration uses 'sorry'"}],
- "env": 0}
+{"results":
+ [{"source": "example : True := by\n  have h : set Nat := by sorry\n  sorry",
+   "messages":
+   [{"severity": "error",
+     "pos": {"line": 2, "column": 11},
+     "endPos": {"line": 2, "column": 18},
+     "data": "type expected, got\n  (set Nat : ?m.8 PUnit)"},
+    {"severity": "error",
+     "pos": {"line": 3, "column": 2},
+     "endPos": {"line": 3, "column": 7},
+     "data": "no goals to be solved"},
+    {"severity": "warning",
+     "pos": {"line": 1, "column": 0},
+     "endPos": {"line": 1, "column": 7},
+     "data": "declaration uses 'sorry'"}],
+   "env": 0}]}
 

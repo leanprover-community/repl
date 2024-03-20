@@ -1,9 +1,11 @@
-{"env": 0}
+{"results": [{"source": "def f :=\n  37", "env": 0}]}
 
-{"messages":
- [{"severity": "info",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 6},
-   "data": "rfl : f = f"}],
- "env": 1}
+{"results":
+ [{"source": "#check (rfl : f = 37)",
+   "messages":
+   [{"severity": "info",
+     "pos": {"line": 1, "column": 0},
+     "endPos": {"line": 1, "column": 6},
+     "data": "rfl : f = f"}],
+   "env": 1}]}
 

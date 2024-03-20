@@ -265,57 +265,23 @@ def runCommand (s : JSON.Command) : M IO (CommandResponses ⊕ Error) := do
     return .inr ⟨"Unknown incremental state."⟩
   let initialCmdSnapshot? := (·.snapshot) <$> retrieved?
   let initialCmdState? := initialCmdSnapshot?.map fun c => c.cmdState
-  let states ← try
+  let (header?, states) ← try
     IO.processInput s.cmd initialCmdState? incrementalStateBefore?
   catch ex =>
     return .inr ⟨ex.toString⟩
+  -- IO.println states.length
+  -- if h : _  then IO.println (states[0]'h).commands
+  -- if h : 0 < s.commands.size then
   let states := states.filter fun s => match s.commands.back? with | none => true | some stx => stx.getKind ≠ ``Lean.Parser.Command.eoi
-  let results ← states.mapM fun state => mkResponse parentId? initialCmdSnapshot? s state
+  let states : List (Command.State × Syntax × Option IncrementalState) :=
+    (match header? with | none => [] | some h => [(h.1, h.2, none)]) ++
+      states.map fun state => (state.commandState, state.commands.back?.get!, some state)
+  let results ← states.mapM fun t => mkResponse parentId? initialCmdSnapshot? s t.1 t.2.1 t.2.2
   return .inl { results }
-  -- let incrementalState ← if h : 0 < states.length then
-  --   pure states[0]
-  -- else
-  --   throw <| IO.userError ""
-  -- let cmdState := incrementalState.commandState
-  -- let messages := cmdState.messages.msgs.toList
-  -- let trees := cmdState.infoState.trees.toList
-  -- let messages ← messages.mapM fun m => Message.of m
-  -- -- For debugging purposes, sometimes we print out the trees here:
-  -- -- trees.forM fun t => do IO.println (← t.format)
-  -- let sorries ← sorries trees (initialCmdState?.map (·.env))
-  -- let tactics ← match s.allTactics with
-  -- | some true => tactics trees
-  -- | _ => pure []
-  -- let cmdSnapshot :=
-  -- { cmdState
-  --   cmdContext := (initialCmdSnapshot?.map fun c => c.cmdContext).getD
-  --     { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
-  -- let env ← recordCommandSnapshot parentId? s.cmd cmdSnapshot incrementalState
-  -- -- if let some i := s.env then
-  -- --   modify fun c => { c with latestIncrementalState := c.latestIncrementalState.insert i env }
-  -- -- else
-  -- --   modify fun c => { c with latestInitialIncrementalState := some env }
-  -- let jsonTrees := match s.infotree with
-  -- | some "full" => trees
-  -- | some "tactics" => trees.bind InfoTree.retainTacticInfo
-  -- | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
-  -- | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
-  -- | _ => []
-  -- let infotree := if jsonTrees.isEmpty then
-  --   none
-  -- else
-  --   some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
-  -- return .inl
-  --   { env,
-  --     messages,
-  --     sorries,
-  --     tactics
-  --     infotree }
 where
   mkResponse
     (parentId? : Option Nat) (initialCmdSnapshot? : Option CommandSnapshot) (s : JSON.Command)
-    (incrementalState : IncrementalState) : M IO CommandResponse := do
-  let cmdState := incrementalState.commandState
+    (cmdState : Command.State) (stx : Syntax) (incrementalState? : Option IncrementalState) : M IO CommandResponse := do
   let messages := cmdState.messages.msgs.toList
   let trees := cmdState.infoState.trees.toList
   let messages ← messages.mapM fun m => Message.of m
@@ -330,7 +296,7 @@ where
   let cmdSnapshot :=
   { cmdState
     cmdContext }
-  let env ← recordCommandSnapshot parentId? s.cmd cmdSnapshot incrementalState
+  let env ← recordCommandSnapshot parentId? s.cmd cmdSnapshot incrementalState?
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo
@@ -341,8 +307,7 @@ where
     none
   else
     some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
-  let stx : Lean.Command := ⟨incrementalState.commands.back?.get!⟩
-  let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand stx) cmdContext cmdState -- FIXME this should be the Command.State before, not after?!
+  let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand ⟨stx⟩) cmdContext cmdState -- FIXME this should be the Command.State before, not after?!
   return {
     source := toString format,
     env,

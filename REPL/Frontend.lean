@@ -52,12 +52,6 @@ def processCommandsWithInfoTrees
     IO (List IncrementalState) := do
   let commandState := { commandState with infoState.enabled := true }
   IO.processCommandsIncrementally' inputCtx parserState commandState incrementalState?
-  -- let r ← if h : 0 < r.length then
-  --   pure r[0]
-  -- else
-  --   throw <| IO.userError ""
-  -- let s := r.commandState
-  -- pure (s, r, s.messages.msgs.toList, s.infoState.trees.toList)
 
 /--
 Process some text input, with or without an existing command state.
@@ -70,16 +64,17 @@ Returns the resulting command state, along with a list of messages and info tree
 def processInput (input : String) (cmdState? : Option Command.State)
      (incrementalState? : Option IncrementalState := none)
     (opts : Options := {}) (fileName : Option String := none) :
-    IO (List IncrementalState) := unsafe do
+    IO (Option (Command.State × Syntax) × List IncrementalState) := unsafe do
   Lean.initSearchPath (← Lean.findSysroot)
   enableInitializersExecution
   let fileName   := fileName.getD "<input>"
   let inputCtx   := Parser.mkInputContext input fileName
-  let (parserState, commandState) ← match cmdState? with
+  let (header?, parserState, commandState) ← match cmdState? with
   | none => do
     let (header, parserState, messages) ← Parser.parseHeader inputCtx
     let (env, messages) ← processHeader header opts messages inputCtx
-    pure (parserState, (Command.mkState env messages opts))
+    pure (some header, parserState, Command.mkState env messages opts)
   | some cmdState => do
-    pure ({ : Parser.ModuleParserState }, cmdState)
-  processCommandsWithInfoTrees inputCtx parserState commandState incrementalState?
+    pure (none, { : Parser.ModuleParserState }, cmdState)
+  (match header? with | none => none | some h => (commandState, h), ·) <$>
+    processCommandsWithInfoTrees inputCtx parserState commandState incrementalState?
