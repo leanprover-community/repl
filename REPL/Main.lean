@@ -135,11 +135,11 @@ def source (i : Nat) (before := true) (self := true) (after := false) : M m Stri
   src := src.dropRightWhile (· == '\n')
   return src
 
-def processSource (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ JSON.Error) := do
+def processSource (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ String) := do
   return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
 
 def retrieve (after? : Option Nat) (replace? : Option Nat) :
-    M IO (Option (Command × Nat × String) ⊕ JSON.Error) := do
+    M m (Option (Command × Nat × String) ⊕ String) := do
   let additionalSource ← match replace? with
   | none => pure ""
   | some j => source j (before := false) (self := false) (after := true)
@@ -153,18 +153,18 @@ def retrieve (after? : Option Nat) (replace? : Option Nat) :
       else
         pure (c.back?.map fun s => (s, c.size - 1, ""), false)
     | some j => match (← get).commands[j]? with
-      | none => return .inr ⟨"Unknown replace target."⟩
+      | none => return .inr "Unknown replace target."
       | some x => match x.parentId? with
         | none => pure (none, false)
         | some p => match (← get).commands[p]? with
-          | none => return .inr ⟨"Unreachable code; could not find parent of replace target."⟩
+          | none => return .inr "Unreachable code; could not find parent of replace target."
           | some c => pure (some (c, p, additionalSource), false)
   | some i => do match (← get).commands[i]? with
     | some env =>
       pure (some (env, i, additionalSource), false)
     | none => pure (none, true)
   if notFound then
-    return .inr ⟨"Unknown environment."⟩
+    return .inr "Unknown environment."
   else
     return .inl r
 
@@ -253,14 +253,6 @@ where ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   catch _ =>
     pure "<failed to pretty print>"
 
-structure Native.CommandResponse where
-  source : String
-  env : Nat
-  messages : List Lean.Message := []
-  sorries : List Native.Sorry := []
-  tactics : List Native.Tactic := []
-  infotree : List InfoTree := []
-
 structure Native.ProofStepResponse where
   proofState : ProofSnapshot
   messages : List Lean.Message := []
@@ -297,89 +289,124 @@ def Native.Tactic.toJson (t : Native.Tactic) : M m JSON.Tactic := do
 def Native.Sorry.toJson (s : Native.Sorry) : M m JSON.Sorry := do
   return { ← Native.Tactic.toJson s.toTactic with }
 
+structure Native.CommandResponse where
+  source : String
+  env : Nat
+  messages : List Lean.Message := []
+  sorries : List Native.Sorry := []
+  tactics : List Native.Tactic := []
+  infotree : List InfoTree := []
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
-def runCommand (s : JSON.Command) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
-  let (retrieved?, parentId?, additionalSource) ← match ← retrieve s.env s.replace with
+def runCommand' (cmd : JSON.Command) : M IO (List Native.CommandResponse ⊕ String) := do
+  let (retrieved?, parentId?, additionalSource) ← match ← retrieve cmd.env cmd.replace with
   | .inr e => return .inr e
   | .inl none => pure (none, none, "")
   | .inl (some x) => pure (some x.1, some x.2.1, x.2.2)
   let (incrementalStateBefore?, notFound) ← do
-    match s.incr with
-    | none => pure (← findLatestIncrementalState s.env, false)
+    match cmd.incr with
+    | none => pure (← findLatestIncrementalState cmd.env, false)
     | some j => do match (← get).commands[j]? with
       | some { incrementalState? := some s, .. } => pure (some s, false)
       | some _
       | none => pure (none, true)
   if notFound then
-    return .inr ⟨"Unknown incremental state."⟩
+    return .inr "Unknown incremental state."
   let initialCmdSnapshot? := (·.snapshot) <$> retrieved?
   let initialCmdState? := initialCmdSnapshot?.map fun c => c.cmdState
   let (header?, states) ← try
-    IO.processInput (s.cmd ++ "\n" ++ additionalSource) initialCmdState? incrementalStateBefore?
+    IO.processInput (cmd.cmd ++ "\n" ++ additionalSource) initialCmdState? incrementalStateBefore?
   catch ex =>
-    return .inr ⟨ex.toString⟩
+    return .inr ex.toString
   -- Drop the "end of input" state.
   let states := states.filter fun s => match s.commands.back? with | none => true | some stx => stx.getKind ≠ ``Lean.Parser.Command.eoi
   let states : List (Command.State × Syntax × Option IncrementalState) :=
     (match header? with | none => [] | some (headerState, headerSyntax) => if isEmptyModuleHeader headerSyntax then [] else [(headerState, headerSyntax, none)]) ++
       states.map fun state => (state.commandState, state.commands.back?.get!, some state)
-  let (_, results) ← states.foldlM (init := (parentId?, #[])) fun (i, r) t => do
-    let n ← mkResponse i initialCmdSnapshot? s t.1 t.2.1 t.2.2
+  let (_, results) ← states.foldlM (init := (parentId?, #[])) fun (p, r) t => do
+    let ctx := context initialCmdSnapshot?
+    let src ← source ctx t.1 t.2.1
+    let i ← record p ctx t.1 t.2.1 src t.2.2
+    let n ← mkResponse i initialCmdSnapshot? cmd.allTactics cmd.infotree t.1 src
     pure (n.env, r.push n)
-  return .inl { results := results.toList }
+  return .inl results.toList
 where
   isEmptyModuleHeader (stx : Syntax) : Bool :=
     stx.isOfKind ``Parser.Module.header && match stx.getArgs with
     | #[prelude, imports] => prelude.getArgs.size = 0 && imports.getArgs.size = 0
     | _ => false
-  mkResponse
-    (parentId? : Option Nat) (initialCmdSnapshot? : Option CommandSnapshot) (s : JSON.Command)
-    (cmdState : Command.State) (stx : Syntax) (incrementalState? : Option IncrementalState) : M IO JSON.CommandResponse := do
-  let messages := cmdState.messages.msgs.toList
-  let trees := cmdState.infoState.trees.toList
-  let messages ← messages.mapM fun m => Message.of m
-  -- For debugging purposes, sometimes we print out the trees here:
-  -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdSnapshot?.map (·.cmdState.env))
-  let sorries ← sorries |>.mapM fun s => s.toJson
-  let tactics ← match s.allTactics with
-  | some true => (← tactics trees) |>.mapM fun t => t.toJson
-  | _ => pure []
-  let cmdContext := (initialCmdSnapshot?.map fun c => c.cmdContext).getD
+  context (initialCmdSnapshot? : Option CommandSnapshot) : Context :=
+    (initialCmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none, snap? := none }
-  let cmdSnapshot :=
-  { cmdState
-    cmdContext }
-  let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand ⟨stx⟩) cmdContext cmdState -- FIXME this should be the Command.State before, not after?!
-  let source := toString format
-  let env ← recordCommandSnapshot parentId? source stx cmdSnapshot incrementalState?
-  let jsonTrees := match s.infotree with
-  | some "full" => trees
-  | some "tactics" => trees.bind InfoTree.retainTacticInfo
-  | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
-  | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
-  | _ => []
-  let infotree := if jsonTrees.isEmpty then
-    none
-  else
-    some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
+  source
+      (ctx : Context)
+      (cmdState : Command.State) (stx : Syntax) : M IO String := do
+    let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand ⟨stx⟩) ctx cmdState -- FIXME this should be the Command.State before, not after?!
+    return toString format
+  record
+      (parentId? : Option Nat) (cmdContext : Context)
+      (cmdState : Command.State) (stx : Syntax) (source : String) (incrementalState? : Option IncrementalState) : M IO Nat := do
+    let cmdSnapshot :=
+    { cmdState
+      cmdContext }
+    recordCommandSnapshot parentId? source stx cmdSnapshot incrementalState?
+  mkResponse
+      (env : Nat) (initialCmdSnapshot? : Option CommandSnapshot) (allTactics : Option Bool) (infotrees : Option String)
+      (cmdState : Command.State) (source : String) : M IO Native.CommandResponse := do
+    let messages := cmdState.messages.msgs.toList
+    let trees := cmdState.infoState.trees.toList
+    -- For debugging purposes, sometimes we print out the trees here:
+    -- trees.forM fun t => do IO.println (← t.format)
+    let sorries ← sorries trees (initialCmdSnapshot?.map (·.cmdState.env))
+    let tactics ← match allTactics with
+    | some true => tactics trees
+    | _ => pure []
+    let infotree := match infotrees with
+    | some "full" => trees
+    | some "tactics" => trees.bind InfoTree.retainTacticInfo
+    | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
+    | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
+    | _ => []
+    return {
+      source,
+      env,
+      messages,
+      sorries,
+      tactics
+      infotree }
+
+def Native.CommandResponse.toJson (r : CommandResponse) : M m JSON.CommandResponse := do
+  let messages ← r.messages.mapM fun m => Message.of m
+  let sorries ← r.sorries |>.mapM fun s => s.toJson
+  let tactics ← r.tactics |>.mapM fun t => t.toJson
+  let infotree := if r.infotree.isEmpty then
+  none
+else
+  some <| Json.arr (← r.infotree.toArray.mapM fun t => t.toJson none)
   return {
-    source,
-    env,
-    messages,
-    sorries,
+    source := r.source
+    env := r.env
+    messages
+    sorries
     tactics
     infotree }
 
-def processFile (s : File) : M IO (CommandResponses ⊕ Error) := do
+/--
+Run a command, returning the id of the new environment, and any messages and sorries.
+-/
+def runCommand (s : JSON.Command) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
+  match ← runCommand' s with
+  | .inl r => return .inl { results := ← r.mapM fun r => r.toJson }
+  | .inr e => return .inr ⟨e⟩
+
+def processFile (s : JSON.File) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
   try
     let cmd ← IO.FS.readFile s.path
     runCommand { s with env := none, incr := none, replace := none, cmd }
   catch e =>
     pure <| .inr ⟨e.toString⟩
-
 
 def Native.ProofStepResponse.toJson (r : Native.ProofStepResponse) : M m JSON.ProofStepResponse := do
   let messages ← r.messages.mapM fun m => Message.of m
