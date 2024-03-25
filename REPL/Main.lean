@@ -113,7 +113,7 @@ def source (i : Nat) (before := true) (self := true) (after := false) : M m Stri
       match ← lookup? i with
       | none => i? := none
       | some c =>
-        if (!first) || self then src := c.src ++ "\n" ++ src
+        if (!first) || self then src := c.src ++ "\n\n" ++ src
         i? := if before then c.parentId? else none
         first := false
   if after then
@@ -127,10 +127,12 @@ def source (i : Nat) (before := true) (self := true) (after := false) : M m Stri
         match ← lookup? i with
         | none => i? := none
         | some c =>
-          if !first then src := src ++ "\n" ++ c.src
+          if !first then src := src ++ "\n\n" ++ c.src
           i? := c.childIds.head?
           first := false
-  return if src.startsWith "\n" then src.drop 1 else src
+  src := src.dropWhile (· == '\n')
+  src := src.dropRightWhile (· == '\n')
+  return src
 
 def processSource (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ JSON.Error) := do
   return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
@@ -192,7 +194,7 @@ def findLatestIncrementalState (parent? : Option Nat) : M m (Option IncrementalS
 
 /-- Record an `CommandSnapshot` into the REPL state, returning its index for future use. -/
 def recordCommandSnapshot
-    (parentId? : Option Nat) (src : String)
+    (parentId? : Option Nat) (src : String) (stx : Syntax)
     (state : CommandSnapshot) (incr : Option IncrementalState) :
     M m Nat := do
   let id := (← get).commands.size
@@ -200,7 +202,7 @@ def recordCommandSnapshot
   { parentId? := parentId?
     childIds := []
     src := src
-    stx := .missing -- FIXME
+    stx := stx
     snapshot := state
     incrementalState? := incr }
   modify fun s => match parentId? with
@@ -284,7 +286,7 @@ def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Err
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
-  let env ← recordCommandSnapshot none "" env none
+  let env ← recordCommandSnapshot none "" .missing env none
   return { env, source := "" }
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
@@ -365,7 +367,7 @@ where
     cmdContext }
   let (format, _) ← Command.CommandElabM.toIO (do liftCoreM <| PrettyPrinter.ppCommand ⟨stx⟩) cmdContext cmdState -- FIXME this should be the Command.State before, not after?!
   let source := toString format
-  let env ← recordCommandSnapshot parentId? source cmdSnapshot incrementalState?
+  let env ← recordCommandSnapshot parentId? source stx cmdSnapshot incrementalState?
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.bind InfoTree.retainTacticInfo

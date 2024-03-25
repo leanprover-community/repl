@@ -2,15 +2,15 @@
 
 {"results": [{"source": "def g :=\n  38", "env": 1}]}
 
-{"src": "def f :=\n  37\ndef g :=\n  38\n"}
-
-{"src": "def f :=\n  37\n"}
-
 {"src": "def f :=\n  37\n\ndef g :=\n  38"}
+
+{"src": "def f :=\n  37"}
+
+{"src": "def f :=\n  37\n\n\n\ndef g :=\n  38"}
 
 {"results": [{"source": "def h :=\n  39", "env": 2}]}
 
-{"src": "def f :=\n  37\ndef h :=\n  39\n"}
+{"src": "def f :=\n  37\n\ndef h :=\n  39"}
 
-{"src": "def h :=\n  39\n"}
+{"src": "def h :=\n  39"}
 

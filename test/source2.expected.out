@@ -3,9 +3,9 @@
   {"source": "def f :=\n  1", "env": 1},
   {"source": "def g :=\n  2", "env": 2}]}
 
-{"src": "import Lean\n  \n  \ndef f :=\n  1\n"}
+{"src": "import Lean\n  \n  \n\ndef f :=\n  1"}
 
 {"src": "def g :=\n  2"}
 
-{"src": "def f :=\n  1\n\ndef g :=\n  2"}
+{"src": "def f :=\n  1\n\n\n\ndef g :=\n  2"}
 

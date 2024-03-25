@@ -1,0 +1,5 @@
+{"path": "test/omega.lean"}
+
+{"cmd": "example (ε : Int) (_ : ε > 0) : (ε - 2 ≤ ε / 3 + ε / 2 + ε / 2) ∧ (ε / 3 + ε / 4 + ε / 5 ≤ ε) := by\n  have : ε > 0 := by omega\n  sorry", "allTactics": true}
+
+{"src": 5}

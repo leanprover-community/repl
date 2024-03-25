@@ -10,23 +10,23 @@
   {"source": "example : f + 1 = g :=\n  rfl",
    "messages":
    [{"severity": "error",
-     "pos": {"line": 5, "column": 2},
-     "endPos": {"line": 5, "column": 5},
+     "pos": {"line": 6, "column": 2},
+     "endPos": {"line": 6, "column": 5},
      "data":
      "type mismatch\n  rfl\nhas type\n  f + 1 = f + 1 : Prop\nbut is expected to have type\n  f + 1 = g : Prop"}],
    "env": 6}]}
 
-{"src": "import Lean\n  \n  \ndef f :=\n  3\n"}
+{"src": "import Lean\n  \n  \n\ndef f :=\n  3"}
 
-{"src": "import Lean\n  \n  \ndef f :=\n  3\ndef g :=\n  2\n"}
+{"src": "import Lean\n  \n  \n\ndef f :=\n  3\n\ndef g :=\n  2"}
 
 {"src":
- "import Lean\n  \n  \ndef f :=\n  3\n\ndef g :=\n  2\nexample : f + 1 = g :=\n  rfl"}
+ "import Lean\n  \n  \n\ndef f :=\n  3\n\n\n\ndef g :=\n  2\n\nexample : f + 1 = g :=\n  rfl"}
 
 {"results":
  [{"source": "def g :=\n  4", "env": 7},
   {"source": "example : f + 1 = g :=\n  rfl", "env": 8}]}
 
 {"src":
- "import Lean\n  \n  \n\ndef f :=\n  3\ndef g :=\n  4\nexample : f + 1 = g :=\n  rfl"}
+ "import Lean\n  \n  \n\n\n\ndef f :=\n  3\n\ndef g :=\n  4\n\nexample : f + 1 = g :=\n  rfl"}
 
