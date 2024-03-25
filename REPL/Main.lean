@@ -220,8 +220,6 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
-open JSON
-
 structure Native.Tactic where
   proofState : ProofSnapshot
   src : String
@@ -244,28 +242,24 @@ def sorries (trees : List InfoTree) (env? : Option Environment) : m (List Native
       | .term _ none =>
         pure none
 
-def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
+def tactics (trees : List InfoTree) : m (List Native.Tactic) :=
+  trees.bind InfoTree.tactics |>.mapM
+    fun ⟨ctx, stx, goals, pos, endPos⟩ => do
+      let src := Format.pretty (← ppTactic ctx stx)
+      return { proofState := (← ProofSnapshot.create ctx none none goals), pos, endPos, src, stx }
+where ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
     Lean.PrettyPrinter.ppTactic ⟨stx⟩
   catch _ =>
     pure "<failed to pretty print>"
 
-def tactics' (trees : List InfoTree) : m (List Native.Tactic) :=
-  trees.bind InfoTree.tactics |>.mapM
-    fun ⟨ctx, stx, goals, pos, endPos⟩ => do
-      let src := Format.pretty (← ppTactic ctx stx)
-      return { proofState := (← ProofSnapshot.create ctx none none goals), pos, endPos, src, stx }
-
-def tactics (trees : List InfoTree) : M m (List JSON.Tactic) := do
-  (← tactics' trees).mapM fun t => do
-      let goals := "\n".intercalate (← t.proofState.ppGoals)
-      let proofStateId ← recordProofSnapshot t.proofState
-      return Tactic.of goals t.src t.pos t.endPos proofStateId
-
-def Native.Sorry.toJson (s : Native.Sorry) : M m JSON.Sorry := do
-    let goal := "\n".intercalate (← s.proofState.ppGoals)
-    let proofStateId ← recordProofSnapshot s.proofState
-    pure <| Sorry.of goal s.pos s.endPos proofStateId
+structure Native.CommandResponse where
+  source : String
+  env : Nat
+  messages : List Lean.Message := []
+  sorries : List Native.Sorry := []
+  tactics : List Native.Tactic := []
+  infotree : List InfoTree := []
 
 structure Native.ProofStepResponse where
   proofState : ProofSnapshot
@@ -273,7 +267,7 @@ structure Native.ProofStepResponse where
   sorries : List Native.Sorry := []
   traces : List String := []
 
-def createProofStepReponse' (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
+def ProofSnapshot.diff (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     m Native.ProofStepResponse := do
   let messages := proofState.newMessages old?
   let traces ← proofState.newTraces old?
@@ -293,64 +287,15 @@ def createProofStepReponse' (proofState : ProofSnapshot) (old? : Option ProofSna
     sorries
     traces }
 
-/-- Record a `ProofSnapshot` and generate a JSON response for it. -/
-def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
-    M m ProofStepResponse := do
-  let r ← createProofStepReponse' proofState old?
-  let messages ← r.messages.mapM fun m => Message.of m
-  let sorries ← r.sorries |>.mapM Native.Sorry.toJson
-  let id ← recordProofSnapshot proofState
-  return {
-    proofState := id
-    goals := (← proofState.ppGoals)
-    messages
-    sorries
-    traces := r.traces }
+open JSON
 
-/-- Pickle a `Command`, generating a JSON response. -/
-def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
-  match (← get).commands[n.env]? with
-  | none => return .inr ⟨"Unknown command."⟩
-  | some cmd =>
-    -- FIXME presumably we want to pickle more!
-    discard <| cmd.snapshot.pickle n.pickleTo
-    return .inl { env := n.env, source := "" }
+def Native.Tactic.toJson (t : Native.Tactic) : M m JSON.Tactic := do
+  let goals := "\n".intercalate (← t.proofState.ppGoals)
+  let proofStateId ← recordProofSnapshot t.proofState
+  return Tactic.of goals t.src t.pos t.endPos proofStateId
 
-/-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
-def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
-  let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
-  let env ← recordCommandSnapshot none "" .missing env none
-  return { env, source := "" }
-
-/-- Pickle a `ProofSnapshot`, generating a JSON response. -/
--- This generates a new identifier, which perhaps is not what we want?
-def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
-  match (← get).proofStates[n.proofState]? with
-  | none => return .inr ⟨"Unknown proof State."⟩
-  | some proofState =>
-    discard <| proofState.pickle n.pickleTo
-    return .inl (← createProofStepReponse proofState)
-
-/-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
-def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕ Error) := do
-  let (cmdSnapshot?, notFound) ← do match n.env with
-  | none => pure (none, false)
-  | some i => do match (← get).commands[i]? with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
-  if notFound then
-    return .inr ⟨"Unknown environment."⟩
-  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom ((·.snapshot) <$> cmdSnapshot?)
-  Sum.inl <$> createProofStepReponse proofState
-
-
-structure Native.CommandResponse where
-  source : String
-  env : Nat
-  messages : List Lean.Message := []
-  sorries : List Sorry := []
-  tactics : List Tactic := []
-  infotree : List InfoTree := []
+def Native.Sorry.toJson (s : Native.Sorry) : M m JSON.Sorry := do
+  return { ← Native.Tactic.toJson s.toTactic with }
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
@@ -398,9 +343,9 @@ where
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees (initialCmdSnapshot?.map (·.cmdState.env))
-  let sorries ← sorries |>.mapM Native.Sorry.toJson
+  let sorries ← sorries |>.mapM fun s => s.toJson
   let tactics ← match s.allTactics with
-  | some true => tactics trees
+  | some true => (← tactics trees) |>.mapM fun t => t.toJson
   | _ => pure []
   let cmdContext := (initialCmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "", fileMap := default, tacticCache? := none, snap? := none }
@@ -436,6 +381,22 @@ def processFile (s : File) : M IO (CommandResponses ⊕ Error) := do
     pure <| .inr ⟨e.toString⟩
 
 
+def Native.ProofStepResponse.toJson (r : Native.ProofStepResponse) : M m JSON.ProofStepResponse := do
+  let messages ← r.messages.mapM fun m => Message.of m
+  let sorries ← r.sorries |>.mapM fun s => s.toJson
+  let id ← recordProofSnapshot r.proofState
+  return {
+    proofState := id
+    goals := (← r.proofState.ppGoals)
+    messages
+    sorries
+    traces := r.traces }
+
+/-- Record a `ProofSnapshot` and generate a JSON response for it. -/
+def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
+    M m JSON.ProofStepResponse := do
+  (← proofState.diff old?).toJson
+
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
 -/
@@ -450,6 +411,42 @@ def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
     catch ex =>
       return .inr ⟨"Lean error:\n" ++ ex.toString⟩
 
+/-- Pickle a `Command`, generating a JSON response. -/
+def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
+  match (← get).commands[n.env]? with
+  | none => return .inr ⟨"Unknown command."⟩
+  | some cmd =>
+    -- FIXME presumably we want to pickle more!
+    discard <| cmd.snapshot.pickle n.pickleTo
+    return .inl { env := n.env, source := "" }
+
+/-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
+def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
+  let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
+  let env ← recordCommandSnapshot none "" .missing env none
+  return { env, source := "" }
+
+/-- Pickle a `ProofSnapshot`, generating a JSON response. -/
+-- This generates a new identifier, which perhaps is not what we want?
+def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
+  match (← get).proofStates[n.proofState]? with
+  | none => return .inr ⟨"Unknown proof State."⟩
+  | some proofState =>
+    discard <| proofState.pickle n.pickleTo
+    return .inl (← createProofStepReponse proofState)
+
+/-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
+def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕ Error) := do
+  let (cmdSnapshot?, notFound) ← do match n.env with
+  | none => pure (none, false)
+  | some i => do match (← get).commands[i]? with
+    | some env => pure (some env, false)
+    | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
+  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom ((·.snapshot) <$> cmdSnapshot?)
+  Sum.inl <$> createProofStepReponse proofState
+
 end REPL
 
 open REPL
@@ -462,6 +459,7 @@ partial def getLines : IO String := do
   else
     return line ++ (← getLines)
 
+-- This has been upstreamed.
 instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with
   | .inl a => toJson a
@@ -504,7 +502,7 @@ def parse (query : String) : IO Input := do
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : JSON.Error)
 
 /-- Read-eval-print loop for Lean. -/
-unsafe def repl : IO Unit :=
+partial def repl : IO Unit :=
   StateT.run' loop {}
 where loop : M IO Unit := do
   let query ← getLines
@@ -524,6 +522,6 @@ where loop : M IO Unit := do
   loop
 
 /-- Main executable function, run as `lake exe repl`. -/
-unsafe def main (_ : List String) : IO Unit := do
+def main (_ : List String) : IO Unit := do
   initSearchPath (← Lean.findSysroot)
   repl

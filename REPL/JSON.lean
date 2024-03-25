@@ -118,10 +118,7 @@ instance : ToJson Sorry where
 
 /-- Construct the JSON representation of a Lean sorry. -/
 def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
-  { pos := ⟨pos.line, pos.column⟩,
-    endPos := ⟨endPos.line, endPos.column⟩,
-    goals := goal,
-    proofState }
+  { Tactic.of goal "sorry" pos endPos proofState with }
 
 structure SourceResponse where
   src : String
