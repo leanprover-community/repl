@@ -3,7 +3,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 18},
-     "goal": "⊢ Nat",
+     "goals": "⊢ Nat",
      "endPos": {"line": 1, "column": 23}}],
    "messages":
    [{"severity": "warning",

@@ -3,7 +3,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 36},
-     "goal": "x : Int\n⊢ x = x",
+     "goals": "x : Int\n⊢ x = x",
      "endPos": {"line": 1, "column": 41}}],
    "messages":
    [{"severity": "warning",
@@ -20,8 +20,8 @@
 {"proofState": 2, "goals": ["case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
 
 {"sorries":
- [{"proofState": 3, "goal": "case pos\nx : Int\nh : x < 0\n⊢ x = x"},
-  {"proofState": 4, "goal": "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
+ [{"proofState": 3, "goals": "case pos\nx : Int\nh : x < 0\n⊢ x = x"},
+  {"proofState": 4, "goals": "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
  "proofState": 5,
  "goals": []}
 

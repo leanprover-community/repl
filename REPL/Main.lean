@@ -233,7 +233,7 @@ structure Native.Sorry extends Native.Tactic where
   src := "sorry"
   stx := Syntax.missing -- FIXME
 
-def sorries' (trees : List InfoTree) (env? : Option Environment) : m (List Native.Sorry) := do
+def sorries (trees : List InfoTree) (env? : Option Environment) : m (List Native.Sorry) := do
   trees.bind InfoTree.sorries |>.filterMapM
     fun ⟨ctx, g, pos, endPos⟩ => do
       match g with
@@ -262,17 +262,20 @@ def tactics (trees : List InfoTree) : M m (List JSON.Tactic) := do
       let proofStateId ← recordProofSnapshot t.proofState
       return Tactic.of goals t.src t.pos t.endPos proofStateId
 
-def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List JSON.Sorry) := do
-  (← sorries' trees env?).mapM fun s => do
+def Native.Sorry.toJson (s : Native.Sorry) : M m JSON.Sorry := do
     let goal := "\n".intercalate (← s.proofState.ppGoals)
     let proofStateId ← recordProofSnapshot s.proofState
     pure <| Sorry.of goal s.pos s.endPos proofStateId
 
-/-- Record a `ProofSnapshot` and generate a JSON response for it. -/
-def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
-    M m ProofStepResponse := do
+structure Native.ProofStepResponse where
+  proofState : ProofSnapshot
+  messages : List Lean.Message := []
+  sorries : List Native.Sorry := []
+  traces : List String := []
+
+def createProofStepReponse' (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
+    m Native.ProofStepResponse := do
   let messages := proofState.newMessages old?
-  let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
   let trees := proofState.newInfoTrees old?
   let trees ← match old? with
@@ -284,13 +287,25 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none
+  return {
+    proofState
+    messages
+    sorries
+    traces }
+
+/-- Record a `ProofSnapshot` and generate a JSON response for it. -/
+def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
+    M m ProofStepResponse := do
+  let r ← createProofStepReponse' proofState old?
+  let messages ← r.messages.mapM fun m => Message.of m
+  let sorries ← r.sorries |>.mapM Native.Sorry.toJson
   let id ← recordProofSnapshot proofState
   return {
     proofState := id
     goals := (← proofState.ppGoals)
     messages
     sorries
-    traces }
+    traces := r.traces }
 
 /-- Pickle a `Command`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
@@ -383,6 +398,7 @@ where
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees (initialCmdSnapshot?.map (·.cmdState.env))
+  let sorries ← sorries |>.mapM Native.Sorry.toJson
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []

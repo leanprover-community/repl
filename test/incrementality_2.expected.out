@@ -18,7 +18,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 3, "column": 2},
-     "goal": "⊢ True",
+     "goals": "⊢ True",
      "endPos": {"line": 3, "column": 7}}],
    "messages":
    [{"severity": "warning",

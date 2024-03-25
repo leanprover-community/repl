@@ -84,21 +84,33 @@ def Message.of (m : Lean.Message) : IO Message := do pure <|
     | .error => .error,
     data := (← m.data.toString).trim }
 
-/-- A Lean `sorry`. -/
-structure Sorry where
+structure Tactic where
   pos : Pos
   endPos : Pos
-  goal : String
+  goals : String
+  tactic : String
   /--
   The index of the proof state at the sorry.
   You can use the `ProofStep` instruction to run a tactic at this state.
   -/
   proofState : Option Nat
-deriving FromJson
+deriving ToJson
+
+/-- Construct the JSON representation of a Lean tactic. -/
+def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Tactic :=
+  { pos := ⟨pos.line, pos.column⟩,
+    endPos := ⟨endPos.line, endPos.column⟩,
+    goals,
+    tactic,
+    proofState }
+
+/-- A Lean `sorry`. -/
+structure Sorry extends Tactic where
+  tactic := "sorry"
 
 instance : ToJson Sorry where
   toJson r := Json.mkObj <| .join [
-    [("goal", r.goal)],
+    [("goals", r.goals)],
     [("proofState", toJson r.proofState)],
     if r.pos.line ≠ 0 then [("pos", toJson r.pos)] else [],
     if r.endPos.line ≠ 0 then [("endPos", toJson r.endPos)] else [],
@@ -108,23 +120,7 @@ instance : ToJson Sorry where
 def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
-    goal,
-    proofState }
-
-structure Tactic where
-  pos : Pos
-  endPos : Pos
-  goals : String
-  tactic : String
-  proofState : Option Nat
-deriving ToJson, FromJson
-
-/-- Construct the JSON representation of a Lean tactic. -/
-def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Tactic :=
-  { pos := ⟨pos.line, pos.column⟩,
-    endPos := ⟨endPos.line, endPos.column⟩,
-    goals,
-    tactic,
+    goals := goal,
     proofState }
 
 structure SourceResponse where
@@ -142,7 +138,6 @@ structure CommandResponse where
   sorries : List Sorry := []
   tactics : List Tactic := []
   infotree : Option Json := none
-deriving FromJson
 
 def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
   | [] => []
@@ -172,7 +167,7 @@ structure ProofStepResponse where
   messages : List Message := []
   sorries : List Sorry := []
   traces : List String
-deriving ToJson, FromJson
+deriving ToJson
 
 instance : ToJson ProofStepResponse where
   toJson r := Json.mkObj <| .join [
@@ -186,34 +181,34 @@ instance : ToJson ProofStepResponse where
 /-- Json wrapper for an error. -/
 structure Error where
   message : String
-deriving ToJson, FromJson
+deriving ToJson
 
 structure PickleEnvironment where
   env : Nat
   pickleTo : System.FilePath
-deriving ToJson, FromJson
+deriving FromJson
 
 structure UnpickleEnvironment where
   unpickleEnvFrom : System.FilePath
-deriving ToJson, FromJson
+deriving FromJson
 
 structure PickleIncrementalState where
   incr : Nat
   pickleTo : System.FilePath
-deriving ToJson, FromJson
+deriving FromJson
 
 structure UnpickleIncrementalState where
   unpickleIncrFrom : System.FilePath
-deriving ToJson, FromJson
+deriving FromJson
 
 structure PickleProofState where
   proofState : Nat
   pickleTo : System.FilePath
-deriving ToJson, FromJson
+deriving FromJson
 
 structure UnpickleProofState where
   unpickleProofStateFrom : System.FilePath
   env : Option Nat
-deriving ToJson, FromJson
+deriving FromJson
 
 end REPL.JSON

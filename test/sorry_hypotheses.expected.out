@@ -3,7 +3,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 36},
-     "goal": "x : Int\n⊢ x = x",
+     "goals": "x : Int\n⊢ x = x",
      "endPos": {"line": 1, "column": 41}}],
    "messages":
    [{"severity": "warning",
@@ -12,7 +12,7 @@
      "data": "declaration uses 'sorry'"}],
    "env": 0}]}
 
-{"sorries": [{"proofState": 1, "goal": "x : Int\n⊢ x = 1"}],
+{"sorries": [{"proofState": 1, "goals": "x : Int\n⊢ x = 1"}],
  "proofState": 2,
  "goals": ["x : Int\nh : x = 1\n⊢ x = x"]}
 

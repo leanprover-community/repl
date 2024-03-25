@@ -20,11 +20,11 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 2, "column": 14},
-     "goal": "⊢ 3 = 4",
+     "goals": "⊢ 3 = 4",
      "endPos": {"line": 2, "column": 19}},
     {"proofState": 1,
      "pos": {"line": 3, "column": 14},
-     "goal": "⊢ 4 = 5",
+     "goals": "⊢ 4 = 5",
      "endPos": {"line": 3, "column": 19}}],
    "messages":
    [{"severity": "warning",

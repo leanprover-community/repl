@@ -4,7 +4,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 2, "column": 45},
-     "goal": "x : Int\nh0 : x > 0\n⊢ False",
+     "goals": "x : Int\nh0 : x > 0\n⊢ False",
      "endPos": {"line": 2, "column": 50}}],
    "messages":
    [{"severity": "warning",
@@ -13,7 +13,7 @@
      "data": "declaration uses 'sorry'"}],
    "env": 1}]}
 
-{"sorries": [{"proofState": 1, "goal": "x : Int\nh0 : x > 0\n⊢ x > 0"}],
+{"sorries": [{"proofState": 1, "goals": "x : Int\nh0 : x > 0\n⊢ x > 0"}],
  "proofState": 2,
  "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
 

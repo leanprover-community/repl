@@ -3,7 +3,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 43},
-     "goal": "x : Nat\n⊢ x = x",
+     "goals": "x : Nat\n⊢ x = x",
      "endPos": {"line": 1, "column": 48}}],
    "messages":
    [{"severity": "warning",
