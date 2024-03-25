@@ -11,6 +11,7 @@ import REPL.Lean.Environment
 import REPL.Lean.InfoTree
 import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
+import REPL.Proof
 
 /-!
 # A REPL for Lean.
@@ -221,19 +222,27 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
 
 open JSON
 
-def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
-  trees.bind InfoTree.sorries |>.mapM
+structure Native.Tactic where
+  proofState : ProofSnapshot
+  src : String
+  stx : Syntax
+  pos : Position
+  endPos  : Position
+
+structure Native.Sorry extends Native.Tactic where
+  src := "sorry"
+  stx := Syntax.missing -- FIXME
+
+def sorries' (trees : List InfoTree) (env? : Option Environment) : m (List Native.Sorry) := do
+  trees.bind InfoTree.sorries |>.filterMapM
     fun ⟨ctx, g, pos, endPos⟩ => do
-      let (goal, proofState) ← match g with
+      match g with
       | .tactic g => do
-         let s ← ProofSnapshot.create ctx none env? [g]
-         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+        pure <| some { proofState := (← ProofSnapshot.create ctx none env? [g]), pos, endPos }
       | .term lctx (some t) => do
-         let s ← ProofSnapshot.create ctx lctx env? [] [t]
-         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
-      | .term _ none => unreachable!
-      let proofStateId ← proofState.mapM recordProofSnapshot
-      return Sorry.of goal pos endPos proofStateId
+        pure <| some { proofState := (← ProofSnapshot.create ctx lctx env? [] [t]), pos, endPos }
+      | .term _ none =>
+        pure none
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
@@ -241,14 +250,23 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   catch _ =>
     pure "<failed to pretty print>"
 
-def tactics (trees : List InfoTree) : M m (List Tactic) :=
+def tactics' (trees : List InfoTree) : m (List Native.Tactic) :=
   trees.bind InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, goals, pos, endPos⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none none goals)
-      let goals := s!"{(← ctx.ppGoals goals)}".trim
-      let tactic := Format.pretty (← ppTactic ctx stx)
-      let proofStateId ← proofState.mapM recordProofSnapshot
-      return Tactic.of goals tactic pos endPos proofStateId
+      let src := Format.pretty (← ppTactic ctx stx)
+      return { proofState := (← ProofSnapshot.create ctx none none goals), pos, endPos, src, stx }
+
+def tactics (trees : List InfoTree) : M m (List JSON.Tactic) := do
+  (← tactics' trees).mapM fun t => do
+      let goals := "\n".intercalate (← t.proofState.ppGoals)
+      let proofStateId ← recordProofSnapshot t.proofState
+      return Tactic.of goals t.src t.pos t.endPos proofStateId
+
+def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List JSON.Sorry) := do
+  (← sorries' trees env?).mapM fun s => do
+    let goal := "\n".intercalate (← s.proofState.ppGoals)
+    let proofStateId ← recordProofSnapshot s.proofState
+    pure <| Sorry.of goal s.pos s.endPos proofStateId
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
@@ -269,7 +287,7 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   let id ← recordProofSnapshot proofState
   return {
     proofState := id
-    goals := (← proofState.ppGoals).map fun s => s!"{s}"
+    goals := (← proofState.ppGoals)
     messages
     sorries
     traces }
@@ -311,10 +329,18 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   Sum.inl <$> createProofStepReponse proofState
 
 
+structure Native.CommandResponse where
+  source : String
+  env : Nat
+  messages : List Lean.Message := []
+  sorries : List Sorry := []
+  tactics : List Tactic := []
+  infotree : List InfoTree := []
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
-def runCommand (s : JSON.Command) : M IO (CommandResponses ⊕ Error) := do
+def runCommand (s : JSON.Command) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
   let (retrieved?, parentId?, additionalSource) ← match ← retrieve s.env s.replace with
   | .inr e => return .inr e
   | .inl none => pure (none, none, "")
@@ -350,7 +376,7 @@ where
     | _ => false
   mkResponse
     (parentId? : Option Nat) (initialCmdSnapshot? : Option CommandSnapshot) (s : JSON.Command)
-    (cmdState : Command.State) (stx : Syntax) (incrementalState? : Option IncrementalState) : M IO CommandResponse := do
+    (cmdState : Command.State) (stx : Syntax) (incrementalState? : Option IncrementalState) : M IO JSON.CommandResponse := do
   let messages := cmdState.messages.msgs.toList
   let trees := cmdState.infoState.trees.toList
   let messages ← messages.mapM fun m => Message.of m

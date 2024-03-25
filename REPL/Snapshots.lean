@@ -182,8 +182,12 @@ def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
   | .ok stx => p.runSyntax stx
 
 /-- Pretty print the current goals in the `ProofSnapshot`. -/
-def ppGoals (p : ProofSnapshot) : IO (List Format) :=
+def formatGoals (p : ProofSnapshot) : IO (List Format) :=
   Prod.fst <$> p.runMetaM do p.tacticState.goals.mapM (Meta.ppGoal ·)
+
+def ppGoals (p : ProofSnapshot) : IO (List String) :=
+  return (← p.formatGoals).map fun s => s!"{s}"
+
 /--
 Construct a `ProofSnapshot` from a `ContextInfo` and optional `LocalContext`, and a list of goals.
 

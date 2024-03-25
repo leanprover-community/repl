@@ -17,16 +17,16 @@ structure CommandOptions where
   Should be "full", "tactics", "original", or "substantive".
   Anything else is ignored.
   -/
-  infotree : Option String
+  infotree : Option String := none
 
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).
 If `env = some n`, builds on the existing environment `n`.
 -/
 structure Command extends CommandOptions where
-  env : Option Nat
-  replace : Option Nat
-  incr : Option Nat
+  env : Option Nat := none
+  replace : Option Nat := none
+  incr : Option Nat := none
   cmd : String
 deriving ToJson, FromJson
 
