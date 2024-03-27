@@ -37,3 +37,12 @@ theorem h : f + g = 39 := by exact rfl
 -/
 #guard_msgs in
 #eval process_file.run' {}
+
+def run_command : M IO Unit := do
+  match ← runCommand' { cmd := "def x := 1\ndef y := 2\ntheorem h : x + 1 = 2 := by\n  have z := 4\n  sorry" } with
+  | .inl r => IO.println s!"{r.length} results"
+  | .inr e => IO.println s!"Error: {e}"
+
+/-- info: 3 results -/
+#guard_msgs in
+#eval run_command.run' {}
