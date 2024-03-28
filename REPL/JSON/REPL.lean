@@ -1,5 +1,5 @@
 import REPL.Main
-import REPL.Json.Types
+import REPL.JSON.Types
 
 namespace REPL
 
