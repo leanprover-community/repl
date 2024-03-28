@@ -134,6 +134,10 @@ partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) :
 partial def retainTacticInfo (tree : InfoTree) : List InfoTree :=
   tree.filter fun | .ofTacticInfo _ => true | _ => false
 
+/-- Discard all nodes besides `by` nodes. -/
+partial def retainBy (tree : InfoTree) : List InfoTree :=
+  tree.filter fun | .ofTacticInfo i => i.stx.isOfKind `Lean.Parser.Term.byTactic | _ => false
+
 /-- Retain only nodes with "original" syntax. -/
 partial def retainOriginal (tree : InfoTree) : List InfoTree :=
   tree.filter Info.isOriginal
@@ -144,7 +148,7 @@ partial def retainSubstantive (tree : InfoTree) : List InfoTree :=
   tree.filter fun | .ofTacticInfo i => i.isSubstantive | _ => true
 
 /-- Analogue of `Lean.Elab.InfoTree.findInfo?`, but that returns all results. -/
-partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info → Bool) :
+partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo := none) (p : Info → Bool) :
     List (Info × Option ContextInfo) :=
   match t with
   | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p
@@ -153,6 +157,19 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
     let rest := ts.toList.bind (fun t => t.findAllInfo ctx? p)
     info ++ rest
   | _ => []
+
+partial def subtrees (t : InfoTree) (ctx? : Option ContextInfo := none) (p : Info → Bool) :
+  List (InfoTree × Option ContextInfo) :=
+  match t with
+  | context ctx t => t.subtrees (ctx.mergeIntoOuter? ctx?) p
+  | node i ts  =>
+    let info := if p i then [(t, ctx?)] else []
+    let rest := ts.toList.bind (fun t => t.subtrees ctx? p)
+    info ++ rest
+  | _ => []
+
+def byTrees (t : InfoTree) : List (InfoTree × Option ContextInfo) :=
+  t.subtrees none fun | .ofTacticInfo i => i.stx.isOfKind ``Lean.Parser.Term.byTactic | _ => false
 
 /-- Return all `TacticInfo` nodes in an `InfoTree` with "original" syntax,
 each equipped with its relevant `ContextInfo`. -/

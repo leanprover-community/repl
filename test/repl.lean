@@ -1,9 +1,9 @@
-import REPL.Main
+import REPL.JSON.REPL
 
 open REPL
 
 def no_such_file : M IO Unit := do
-  let r ← processFile { path := "test/no_such_file.lean" }
+  let r ← handleFileRequest { path := "test/no_such_file.lean" }
   match r with
   | .inl _ => IO.println "Success"
   | .inr error => IO.println s!"Error: {error.message}"
@@ -16,7 +16,7 @@ info: Error: no such file or directory (error code: 2)
 #eval no_such_file.run' {}
 
 def process_file : M IO Unit := do
-  let r ← processFile { path := "test/file.lean" }
+  let r ← handleFileRequest { path := "test/file.lean" }
   match r with
   | .inl r =>
     IO.println s!"{r.results.length} results"
@@ -39,10 +39,22 @@ theorem h : f + g = 39 := by exact rfl
 #eval process_file.run' {}
 
 def run_command : M IO Unit := do
-  match ← runCommand' { cmd := "def x := 1\ndef y := 2\ntheorem h : x + 1 = 2 := by\n  have z := 4\n  sorry" } with
-  | .inl r => IO.println s!"{r.length} results"
+  match ← runCommand (infotree := .full) "def x := 1\ndef y := 2\ntheorem h : x + 1 = 2 := by\n  by_cases h : 0 < 1\n  · have z := 4\n    have z' := by sorry\n  · sorry" with
+  | .inl r => do
+    IO.println s!"{r.length} results"
+    if h : r.length = 3 then
+        -- IO.println r[2].stx
+        IO.println r[2].proofs.length
+        for p in r[2].proofs do
+          IO.println p.ppRaw
+        -- IO.println r[2].infotree.length
+        -- IO.println <| ← (r[2].infotree.toArray.mapM fun t => do pure <| toString (← t.format))
+        -- IO.println <| Lean.Json.arr (← r[2].infotree.toArray.mapM fun t => t.toJson none)
   | .inr e => IO.println s!"Error: {e}"
 
-/-- info: 3 results -/
+/--
+info: 3 results
+Source looks correct.
+-/
 #guard_msgs in
 #eval run_command.run' {}

@@ -3,7 +3,6 @@ Copyright (c) 2023 Scott Morrison. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
-import REPL.JSON
 import REPL.Frontend
 import REPL.Util.Path
 import REPL.Lean.ContextInfo
@@ -246,17 +245,6 @@ structure SorryResult extends TacticResult where
   src := "sorry"
   stx := Syntax.missing -- FIXME
 
-def sorries (trees : List InfoTree) (env? : Option Environment) : m (List SorryResult) := do
-  trees.bind InfoTree.sorries |>.filterMapM
-    fun ⟨ctx, g, pos, endPos⟩ => do
-      match g with
-      | .tactic g => do
-        pure <| some { proofState := (← ProofSnapshot.create ctx none env? [g]), pos, endPos }
-      | .term lctx (some t) => do
-        pure <| some { proofState := (← ProofSnapshot.create ctx lctx env? [] [t]), pos, endPos }
-      | .term _ none =>
-        pure none
-
 def tactics (trees : List InfoTree) : m (List TacticResult) :=
   trees.bind InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, goals, pos, endPos⟩ => do
@@ -267,6 +255,17 @@ where ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
     Lean.PrettyPrinter.ppTactic ⟨stx⟩
   catch _ =>
     pure "<failed to pretty print>"
+
+def sorries (trees : List InfoTree) (env? : Option Environment) : m (List SorryResult) := do
+  trees.bind InfoTree.sorries |>.filterMapM
+    fun ⟨ctx, g, pos, endPos⟩ => do
+      match g with
+      | .tactic g => do
+        pure <| some { proofState := (← ProofSnapshot.create ctx none env? [g]), pos, endPos }
+      | .term lctx (some t) => do
+        pure <| some { proofState := (← ProofSnapshot.create ctx lctx env? [] [t]), pos, endPos }
+      | .term _ none =>
+        pure none
 
 structure ProofStepResponse where
   proofState : ProofSnapshot
@@ -296,29 +295,77 @@ def ProofSnapshot.diff (proofState : ProofSnapshot) (old? : Option ProofSnapshot
 
 structure CommandResponse where
   source : String
+  stx : Syntax
   env : Nat
   messages : List Lean.Message := []
   sorries : List SorryResult := []
   tactics : List TacticResult := []
   infotree : List InfoTree := []
+  proofs : List Proof := []
+
+inductive InfoTreeOption
+| none
+| full
+| by
+| tactics
+| original
+| substantive
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
+
+Base environment:
+* If `after? = some i`,
+  then the command is run using the `Environment` produced after the command at index `i`.
+* If `after? = none`, and `replace? = some j`,
+  then the command is run using the `Environment` produced after the parent of the command at index `j`.
+* If `after? = none` and `replace? = none`,
+  then the command is run in a new environment. (This is the only way to use `import` commands.)
+
+Incrementality:
+* If `incr? = none`, then we use the most recently generated incrementality state from the base environment
+  as selected above. In particular, if we have not previously run a command from the same base environment,
+  then there will be no incrementality.
+* If `incr? = some k`, then the command is run using the incrementality state from the command at index `k`,
+  regardless of whether that is compatible with the base environment.
+  (Incompatibilities should just result in the incrementality state not being used.)
+  This is typically only needed when you are trying out multiple next continuations from the same base environment,
+  and want to re-use incrementality state from a continuation before the most recent one.
+
+Replacing source code:
+* If `replace? = none`, then the code is the source code associated to `after?`, followed by the new command.
+* If `replace? = some l`, then the code is the source code associated to the base environment, followed by the new command,
+  followed by any source code that follows the command at index `l`.
+  This source code following the command at index `l` is also re-executed along with the new command.
+
+Returns either
+* a list of `CommandResponse`s (one for each command in the execute source code)
+* an error message
+
+By default the `CommandResponse`s only include information about the `sorry`s in the code,
+not all tactic invocations. -- FIXME this will probably change
+
+By default the `CommandResponse`s do not contain the full `InfoTree`s. Setting `infotree` to
+* `none` results in no `InfoTree`s being included
 -/
-def runCommand' (cmd : JSON.Command) : M IO (List CommandResponse ⊕ String) := do
-  let (retrieved?, parentId?, additionalSource) ← match ← retrieve cmd.env cmd.replace with
+def runCommand (cmd : String)
+    (after? : Option Nat := none) (replace? : Option Nat := none) (incr? : Option Nat := none)
+    (allTactics : Bool := false) (infotree : InfoTreeOption := .none) :
+    M IO (List CommandResponse ⊕ String) := do
+  let (retrieved?, parentId?, additionalSource) ← match ← retrieve after? replace? with
   | .inr e => return .inr e
   | .inl none => pure (none, none, "")
   | .inl (some x) => pure (some x.1, some x.2.1, x.2.2)
+
   let (incrementalStateBefore?, notFound) ← do
-    match cmd.incr with
-    | none => pure (← findLatestIncrementalState cmd.env, false)
+    match incr? with
+    | none => pure (← findLatestIncrementalState after?, false)
     | some j => do match  ← lookup? j with
       | some { incrementalState? := some s, .. } => pure (some s, false)
       | some _
       | none => pure (none, true)
   if notFound then
-    return .inr "Unknown incremental state."
+    return .inr s!"Unknown incremental state {incr?.get!}"
 
   let initialCmdSnapshot? := (·.snapshot) <$> retrieved?
   let initialContext :=
@@ -328,7 +375,7 @@ def runCommand' (cmd : JSON.Command) : M IO (List CommandResponse ⊕ String) :=
   let initialEnv? := initialCmdState?.map (·.env)
 
   let (header?, states) ← try
-    IO.processInput (cmd.cmd ++ "\n" ++ additionalSource) initialCmdState? incrementalStateBefore?
+    IO.processInput (cmd ++ "\n" ++ additionalSource) initialCmdState? incrementalStateBefore?
   catch ex =>
     return .inr ex.toString
 
@@ -341,7 +388,7 @@ def runCommand' (cmd : JSON.Command) : M IO (List CommandResponse ⊕ String) :=
   let (_, results) ← states.foldlM (init := (parentId?, #[])) fun (p, r) ⟨state, stx, incr⟩ => do
     let src ← source initialContext state stx
     let i ← record p initialContext state stx src incr
-    let n ← mkResponse i initialEnv? cmd.allTactics cmd.infotree state src
+    let n ← mkResponse i initialEnv? allTactics infotree state src stx
     pure (n.env, r.push n)
   return .inl results.toList
 where
@@ -359,214 +406,29 @@ where
       cmdContext }
     recordCommandSnapshot parentId? source stx cmdSnapshot incrementalState?
   mkResponse
-      (env : Nat) (initialEnv : Option Environment) (allTactics : Option Bool) (infotrees : Option String)
-      (cmdState : Command.State) (source : String) : M IO CommandResponse := do
+      (env : Nat) (initialEnv : Option Environment) (allTactics : Bool) (infotrees : InfoTreeOption)
+      (cmdState : Command.State) (source : String) (stx : Syntax) : M IO CommandResponse := do
     let messages := cmdState.messages.msgs.toList
     let trees := cmdState.infoState.trees.toList
     -- For debugging purposes, sometimes we print out the trees here:
     -- trees.forM fun t => do IO.println (← t.format)
     let sorries ← sorries trees initialEnv
-    let tactics ← match allTactics with
-    | some true => tactics trees
-    | _ => pure []
+    let tactics ← if allTactics then tactics trees else pure []
+    let byTrees := (·.1) <$> trees.bind InfoTree.byTrees
+    let proofs := byTrees.filterMap fun t => Proof.ofInfoTree t
     let infotree := match infotrees with
-    | some "full" => trees
-    | some "tactics" => trees.bind InfoTree.retainTacticInfo
-    | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
-    | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
-    | _ => []
+    | .full => trees
+    | .by => trees.bind InfoTree.retainBy
+    | .tactics => trees.bind InfoTree.retainTacticInfo
+    | .original => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
+    | .substantive => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
+    | .none => []
     return {
       source,
+      stx,
       env,
       messages,
       sorries,
       tactics
-      infotree }
-
-open JSON
-
-def TacticResult.toJson (t : TacticResult) : M m JSON.Tactic := do
-  let goals := "\n".intercalate (← t.proofState.ppGoals)
-  let proofStateId ← recordProofSnapshot t.proofState
-  return Tactic.of goals t.src t.pos t.endPos proofStateId
-
-def SorryResult.toJson (s : SorryResult) : M m JSON.Sorry := do
-  return { ← TacticResult.toJson s.toTacticResult with }
-
-def CommandResponse.toJson (r : CommandResponse) : M m JSON.CommandResponse := do
-  let messages ← r.messages.mapM fun m => Message.of m
-  let sorries ← r.sorries |>.mapM fun s => s.toJson
-  let tactics ← r.tactics |>.mapM fun t => t.toJson
-  let infotree := if r.infotree.isEmpty then
-  none
-else
-  some <| Json.arr (← r.infotree.toArray.mapM fun t => t.toJson none)
-  return {
-    source := r.source
-    env := r.env
-    messages
-    sorries
-    tactics
-    infotree }
-
-/--
-Run a command, returning the id of the new environment, and any messages and sorries.
--/
-def runCommand (s : JSON.Command) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
-  match ← runCommand' s with
-  | .inl r => return .inl { results := ← r.mapM fun r => r.toJson }
-  | .inr e => return .inr ⟨e⟩
-
-def processFile (s : JSON.File) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
-  try
-    let cmd ← IO.FS.readFile s.path
-    runCommand { s with env := none, incr := none, replace := none, cmd }
-  catch e =>
-    pure <| .inr ⟨e.toString⟩
-
-def ProofStepResponse.toJson (r : ProofStepResponse) : M m JSON.ProofStepResponse := do
-  let messages ← r.messages.mapM fun m => Message.of m
-  let sorries ← r.sorries |>.mapM fun s => s.toJson
-  let id ← recordProofSnapshot r.proofState
-  return {
-    proofState := id
-    goals := (← r.proofState.ppGoals)
-    messages
-    sorries
-    traces := r.traces }
-
-/-- Record a `ProofSnapshot` and generate a JSON response for it. -/
-def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
-    M m JSON.ProofStepResponse := do
-  (← proofState.diff old?).toJson
-
-/--
-Run a single tactic, returning the id of the new proof statement, and the new goals.
--/
--- TODO detect sorries?
-def runProofStep (s : ProofStep) : M IO (JSON.ProofStepResponse ⊕ JSON.Error) := do
-  match (← get).proofStates[s.proofState]? with
-  | none => return .inr ⟨"Unknown proof state."⟩
-  | some proofState =>
-    try
-      let proofState' ← proofState.runString s.tactic
-      return .inl (← createProofStepReponse proofState' proofState)
-    catch ex =>
-      return .inr ⟨"Lean error:\n" ++ ex.toString⟩
-
-/-- Pickle a `Command`, generating a JSON response. -/
-def pickleCommandSnapshot (n : PickleEnvironment) : M m (JSON.CommandResponse ⊕ JSON.Error) := do
-  match ← lookup? n.env with
-  | none => return .inr ⟨"Unknown command."⟩
-  | some cmd =>
-    -- FIXME presumably we want to pickle more!
-    discard <| cmd.snapshot.pickle n.pickleTo
-    return .inl { env := n.env, source := "" }
-
-/-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
-def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO JSON.CommandResponse := do
-  let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
-  let env ← recordCommandSnapshot none "" .missing env none
-  return { env, source := "" }
-
-/-- Pickle a `ProofSnapshot`, generating a JSON response. -/
--- This generates a new identifier, which perhaps is not what we want?
-def pickleProofSnapshot (n : PickleProofState) : M m (JSON.ProofStepResponse ⊕ JSON.Error) := do
-  match (← get).proofStates[n.proofState]? with
-  | none => return .inr ⟨"Unknown proof State."⟩
-  | some proofState =>
-    discard <| proofState.pickle n.pickleTo
-    return .inl (← createProofStepReponse proofState)
-
-/-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
-def unpickleProofSnapshot (n : UnpickleProofState) : M IO (JSON.ProofStepResponse ⊕ JSON.Error) := do
-  let (cmdSnapshot?, notFound) ← do match n.env with
-  | none => pure (none, false)
-  | some i => do match ← lookup? i with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
-  if notFound then
-    return .inr ⟨"Unknown environment."⟩
-  let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom ((·.snapshot) <$> cmdSnapshot?)
-  Sum.inl <$> createProofStepReponse proofState
-
-end REPL
-
-open REPL
-
-def handleSourceRequest (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ String) := do
-  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
-
-/-- Get lines from stdin until a blank line is entered. -/
-partial def getLines : IO String := do
-  let line ← (← IO.getStdin).getLine
-  if line.trim.isEmpty then
-    return line
-  else
-    return line ++ (← getLines)
-
-instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
-  toJson x := match x with
-  | .inl a => toJson a
-  | .inr b => toJson b
-
-/-- Commands accepted by the REPL. -/
-inductive Input
-| command : JSON.Command → Input
-| file : JSON.File → Input
-| source : JSON.Source → Input
-| proofStep : JSON.ProofStep → Input
-| pickleEnvironment : JSON.PickleEnvironment → Input
-| unpickleEnvironment : JSON.UnpickleEnvironment → Input
-| pickleProofSnapshot : JSON.PickleProofState → Input
-| unpickleProofSnapshot : JSON.UnpickleProofState → Input
-
-/-- Parse a user input string to an input command. -/
-def parse (query : String) : IO Input := do
-  let json := Json.parse query
-  match json with
-  | .error e => throw <| IO.userError <| toString <| toJson <|
-      (⟨"Could not parse JSON:\n" ++ e⟩ : JSON.Error)
-  | .ok j => match fromJson? j with
-    | .ok (r : JSON.ProofStep) => return .proofStep r
-    | .error _ => match fromJson? j with
-    | .ok (r : JSON.PickleEnvironment) => return .pickleEnvironment r
-    | .error _ => match fromJson? j with
-    | .ok (r : JSON.UnpickleEnvironment) => return .unpickleEnvironment r
-    | .error _ => match fromJson? j with
-    | .ok (r : JSON.PickleProofState) => return .pickleProofSnapshot r
-    | .error _ => match fromJson? j with
-    | .ok (r : JSON.UnpickleProofState) => return .unpickleProofSnapshot r
-    | .error _ => match fromJson? j with
-    | .ok (r : JSON.Command) => return .command r
-    | .error _ => match fromJson? j with
-    | .ok (r : JSON.File) => return .file r
-    | .error _ => match fromJson? j with
-    | .ok (r : JSON.Source) => return .source r
-    | .error e => throw <| IO.userError <| toString <| toJson <|
-        (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : JSON.Error)
-
-/-- Read-eval-print loop for Lean. -/
-partial def repl : IO Unit :=
-  StateT.run' loop {}
-where loop : M IO Unit := do
-  let query ← getLines
-  if query = "" then
-    return ()
-  if query.startsWith "#" || query.startsWith "--" then loop else
-  IO.println <| toString <| ← match ← parse query with
-  | .command r => return toJson (← runCommand r)
-  | .file r => return toJson (← processFile r)
-  | .source r => return toJson (← handleSourceRequest r)
-  | .proofStep r => return toJson (← runProofStep r)
-  | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
-  | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
-  | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
-  | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
-  IO.println "" -- easier to parse the output if there are blank lines
-  loop
-
-/-- Main executable function, run as `lake exe repl`. -/
-def main (_ : List String) : IO Unit := do
-  initSearchPath (← Lean.findSysroot)
-  repl
+      infotree,
+      proofs }

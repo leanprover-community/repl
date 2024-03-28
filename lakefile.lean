@@ -11,5 +11,5 @@ lean_lib REPL {
 
 @[default_target]
 lean_exe repl where
-  root := `REPL.Main
+  root := `REPL.JSON.REPL
   supportInterpreter := true
