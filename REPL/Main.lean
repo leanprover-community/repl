@@ -66,6 +66,8 @@ structure Command where
   stx : Syntax
   snapshot : CommandSnapshot
   incrementalState? : Option IncrementalState
+-- TODO: reduce duplication: there is a `Command.State` in both `snapshot` and `incrementalState?`.
+
 
 /-- The monadic state for the Lean REPL. -/
 structure State where
@@ -135,9 +137,6 @@ def source (i : Nat) (before := true) (self := true) (after := false) : M m Stri
   src := src.dropRightWhile (· == '\n')
   return src
 
-def processSource (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ String) := do
-  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
-
 /--
 Retrieve a previous command.
 
@@ -168,19 +167,19 @@ def retrieve (after? : Option Nat) (replace? : Option Nat) :
         pure (none, false)
       else
         pure (c.back?.map fun s => (s, c.size - 1, ""), false)
-    | some j => match (← get).commands[j]? with
-      | none => return .inr "Unknown `replace?` target."
+    | some j => match ← lookup? j with
+      | none => return .inr s!"Unknown environment: {replace?.get!}."
       | some x => match x.parentId? with
         | none => pure (none, false)
-        | some p => match (← get).commands[p]? with
+        | some p => match ← lookup? p with
           | none => return .inr "Unreachable code; could not find parent of `replace?` target."
           | some c => pure (some (c, p, additionalSource), false)
-  | some i => do match (← get).commands[i]? with
+  | some i => do match ← lookup? i with
     | some env =>
       pure (some (env, i, additionalSource), false)
     | none => pure (none, true)
   if notFound then
-    return .inr "Unknown environment specified in `after?`."
+    return .inr s!"Unknown environment {after?.get!}"
   else
     return .inl r
 
@@ -269,14 +268,14 @@ where ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   catch _ =>
     pure "<failed to pretty print>"
 
-structure Native.ProofStepResponse where
+structure ProofStepResponse where
   proofState : ProofSnapshot
   messages : List Lean.Message := []
   sorries : List SorryResult := []
   traces : List String := []
 
 def ProofSnapshot.diff (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
-    m Native.ProofStepResponse := do
+    m ProofStepResponse := do
   let messages := proofState.newMessages old?
   let traces ← proofState.newTraces old?
   let trees := proofState.newInfoTrees old?
@@ -294,16 +293,6 @@ def ProofSnapshot.diff (proofState : ProofSnapshot) (old? : Option ProofSnapshot
     messages
     sorries
     traces }
-
-open JSON
-
-def TacticResult.toJson (t : TacticResult) : M m JSON.Tactic := do
-  let goals := "\n".intercalate (← t.proofState.ppGoals)
-  let proofStateId ← recordProofSnapshot t.proofState
-  return Tactic.of goals t.src t.pos t.endPos proofStateId
-
-def SorryResult.toJson (s : SorryResult) : M m JSON.Sorry := do
-  return { ← TacticResult.toJson s.toTacticResult with }
 
 structure CommandResponse where
   source : String
@@ -324,7 +313,7 @@ def runCommand' (cmd : JSON.Command) : M IO (List CommandResponse ⊕ String) :=
   let (incrementalStateBefore?, notFound) ← do
     match cmd.incr with
     | none => pure (← findLatestIncrementalState cmd.env, false)
-    | some j => do match (← get).commands[j]? with
+    | some j => do match  ← lookup? j with
       | some { incrementalState? := some s, .. } => pure (some s, false)
       | some _
       | none => pure (none, true)
@@ -394,6 +383,16 @@ where
       tactics
       infotree }
 
+open JSON
+
+def TacticResult.toJson (t : TacticResult) : M m JSON.Tactic := do
+  let goals := "\n".intercalate (← t.proofState.ppGoals)
+  let proofStateId ← recordProofSnapshot t.proofState
+  return Tactic.of goals t.src t.pos t.endPos proofStateId
+
+def SorryResult.toJson (s : SorryResult) : M m JSON.Sorry := do
+  return { ← TacticResult.toJson s.toTacticResult with }
+
 def CommandResponse.toJson (r : CommandResponse) : M m JSON.CommandResponse := do
   let messages ← r.messages.mapM fun m => Message.of m
   let sorries ← r.sorries |>.mapM fun s => s.toJson
@@ -425,7 +424,7 @@ def processFile (s : JSON.File) : M IO (JSON.CommandResponses ⊕ JSON.Error) :=
   catch e =>
     pure <| .inr ⟨e.toString⟩
 
-def Native.ProofStepResponse.toJson (r : Native.ProofStepResponse) : M m JSON.ProofStepResponse := do
+def ProofStepResponse.toJson (r : ProofStepResponse) : M m JSON.ProofStepResponse := do
   let messages ← r.messages.mapM fun m => Message.of m
   let sorries ← r.sorries |>.mapM fun s => s.toJson
   let id ← recordProofSnapshot r.proofState
@@ -445,7 +444,7 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
 Run a single tactic, returning the id of the new proof statement, and the new goals.
 -/
 -- TODO detect sorries?
-def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
+def runProofStep (s : ProofStep) : M IO (JSON.ProofStepResponse ⊕ JSON.Error) := do
   match (← get).proofStates[s.proofState]? with
   | none => return .inr ⟨"Unknown proof state."⟩
   | some proofState =>
@@ -457,7 +456,7 @@ def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
 
 /-- Pickle a `Command`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (JSON.CommandResponse ⊕ JSON.Error) := do
-  match (← get).commands[n.env]? with
+  match ← lookup? n.env with
   | none => return .inr ⟨"Unknown command."⟩
   | some cmd =>
     -- FIXME presumably we want to pickle more!
@@ -472,7 +471,7 @@ def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO JSON.CommandRespons
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
-def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ JSON.Error) := do
+def pickleProofSnapshot (n : PickleProofState) : M m (JSON.ProofStepResponse ⊕ JSON.Error) := do
   match (← get).proofStates[n.proofState]? with
   | none => return .inr ⟨"Unknown proof State."⟩
   | some proofState =>
@@ -480,10 +479,10 @@ def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ JSON
     return .inl (← createProofStepReponse proofState)
 
 /-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
-def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕ JSON.Error) := do
+def unpickleProofSnapshot (n : UnpickleProofState) : M IO (JSON.ProofStepResponse ⊕ JSON.Error) := do
   let (cmdSnapshot?, notFound) ← do match n.env with
   | none => pure (none, false)
-  | some i => do match (← get).commands[i]? with
+  | some i => do match ← lookup? i with
     | some env => pure (some env, false)
     | none => pure (none, true)
   if notFound then
@@ -495,6 +494,9 @@ end REPL
 
 open REPL
 
+def handleSourceRequest (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ String) := do
+  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
+
 /-- Get lines from stdin until a blank line is entered. -/
 partial def getLines : IO String := do
   let line ← (← IO.getStdin).getLine
@@ -503,7 +505,6 @@ partial def getLines : IO String := do
   else
     return line ++ (← getLines)
 
--- This has been upstreamed.
 instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with
   | .inl a => toJson a
@@ -556,7 +557,7 @@ where loop : M IO Unit := do
   IO.println <| toString <| ← match ← parse query with
   | .command r => return toJson (← runCommand r)
   | .file r => return toJson (← processFile r)
-  | .source r => return toJson (← processSource r)
+  | .source r => return toJson (← handleSourceRequest r)
   | .proofStep r => return toJson (← runProofStep r)
   | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
