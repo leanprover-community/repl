@@ -120,6 +120,10 @@ instance : ToJson Sorry where
 def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
   { Tactic.of goal "sorry" pos endPos proofState with }
 
+structure Proof where
+
+deriving ToJson
+
 structure SourceResponse where
   src : String
 deriving ToJson
@@ -134,6 +138,7 @@ structure CommandResponse where
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
+  proofs : List Proof := []
   infotree : Option Json := none
 
 def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
