@@ -18,7 +18,7 @@
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "Try this: exact Nat.zero_lt_one"}],
- "goals": []}
+ "goalsBefore": []}
 
 {"sorries":
  [{"proofState": 2,

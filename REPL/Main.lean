@@ -235,7 +235,8 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   return id
 
 structure TacticResult where
-  proofState : ProofSnapshot
+  before : ProofSnapshot
+  after? : Option ProofSnapshot := none
   src : String
   stx : Syntax
   pos : Position
@@ -249,7 +250,10 @@ def tactics (trees : List InfoTree) : m (List TacticResult) :=
   trees.bind InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, goals, pos, endPos⟩ => do
       let src := Format.pretty (← ppTactic ctx stx)
-      return { proofState := (← ProofSnapshot.create ctx none none goals), pos, endPos, src, stx }
+      return {
+        after? := none,
+        before := (← ProofSnapshot.create ctx none none goals),
+        pos, endPos, src, stx }
 where ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
     Lean.PrettyPrinter.ppTactic ⟨stx⟩
@@ -261,9 +265,9 @@ def sorries (trees : List InfoTree) (env? : Option Environment) : m (List SorryR
     fun ⟨ctx, g, pos, endPos⟩ => do
       match g with
       | .tactic g => do
-        pure <| some { proofState := (← ProofSnapshot.create ctx none env? [g]), pos, endPos }
+        pure <| some { before := (← ProofSnapshot.create ctx none env? [g]), pos, endPos }
       | .term lctx (some t) => do
-        pure <| some { proofState := (← ProofSnapshot.create ctx lctx env? [] [t]), pos, endPos }
+        pure <| some { before := (← ProofSnapshot.create ctx lctx env? [] [t]), pos, endPos }
       | .term _ none =>
         pure none
 

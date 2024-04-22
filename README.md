@@ -115,7 +115,7 @@ results in output
  [{"tactic": "exact rfl",
    "proofState": 0,
    "pos": {"line": 5, "column": 29},
-   "goals": "⊢ f + g = 39",
+   "goalsBefore": "⊢ f + g = 39",
    "endPos": {"line": 5, "column": 38}}],
  "env": 0}
  ```
@@ -143,11 +143,11 @@ Example usage:
 
 {"tactic": "apply Int.natAbs", "proofState": 0}
 
-{"proofState": 1, "goals": ["x : Unit\n⊢ Int"]}
+{"proofState": 1, "goalsBefore": ["x : Unit\n⊢ Int"]}
 
 {"tactic": "exact -37", "proofState": 1}
 
-{"proofState": 2, "goals": []}
+{"proofState": 2, "goalsBefore": []}
 ```
 
 You can use `sorry` in tactic mode.

@@ -3,7 +3,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 36},
-     "goals": "x : Int\n⊢ x = x",
+     "goalsBefore": "x : Int\n⊢ x = x",
      "endPos": {"line": 1, "column": 41}}],
    "messages":
    [{"severity": "warning",
@@ -13,15 +13,15 @@
    "env": 0}]}
 
 {"proofState": 1,
- "goals":
+ "goalsAfter":
  ["case pos\nx : Int\nh : x < 0\n⊢ x = x",
   "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
 
-{"proofState": 2, "goals": ["case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
+{"proofState": 2, "goalsAfter": ["case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
 
 {"sorries":
- [{"proofState": 3, "goals": "case pos\nx : Int\nh : x < 0\n⊢ x = x"},
-  {"proofState": 4, "goals": "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
+ [{"proofState": 3, "goalsBefore": "case pos\nx : Int\nh : x < 0\n⊢ x = x"},
+  {"proofState": 4, "goalsBefore": "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
  "proofState": 5,
- "goals": []}
+ "goalsAfter": []}
 

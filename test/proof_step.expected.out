@@ -3,7 +3,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 18},
-     "goals": "⊢ Nat",
+     "goalsBefore": "⊢ Nat",
      "endPos": {"line": 1, "column": 23}}],
    "messages":
    [{"severity": "warning",
@@ -12,9 +12,9 @@
      "data": "declaration uses 'sorry'"}],
    "env": 0}]}
 
-{"proofState": 1, "goals": ["⊢ Int"]}
+{"proofState": 1, "goalsAfter": ["⊢ Int"]}
 
-{"proofState": 2, "goals": ["t : Nat\n⊢ Nat"]}
+{"proofState": 2, "goalsAfter": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 3, "goals": []}
+{"proofState": 3, "goalsAfter": []}
 

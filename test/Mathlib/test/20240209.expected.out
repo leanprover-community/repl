@@ -16,5 +16,5 @@
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "unsolved goals\n⊢ False"}],
- "goals": []}
+ "goalsBefore": []}
 

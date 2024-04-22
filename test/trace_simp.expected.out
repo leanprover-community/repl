@@ -19,7 +19,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 23},
-     "goals": "⊢ f = 37",
+     "goalsBefore": "⊢ f = 37",
      "endPos": {"line": 1, "column": 28}}],
    "messages":
    [{"severity": "warning",
@@ -28,13 +28,13 @@
      "data": "declaration uses 'sorry'"}],
    "env": 4}]}
 
-{"traces": ["37"], "proofState": 1, "goals": ["⊢ f = 37"]}
+{"traces": ["37"], "proofState": 1, "goalsAfter": ["⊢ f = 37"]}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37",
   "[Meta.Tactic.simp.rewrite] @eq_self:1000, 37 = 37 ==> True"],
  "proofState": 2,
- "goals": []}
+ "goalsAfter": []}
 
 {"results":
  [{"source": "example : True := by\n  trace \"!\"\n  trivial",

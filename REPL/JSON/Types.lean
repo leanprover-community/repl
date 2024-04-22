@@ -87,7 +87,8 @@ def Message.of (m : Lean.Message) : IO Message := do pure <|
 structure Tactic where
   pos : Pos
   endPos : Pos
-  goals : String
+  goalsBefore : String
+  goalsAfter? : Option String
   tactic : String
   /--
   The index of the proof state at the sorry.
@@ -97,10 +98,12 @@ structure Tactic where
 deriving ToJson
 
 /-- Construct the JSON representation of a Lean tactic. -/
-def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Tactic :=
+def Tactic.of (goalsBefore : String) (goalsAfter? : Option String) (tactic : String)
+    (pos endPos : Lean.Position) (proofState : Option Nat) : Tactic :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
-    goals,
+    goalsBefore,
+    goalsAfter?,
     tactic,
     proofState }
 
@@ -110,7 +113,8 @@ structure Sorry extends Tactic where
 
 instance : ToJson Sorry where
   toJson r := Json.mkObj <| .join [
-    [("goals", r.goals)],
+    [("goalsBefore", r.goalsBefore)],
+    match r.goalsAfter? with | .none => [] | .some a => [("goalsAfter", a)],
     [("proofState", toJson r.proofState)],
     if r.pos.line ≠ 0 then [("pos", toJson r.pos)] else [],
     if r.endPos.line ≠ 0 then [("endPos", toJson r.endPos)] else [],
@@ -118,7 +122,7 @@ instance : ToJson Sorry where
 
 /-- Construct the JSON representation of a Lean sorry. -/
 def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
-  { Tactic.of goal "sorry" pos endPos proofState with }
+  { Tactic.of goal none "sorry" pos endPos proofState with }
 
 structure Proof where
 
@@ -165,7 +169,7 @@ A response to a Lean tactic.
 -/
 structure ProofStepResponse where
   proofState : Nat
-  goals : List String
+  goalsAfter : List String
   messages : List Message := []
   sorries : List Sorry := []
   traces : List String
@@ -174,7 +178,7 @@ deriving ToJson
 instance : ToJson ProofStepResponse where
   toJson r := Json.mkObj <| .join [
     [("proofState", r.proofState)],
-    [("goals", toJson r.goals)],
+    [("goalsAfter", toJson r.goalsAfter)],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "traces" r.traces

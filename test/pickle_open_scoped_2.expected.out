@@ -5,7 +5,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 22},
-     "goals": "⊢ ◾",
+     "goalsBefore": "⊢ ◾",
      "endPos": {"line": 1, "column": 27}}],
    "messages":
    [{"severity": "warning",

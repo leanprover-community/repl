@@ -8,9 +8,9 @@ variable [Monad m] [MonadLiftT IO m]
 open JSON
 
 def TacticResult.toJson (t : TacticResult) : M m JSON.Tactic := do
-  let goals := "\n".intercalate (← t.proofState.ppGoals)
-  let proofStateId ← recordProofSnapshot t.proofState
-  return Tactic.of goals t.src t.pos t.endPos proofStateId
+  let goals := "\n".intercalate (← t.before.ppGoals)
+  let proofStateId ← recordProofSnapshot t.before
+  return Tactic.of goals none t.src t.pos t.endPos proofStateId
 
 def SorryResult.toJson (s : SorryResult) : M m JSON.Sorry := do
   return { ← TacticResult.toJson s.toTacticResult with }
@@ -62,7 +62,7 @@ def ProofStepResponse.toJson (r : ProofStepResponse) : M m JSON.ProofStepRespons
   let id ← recordProofSnapshot r.proofState
   return {
     proofState := id
-    goals := (← r.proofState.ppGoals)
+    goalsAfter := (← r.proofState.ppGoals)
     messages
     sorries
     traces := r.traces }
