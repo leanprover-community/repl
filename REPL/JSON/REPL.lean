@@ -1,11 +1,24 @@
 import REPL.Main
 import REPL.JSON.Types
 
+/-!
+# JSON API wrapper around the Lean API.
+
+Functions that convert "rich" Lean data structures to JSON objects,
+which typically involves running some monadic code to pretty print to strings.
+
+Also
+-/
+
 namespace REPL
 
 variable [Monad m] [MonadLiftT IO m]
 
 open JSON
+
+/-!
+## Converting Lean data structures to JSON objects.
+-/
 
 def TacticResult.toJson (t : TacticResult) : M m JSON.Tactic := do
   let goals := "\n".intercalate (← t.proofState.ppGoals)
@@ -31,31 +44,6 @@ def CommandResponse.toJson (r : CommandResponse) : M m JSON.CommandResponse := d
     tactics
     infotree }
 
-def InfoTreeOption.ofString (s : Option String) : InfoTreeOption :=
-  match s with
-  | .some "full" => .full
-  | .some "by" => .by
-  | .some "tactics" => .tactics
-  | .some "original" => .original
-  | .some "substantive" => .substantive
-  | _ => .none
-
-/--
-Run a command, returning the id of the new environment, and any messages and sorries.
--/
-def handleCommandRequest (s : JSON.Command) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
-  match ← runCommand s.cmd s.env s.replace s.incr
-      (s.allTactics.getD false) (InfoTreeOption.ofString s.infotree) with
-  | .inl r => return .inl { results := ← r.mapM fun r => r.toJson }
-  | .inr e => return .inr ⟨e⟩
-
-def handleFileRequest (s : JSON.File) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
-  try
-    let cmd ← IO.FS.readFile s.path
-    handleCommandRequest { s with env := none, incr := none, replace := none, cmd }
-  catch e =>
-    pure <| .inr ⟨e.toString⟩
-
 def ProofStepResponse.toJson (r : ProofStepResponse) : M m JSON.ProofStepResponse := do
   let messages ← r.messages.mapM fun m => Message.of m
   let sorries ← r.sorries |>.mapM fun s => s.toJson
@@ -67,15 +55,55 @@ def ProofStepResponse.toJson (r : ProofStepResponse) : M m JSON.ProofStepRespons
     sorries
     traces := r.traces }
 
-/-- Record a `ProofSnapshot` and generate a JSON response for it. -/
+def InfoTreeOption.ofString (s : Option String) : InfoTreeOption :=
+  match s with
+  | .some "full" => .full
+  | .some "by" => .by
+  | .some "tactics" => .tactics
+  | .some "original" => .original
+  | .some "substantive" => .substantive
+  | _ => .none
+
+/--
+Run a command (possibly a sequence of commands),
+returning a list of `JSON.CommandResponse`s,
+each containing the id of the new environment, and any messages and sorries.
+-/
+def handleCommandRequest (s : JSON.Command) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
+  match ← runCommand s.cmd s.env s.replace s.incr
+      (s.allTactics.getD false) (InfoTreeOption.ofString s.infotree) with
+  | .inl r => return .inl { results := ← r.mapM fun r => r.toJson }
+  | .inr e => return .inr ⟨e⟩
+
+/--
+Run a `JSON.File` request (i.e. loading a `.lean` file`),
+returning a `JSON.CommandResponses` or error message.
+-/
+def handleFileRequest (s : JSON.File) : M IO (JSON.CommandResponses ⊕ JSON.Error) := do
+  try
+    let cmd ← IO.FS.readFile s.path
+    handleCommandRequest { s with env := none, incr := none, replace := none, cmd }
+  catch e =>
+    pure <| .inr ⟨e.toString⟩
+
+/--
+Run a `JSON.source` request (i.e. requesting the current source code),
+returning a `JSON.SourceResponse` or error message.
+-/
+def handleSourceRequest (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ String) := do
+  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
+
+/-- Calculate the diff of two proof states, as a `JSON.ProofStepResponse`. -/
+@[deprecated]
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m JSON.ProofStepResponse := do
   (← proofState.diff old?).toJson
 
+set_option linter.deprecated false in
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
 -/
--- TODO detect sorries?
+@[deprecated]
 def handleProofStep (s : ProofStep) : M IO (JSON.ProofStepResponse ⊕ JSON.Error) := do
   match (← get).proofStates[s.proofState]? with
   | none => return .inr ⟨"Unknown proof state."⟩
@@ -101,8 +129,10 @@ def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO JSON.CommandRespons
   let env ← recordCommandSnapshot none "" .missing env none
   return { env, source := "" }
 
+set_option linter.deprecated false in
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
+@[deprecated]
 def pickleProofSnapshot (n : PickleProofState) : M m (JSON.ProofStepResponse ⊕ JSON.Error) := do
   match (← get).proofStates[n.proofState]? with
   | none => return .inr ⟨"Unknown proof State."⟩
@@ -110,7 +140,9 @@ def pickleProofSnapshot (n : PickleProofState) : M m (JSON.ProofStepResponse ⊕
     discard <| proofState.pickle n.pickleTo
     return .inl (← createProofStepReponse proofState)
 
+set_option linter.deprecated false in
 /-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
+@[deprecated]
 def unpickleProofSnapshot (n : UnpickleProofState) : M IO (JSON.ProofStepResponse ⊕ JSON.Error) := do
   let (cmdSnapshot?, notFound) ← do match n.env with
   | none => pure (none, false)
@@ -126,9 +158,6 @@ end REPL
 
 open Lean (ToJson toJson Json fromJson? initSearchPath)
 open REPL
-
-def handleSourceRequest (s : JSON.Source) : M IO (JSON.SourceResponse ⊕ String) := do
-  return .inl ⟨← source s.src (before := s.before') (self := s.self') (after := s.after')⟩
 
 /-- Get lines from stdin until a blank line is entered. -/
 partial def getLines : IO String := do
@@ -179,6 +208,7 @@ def parse (query : String) : IO Input := do
     | .error e => throw <| IO.userError <| toString <| toJson <|
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : JSON.Error)
 
+set_option linter.deprecated false in
 /-- Read-eval-print loop for Lean. -/
 partial def repl : IO Unit :=
   StateT.run' loop {}
