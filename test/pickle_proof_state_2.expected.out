@@ -1,4 +1,4 @@
-{"proofState": 0, "goals": ["t : Nat\n⊢ Nat"]}
+{"proofState": 0, "goalsAfter": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 1, "goals": []}
+{"proofState": 1, "goalsAfter": []}
 

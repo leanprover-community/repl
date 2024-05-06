@@ -3,7 +3,7 @@
    "sorries":
    [{"proofState": 0,
      "pos": {"line": 1, "column": 43},
-     "goals": "x : Nat\n⊢ x = x",
+     "goalsBefore": "x : Nat\n⊢ x = x",
      "endPos": {"line": 1, "column": 48}}],
    "messages":
    [{"severity": "warning",
@@ -18,5 +18,5 @@
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "unknown identifier 'my_fake_premise'"}],
- "goals": []}
+ "goalsAfter": []}
 

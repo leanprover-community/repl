@@ -18,12 +18,12 @@
   "case succ\nn✝ : ℕ\nn_ih✝ : n✝ = n✝\n⊢ Nat.succ n✝ = Nat.succ n✝"]}
 
 {"proofState": 2,
- "goals": ["case succ\nn✝ : ℕ\nn_ih✝ : n✝ = n✝\n⊢ Nat.succ n✝ = Nat.succ n✝"]}
+ "goalsBefore": ["case succ\nn✝ : ℕ\nn_ih✝ : n✝ = n✝\n⊢ Nat.succ n✝ = Nat.succ n✝"]}
 
 {"sorries":
  [{"proofState": 3, "goal": "case zero\n⊢ Nat.zero = Nat.zero"},
   {"proofState": 4,
    "goal": "case succ\nx : ℕ\nn_ih✝ : x = x\n⊢ Nat.succ x = Nat.succ x"}],
  "proofState": 5,
- "goals": []}
+ "goalsBefore": []}
 

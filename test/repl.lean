@@ -46,7 +46,7 @@ def run_command : M IO Unit := do
         -- IO.println r[2].stx
         IO.println r[2].proofs.length
         for p in r[2].proofs do
-          IO.println p.ppRaw
+          IO.println p.pp
         -- IO.println r[2].infotree.length
         -- IO.println <| ← (r[2].infotree.toArray.mapM fun t => do pure <| toString (← t.format))
         -- IO.println <| Lean.Json.arr (← r[2].infotree.toArray.mapM fun t => t.toJson none)

@@ -5,7 +5,7 @@
    [{"tactic": "exact rfl",
      "proofState": 0,
      "pos": {"line": 5, "column": 29},
-     "goals": "⊢ f + g = 39",
+     "goalsBefore": "⊢ f + g = 39",
      "endPos": {"line": 5, "column": 38}}],
    "source": "theorem h : f + g = 39 := by exact rfl",
    "env": 2}]}
