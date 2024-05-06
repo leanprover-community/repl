@@ -14,16 +14,14 @@
 
 {"proofState": 1,
  "goals":
- ["case zero\n⊢ Nat.zero = Nat.zero",
-  "case succ\nn✝ : ℕ\nn_ih✝ : n✝ = n✝\n⊢ Nat.succ n✝ = Nat.succ n✝"]}
+ ["case zero\n⊢ 0 = 0", "case succ\nn✝ : ℕ\na✝ : n✝ = n✝\n⊢ n✝ + 1 = n✝ + 1"]}
 
 {"proofState": 2,
- "goals": ["case succ\nn✝ : ℕ\nn_ih✝ : n✝ = n✝\n⊢ Nat.succ n✝ = Nat.succ n✝"]}
+ "goals": ["case succ\nn✝ : ℕ\na✝ : n✝ = n✝\n⊢ n✝ + 1 = n✝ + 1"]}
 
 {"sorries":
- [{"proofState": 3, "goal": "case zero\n⊢ Nat.zero = Nat.zero"},
-  {"proofState": 4,
-   "goal": "case succ\nx : ℕ\nn_ih✝ : x = x\n⊢ Nat.succ x = Nat.succ x"}],
+ [{"proofState": 3, "goal": "case zero\n⊢ 0 = 0"},
+  {"proofState": 4, "goal": "case succ\nx : ℕ\na✝ : x = x\n⊢ x + 1 = x + 1"}],
  "proofState": 5,
  "goals": []}
 

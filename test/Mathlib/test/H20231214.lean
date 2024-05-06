@@ -12,6 +12,14 @@ but is expected to have type
   p x = 6 / x * p x : Prop
 ---
 error: unsolved goals
+case calc.step
+p q : ℝ → ℝ
+h₀ : ∀ (x : ℝ), p x = 2 - x ^ 2
+h₁ : ∀ (x : ℝ), x ≠ 0 → q x = 6 / x
+x : ℝ
+⊢ 6 / 2 * 6 / x * (6 / x) = 6 / x
+---
+error: unsolved goals
 p q : ℝ → ℝ
 h₀ : ∀ (x : ℝ), p x = 2 - x ^ 2
 h₁ : ∀ (x : ℝ), x ≠ 0 → q x = 6 / x

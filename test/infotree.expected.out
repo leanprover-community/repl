@@ -2,7 +2,8 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 7},
    "endPos": {"line": 1, "column": 8},
-   "data": "unused variable `h` [linter.unusedVariables]"}],
+   "data":
+   "unused variable `h`\nnote: this linter can be disabled with `set_option linter.unusedVariables false`"}],
  "infotree":
  [{"node":
    {"stx":
