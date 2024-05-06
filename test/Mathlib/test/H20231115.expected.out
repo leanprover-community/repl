@@ -14,6 +14,6 @@
 
 {"proofState": 1,
  "goals":
- ["case zero\n⊢ Nat.zero + 1 > Nat.zero",
-  "case succ\nx : Nat\nhx : x + 1 > x\n⊢ Nat.succ x + 1 > Nat.succ x"]}
+ ["case zero\n⊢ 0 + 1 > 0",
+  "case succ\nx : Nat\nhx : x + 1 > x\n⊢ x + 1 + 1 > x + 1"]}
 

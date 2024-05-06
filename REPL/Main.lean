@@ -208,7 +208,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
-      { fileName := "", fileMap := default, tacticCache? := none } }
+      { fileName := "", fileMap := default, tacticCache? := none, snap? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
   let jsonTrees := match s.infotree with
   | some "full" => trees
@@ -216,10 +216,10 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
   | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
   | _ => []
-  let infotree := if jsonTrees.isEmpty then
-    none
+  let infotree ← if jsonTrees.isEmpty then
+    pure none
   else
-    some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
+    pure <| some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
   return .inl
     { env,
       messages,

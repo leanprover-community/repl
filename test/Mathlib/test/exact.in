@@ -1,4 +1,4 @@
-{"cmd": "import Mathlib\n\nset_option maxHeartbeats 500000"}
+{"cmd": "import Mathlib"}
 
 {"cmd": "theorem test : 0 < 1 := by sorry", "env": 0}
 
