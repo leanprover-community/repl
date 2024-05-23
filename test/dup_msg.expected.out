@@ -1,0 +1,16 @@
+{"env": 0}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 6},
+   "data": "f : Nat"}],
+ "env": 1}
+
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 7},
+   "endPos": {"line": 1, "column": 8},
+   "data": "unknown identifier 'g'"}],
+ "env": 2}
+

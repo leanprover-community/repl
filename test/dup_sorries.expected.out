@@ -1,0 +1,24 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 24},
+   "goal": "⊢ 1 = 1",
+   "endPos": {"line": 1, "column": 29}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 12},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 1,
+   "pos": {"line": 1, "column": 24},
+   "goal": "⊢ 2 = 2",
+   "endPos": {"line": 1, "column": 29}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 12},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+

@@ -1,0 +1,5 @@
+{"cmd": "def f := 2"}
+
+{"cmd": "#check f", "env": 0}
+
+{"cmd": "#check g", "env": 1}

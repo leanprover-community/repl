@@ -1,0 +1,3 @@
+{"cmd": "theorem thm1 : 1 = 1 := sorry"}
+
+{"cmd": "theorem thm2 : 2 = 2 := sorry", "env": 0}
