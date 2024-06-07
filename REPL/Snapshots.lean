@@ -116,8 +116,8 @@ open Lean Elab Tactic
 /-- New messages in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
 def newMessages (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : List Lean.Message :=
   match old? with
-  | none => new.coreState.messages.msgs.toList
-  | some old => new.coreState.messages.msgs.toList.drop (old.coreState.messages.msgs.size)
+  | none => new.coreState.messages.toList
+  | some old => new.coreState.messages.toList.drop (old.coreState.messages.toList.length)
 
 /-- New info trees in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
 def newInfoTrees (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : List InfoTree :=
