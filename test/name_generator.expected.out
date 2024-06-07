@@ -24,13 +24,13 @@
  "goals": []}
 
 {"traces":
- ["[Meta.Tactic.simp.rewrite] @gt_iff_lt:1000, x > 0 ==> 0 < x",
+ ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000, x > 0 ==> 0 < x",
   "[Meta.Tactic.simp.rewrite] h0:1000, 0 < x ==> True"],
  "proofState": 6,
  "goals": []}
 
 {"traces":
- ["[Meta.Tactic.simp.rewrite] @gt_iff_lt:1000, x > 0 ==> 0 < x",
+ ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000, x > 0 ==> 0 < x",
   "[Meta.Tactic.simp.rewrite] h0:1000, 0 < x ==> True"],
  "proofState": 7,
  "goals": []}

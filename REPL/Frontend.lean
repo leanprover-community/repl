@@ -20,7 +20,7 @@ def processCommandsWithInfoTrees
     (commandState : Command.State) : IO (Command.State × List Message × List InfoTree) := do
   let commandState := { commandState with infoState.enabled := true }
   let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
-  let msgs := s.messages.msgs.toList.drop commandState.messages.msgs.size
+  let msgs := s.messages.toList.drop commandState.messages.toList.length
   let trees := s.infoState.trees.toList.drop commandState.infoState.trees.size
 
   pure (s, msgs, trees)
