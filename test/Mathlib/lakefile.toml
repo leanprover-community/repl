@@ -1,0 +1,11 @@
+name = "«repl-mathlib-tests»"
+defaultTargets = ["ReplMathlibTests"]
+
+[[require]]
+name = "mathlib"
+git = "https://github.com/leanprover-community/mathlib4"
+rev = "master"
+
+[[lean_lib]]
+name = "ReplMathlibTests"
+globs = ["test.+"]

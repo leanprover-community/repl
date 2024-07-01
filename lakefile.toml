@@ -1,0 +1,10 @@
+name = "REPL"
+defaultTargets = ["repl"]
+
+[[lean_lib]]
+name = "REPL"
+
+[[lean_exe]]
+name = "repl"
+root = "REPL.Main"
+supportInterpreter = true
