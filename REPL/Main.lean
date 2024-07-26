@@ -302,6 +302,12 @@ def parse (query : String) : IO Input := do
     | .error e => throw <| IO.userError <| toString <| toJson <|
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : Error)
 
+/-- Avoid buffering the output. -/
+def printFlush [ToString α] (s : α) : IO Unit := do
+  let out ← IO.getStdout
+  out.putStr (toString s)
+  out.flush -- Flush the output
+
 /-- Read-eval-print loop for Lean. -/
 unsafe def repl : IO Unit :=
   StateT.run' loop {}
@@ -318,7 +324,7 @@ where loop : M IO Unit := do
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
   | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
   | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
-  IO.println "" -- easier to parse the output if there are blank lines
+  printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 
 /-- Main executable function, run as `lake exe repl`. -/
