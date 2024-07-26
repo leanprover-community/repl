@@ -6,6 +6,9 @@ EXPECTED_DIR="test"
 
 lake build
 
+# ignore locale to ensure test `bla` runs before `bla2`
+export LC_COLLATE=C
+
 # Iterate over each .in file in the test directory
 for infile in $IN_DIR/*.in; do
     # Extract the base filename without the extension
