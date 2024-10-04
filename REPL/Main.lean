@@ -205,6 +205,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []
+  -- The list is repeated, so we only keep the second half.
+  let tactics := tactics.drop (tactics.length / 2)
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
