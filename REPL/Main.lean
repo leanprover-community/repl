@@ -95,18 +95,20 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   return id
 
 def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
-  trees.flatMap InfoTree.sorries |>.mapM
-    fun ⟨ctx, g, pos, endPos⟩ => do
-      let (goal, proofState) ← match g with
-      | .tactic g => do
-         let s ← ProofSnapshot.create ctx none env? [g]
-         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
-      | .term lctx (some t) => do
-         let s ← ProofSnapshot.create ctx lctx env? [] [t]
-         pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
-      | .term _ none => unreachable!
-      let proofStateId ← proofState.mapM recordProofSnapshot
-      return Sorry.of goal pos endPos proofStateId
+  trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
+    | .term _ none => false
+    | _ => true ) |>.mapM
+      fun ⟨ctx, g, pos, endPos⟩ => do
+        let (goal, proofState) ← match g with
+        | .tactic g => do
+           let s ← ProofSnapshot.create ctx none env? [g]
+           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+        | .term lctx (some t) => do
+           let s ← ProofSnapshot.create ctx lctx env? [] [t]
+           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+        | .term _ none => unreachable!
+        let proofStateId ← proofState.mapM recordProofSnapshot
+        return Sorry.of goal pos endPos proofStateId
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
