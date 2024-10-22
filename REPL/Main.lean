@@ -95,7 +95,7 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   return id
 
 def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
-  trees.bind InfoTree.sorries |>.mapM
+  trees.flatMap InfoTree.sorries |>.mapM
     fun ⟨ctx, g, pos, endPos⟩ => do
       let (goal, proofState) ← match g with
       | .tactic g => do
@@ -115,7 +115,7 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
     pure "<failed to pretty print>"
 
 def tactics (trees : List InfoTree) : M m (List Tactic) :=
-  trees.bind InfoTree.tactics |>.mapM
+  trees.flatMap InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, goals, pos, endPos⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none none goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
@@ -216,9 +216,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let env ← recordCommandSnapshot cmdSnapshot
   let jsonTrees := match s.infotree with
   | some "full" => trees
-  | some "tactics" => trees.bind InfoTree.retainTacticInfo
-  | some "original" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainOriginal
-  | some "substantive" => trees.bind InfoTree.retainTacticInfo |>.bind InfoTree.retainSubstantive
+  | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
+  | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
+  | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
   | _ => []
   let infotree ← if jsonTrees.isEmpty then
     pure none
