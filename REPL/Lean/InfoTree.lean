@@ -111,6 +111,12 @@ def isSubstantive (t : TacticInfo) : Bool :=
   | some ``Lean.Parser.Tactic.paren => false
   | _ => true
 
+def getUsedConstantsAsSet (t : TacticInfo) : NameSet :=
+  t.goalsBefore
+    |>.filterMap t.mctxAfter.getExprAssignmentCore?
+    |>.map Expr.getUsedConstantsAsSet
+    |>.foldl .union .empty
+
 end Lean.Elab.TacticInfo
 
 namespace Lean.Elab.InfoTree
@@ -206,11 +212,16 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
     (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
 
-def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position) :=
-  (t.findTacticNodes.map fun ⟨i, ctx⟩ =>
+def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position × Array Name) :=
     -- HACK: creating a child ngen
-     ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, i.stx, i.goalsBefore,
-       stxRange ctx.fileMap i.stx))
+  t.findTacticNodes.map fun ⟨i, ctx⟩ => 
+    let range := stxRange ctx.fileMap i.stx 
+    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, 
+      i.stx, 
+      i.goalsBefore, 
+      range.fst, 
+      range.snd, 
+      i.getUsedConstantsAsSet.toArray )
 
 
 end Lean.Elab.InfoTree
