@@ -194,7 +194,6 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Envi
     (goals : List MVarId) (types : List Expr := []) : IO ProofSnapshot := do
   ctx.runMetaM (lctx?.getD {}) do
     let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
-    goals.head!.withContext do
     let s ← getThe Core.State
     let s := match env? with
     | none => s
