@@ -103,15 +103,17 @@ structure Tactic where
   goals : String
   tactic : String
   proofState : Option Nat
+  usedConstants : Array Name
 deriving ToJson, FromJson
 
 /-- Construct the JSON representation of a Lean tactic. -/
-def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Tactic :=
+def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat) (usedConstants : Array Name) : Tactic :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
     goals,
     tactic,
-    proofState }
+    proofState,
+    usedConstants }
 
 /--
 A response to a Lean command.

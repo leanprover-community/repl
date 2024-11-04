@@ -1,15 +1,21 @@
 {"tactics":
- [{"tactic": "calc\n  3 = 4 := by sorry\n  4 = 5 := by sorry",
+ [{"usedConstants":
+   ["Trans.trans", "instOfNatNat", "instTransEq", "Nat", "OfNat.ofNat", "Eq"],
+   "tactic": "calc\n  3 = 4 := by sorry\n  4 = 5 := by sorry",
    "proofState": 2,
    "pos": {"line": 1, "column": 22},
    "goals": "⊢ 3 = 5",
    "endPos": {"line": 3, "column": 19}},
-  {"tactic": "sorry",
+  {"usedConstants":
+   ["sorryAx", "instOfNatNat", "Nat", "OfNat.ofNat", "Bool.false", "Eq"],
+   "tactic": "sorry",
    "proofState": 3,
    "pos": {"line": 2, "column": 14},
    "goals": "⊢ 3 = 4",
    "endPos": {"line": 2, "column": 19}},
-  {"tactic": "sorry",
+  {"usedConstants":
+   ["sorryAx", "instOfNatNat", "Nat", "OfNat.ofNat", "Bool.false", "Eq"],
+   "tactic": "sorry",
    "proofState": 4,
    "pos": {"line": 3, "column": 14},
    "goals": "⊢ 4 = 5",
