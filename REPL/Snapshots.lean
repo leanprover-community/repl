@@ -83,7 +83,7 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
   let ((imports, map₂, cmdState, cmdContext), region) ←
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCommandSnapshot ×
       Command.Context) path
-  let env ← (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
+  let env ← (← importModules imports {} 0).replay (Std.HashMap.ofList map₂.toList)
   let p' : CommandSnapshot :=
   { cmdState := { cmdState with env }
     cmdContext }
@@ -194,7 +194,6 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Envi
     (goals : List MVarId) (types : List Expr := []) : IO ProofSnapshot := do
   ctx.runMetaM (lctx?.getD {}) do
     let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
-    goals.head!.withContext do
     let s ← getThe Core.State
     let s := match env? with
     | none => s
@@ -285,9 +284,9 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
   let env ← match cmd? with
   | none =>
     enableInitializersExecution
-    (← importModules imports {} 0).replay (HashMap.ofList map₂.toList)
+    (← importModules imports {} 0).replay (Std.HashMap.ofList map₂.toList)
   | some cmd =>
-    cmd.cmdState.env.replay (HashMap.ofList map₂.toList)
+    cmd.cmdState.env.replay (Std.HashMap.ofList map₂.toList)
   let p' : ProofSnapshot :=
   { coreState := { coreState with env }
     coreContext

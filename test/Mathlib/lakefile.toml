@@ -4,7 +4,7 @@ defaultTargets = ["ReplMathlibTests"]
 [[require]]
 name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4"
-rev = "master"
+rev = "v4.14.0-rc1"
 
 [[lean_lib]]
 name = "ReplMathlibTests"
