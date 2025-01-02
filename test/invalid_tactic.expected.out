@@ -10,15 +10,12 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"proofState": 1,
+{"proofStatus": "Incomplete: contains sorry",
+ "proofState": 1,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
-   "data": "unknown identifier 'my_fake_premise'"},
-  {"severity": "warning",
-   "pos": {"line": 0, "column": 0},
-   "endPos": null,
-   "data": "Proof contains sorry"}],
+   "data": "unknown identifier 'my_fake_premise'"}],
  "goals": []}
 

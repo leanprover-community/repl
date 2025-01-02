@@ -10,5 +10,8 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"sorries": [{"proofState": 1, "goal": "⊢ Nat"}], "proofState": 2, "goals": []}
+{"sorries": [{"proofState": 1, "goal": "⊢ Nat"}],
+ "proofStatus": "Incomplete: contains sorry",
+ "proofState": 2,
+ "goals": []}
 

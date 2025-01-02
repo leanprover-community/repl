@@ -12,5 +12,7 @@
    "data": "declaration uses 'sorry'"}],
  "env": 1}
 
-{"proofState": 1, "goals": ["x : ℕ\nh : 2 * (2 * (2 * (2 * x))) = 48\n⊢ x = 3"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["x : ℕ\nh : 2 * (2 * (2 * (2 * x))) = 48\n⊢ x = 3"]}
 

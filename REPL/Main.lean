@@ -94,17 +94,18 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
-def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
+def sorries (trees : List InfoTree) (env? : Option Environment) (initGoals? : Option (List MVarId))
+: M m (List Sorry) :=
   trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
     | .term _ none => false
     | _ => true ) |>.mapM
       fun ⟨ctx, g, pos, endPos⟩ => do
         let (goal, proofState) ← match g with
         | .tactic g => do
-           let s ← ProofSnapshot.create ctx none env? [g]
+           let s ← ProofSnapshot.create ctx none env? [g] initGoals?
            pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term lctx (some t) => do
-           let s ← ProofSnapshot.create ctx lctx env? [] [t]
+           let s ← ProofSnapshot.create ctx lctx env? [] initGoals? [t]
            pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
@@ -126,55 +127,47 @@ def tactics (trees : List InfoTree) : M m (List Tactic) :=
       return Tactic.of goals tactic pos endPos proofStateId ns
 
 /-- Inspired from LeanDojo REPL. -/
-def validateProof (proofState : ProofSnapshot) : M m Message := do
-  let res := proofState.runMetaM do
-    match proofState.initialGoals with
-    | [goalId] =>
-      match proofState.metaState.mctx.getExprAssignmentCore? goalId with
-      | none => return ("Goal not assigned", Severity.error)
-      | some pf => do
-        let pf ← instantiateMVars pf
-        let pft ← Meta.inferType pf >>= instantiateMVars
-        if pf.hasSorry then
-          return ("Proof contains sorry", Severity.warning)
-        if pf.hasExprMVar then
-          return ("Proof contains metavariable", Severity.error)
+def getProofStatus (proofState : ProofSnapshot) : M m String := do
+  match proofState.tacticState.goals with
+    | [] =>
+      let res := proofState.runMetaM do
+        match proofState.initialGoals with
+        | [goalId] =>
+          match proofState.metaState.mctx.getExprAssignmentCore? goalId with
+          | none => return "Error: Goal not assigned"
+          | some pf => do
+            let pf ← instantiateMVars pf
+            let pft ← Meta.inferType pf >>= instantiateMVars
+            if pf.hasSorry then
+              return "Incomplete: contains sorry"
+            if pf.hasExprMVar then
+              return "Incomplete: contains metavariable(s)"
 
-        -- temporary: check only for one declaration
-        let declCI := proofState.coreState.env.constants.map₂.toList.head!.snd
+            let decl := Declaration.defnDecl ({
+              name := Name.anonymous,
+              type := pft,
+              value := pf,
+              levelParams := [],
+              hints := ReducibilityHints.opaque,
+              safety := DefinitionSafety.safe
+            })
 
-        let decl := match declCI with
-        | .defnInfo info => some (Declaration.defnDecl ({
-              info with name := Name.anonymous, type := pft, value := pf
-            }))
-        | .thmInfo info => some (Declaration.thmDecl ({
-              info with name := Name.anonymous, type := pft, value := pf
-            }))
-        | _ => none
+            try
+              let _ ← addDecl decl
+            catch ex =>
+              return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+            return "Completed"
 
-        match decl with
-        | none => return ("Proof not verified", Severity.warning)
-        | some decl => do
-          try
-            let _ ← addDecl decl
-          catch ex =>
-            return (s!"Kernel type check failed: {← ex.toMessageData.toString}", Severity.error)
-          return ("Proof finished", Severity.info)
+        | _ => return "Not verified: more than one initial goal"
+      return (← res).fst
 
-    | _ => return ("More than one initial goal", Severity.error)
-
-  return {
-      pos := {line := 0, column := 0},
-      endPos := none,
-      severity := (← res).fst.snd,
-      data := (← res).fst.fst
-    }
+    | _ => return "Incomplete: open goals remain"
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m ProofStepResponse := do
   let messages := proofState.newMessages old?
-  let mut messages ← messages.mapM fun m => Message.of m
+  let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
   let trees := proofState.newInfoTrees old?
   let trees ← match old? with
@@ -185,17 +178,15 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   | none => pure trees
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees none
+  let sorries ← sorries trees none (some proofState.initialGoals)
   let id ← recordProofSnapshot proofState
-  if proofState.tacticState.goals.isEmpty then
-    messages := messages ++ [← validateProof proofState]
-
   return {
     proofState := id
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
     messages
     sorries
-    traces }
+    traces
+    proofStatus := (← getProofStatus proofState) }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
@@ -251,7 +242,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdState?.map (·.env))
+  let sorries ← sorries trees (initialCmdState?.map (·.env)) none
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []

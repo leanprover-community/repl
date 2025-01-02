@@ -1,0 +1,25 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data":
+   "fail to show termination for\n  ex\nwith errors\nfailed to infer structural recursion:\nno parameters suitable for structural recursion\n\nwell-founded recursion cannot be used, 'ex' does not take any (non-fixed) arguments"}],
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 22},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 27}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofStatus":
+ "Error: kernel type check failed: (kernel) declaration has free variables '[anonymous]'",
+ "proofState": 1,
+ "goals": []}
+
