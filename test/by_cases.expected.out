@@ -21,5 +21,10 @@
  [{"proofState": 3, "goal": "case pos\nx : Int\nh : x < 0\n⊢ x = x"},
   {"proofState": 4, "goal": "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
  "proofState": 5,
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 0, "column": 0},
+   "endPos": null,
+   "data": "Proof contains sorry"}],
  "goals": []}
 

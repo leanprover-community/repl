@@ -125,11 +125,56 @@ def tactics (trees : List InfoTree) : M m (List Tactic) :=
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
+/-- Inspired from LeanDojo REPL. -/
+def validateProof (proofState : ProofSnapshot) : M m Message := do
+  let res := proofState.runMetaM do
+    match proofState.initialGoals with
+    | [goalId] =>
+      match proofState.metaState.mctx.getExprAssignmentCore? goalId with
+      | none => return ("Goal not assigned", Severity.error)
+      | some pf => do
+        let pf ← instantiateMVars pf
+        let pft ← Meta.inferType pf >>= instantiateMVars
+        if pf.hasSorry then
+          return ("Proof contains sorry", Severity.warning)
+        if pf.hasExprMVar then
+          return ("Proof contains metavariable", Severity.error)
+
+        -- temporary: check only for one declaration
+        let declCI := proofState.coreState.env.constants.map₂.toList.head!.snd
+
+        let decl := match declCI with
+        | .defnInfo info => some (Declaration.defnDecl ({
+              info with name := Name.anonymous, type := pft, value := pf
+            }))
+        | .thmInfo info => some (Declaration.thmDecl ({
+              info with name := Name.anonymous, type := pft, value := pf
+            }))
+        | _ => none
+
+        match decl with
+        | none => return ("Proof not verified", Severity.warning)
+        | some decl => do
+          try
+            let _ ← addDecl decl
+          catch ex =>
+            return (s!"Kernel type check failed: {← ex.toMessageData.toString}", Severity.error)
+          return ("Proof finished", Severity.info)
+
+    | _ => return ("More than one initial goal", Severity.error)
+
+  return {
+      pos := {line := 0, column := 0},
+      endPos := none,
+      severity := (← res).fst.snd,
+      data := (← res).fst.fst
+    }
+
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m ProofStepResponse := do
   let messages := proofState.newMessages old?
-  let messages ← messages.mapM fun m => Message.of m
+  let mut messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
   let trees := proofState.newInfoTrees old?
   let trees ← match old? with
@@ -142,6 +187,9 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none
   let id ← recordProofSnapshot proofState
+  if proofState.tacticState.goals.isEmpty then
+    messages := messages ++ [← validateProof proofState]
+
   return {
     proofState := id
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
