@@ -1,9 +1,9 @@
 {"messages":
  [{"severity": "error",
-   "pos": {"line": 1, "column": 8},
-   "endPos": {"line": 1, "column": 10},
+   "pos": {"line": 1, "column": 25},
+   "endPos": {"line": 1, "column": 31},
    "data":
-   "fail to show termination for\n  ex\nwith errors\nfailed to infer structural recursion:\nno parameters suitable for structural recursion\n\nwell-founded recursion cannot be used, 'ex' does not take any (non-fixed) arguments"}],
+   "`exact?` could not close the goal. Try `apply?` to see partial suggestions."}],
  "env": 0}
 
 {"sorries":
@@ -18,8 +18,12 @@
    "data": "declaration uses 'sorry'"}],
  "env": 1}
 
-{"proofStatus":
- "Error: kernel type check failed: (kernel) declaration has free variables '[anonymous]'",
+{"proofStatus": "Incomplete: contains sorry",
  "proofState": 1,
+ "messages":
+ [{"severity": "info",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "`exact?` could not close the goal. Try `apply?` to see partial suggestions."}],
  "goals": []}
 
