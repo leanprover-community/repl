@@ -1,0 +1,6 @@
+{"cmd": "example : 1=1 := by\n  skip\n  exact?\n\ntheorem bb : 1+1=2 := by rfl", "rootGoals": true}
+
+{"proofState" : 0, "tactic": "rfl"}
+
+{"proofState" : 1, "tactic": "exact rfl"}
+

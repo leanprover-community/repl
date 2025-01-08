@@ -10,7 +10,8 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"proofState": 1,
+{"proofStatus": "Incomplete: contains sorry",
+ "proofState": 1,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},

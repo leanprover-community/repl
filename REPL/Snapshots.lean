@@ -108,6 +108,7 @@ structure ProofSnapshot where
   termContext   : Term.Context
   tacticState   : Tactic.State
   tacticContext : Tactic.Context
+  rootGoals     : List MVarId
 
 namespace ProofSnapshot
 
@@ -191,7 +192,8 @@ For convenience, we also allow a list of `Expr`s, and these are appended to the 
 as fresh metavariables with the given types.
 -/
 def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Environment)
-    (goals : List MVarId) (types : List Expr := []) : IO ProofSnapshot := do
+    (goals : List MVarId) (rootGoals? : Option (List MVarId)) (types : List Expr := [])
+    : IO ProofSnapshot := do
   ctx.runMetaM (lctx?.getD {}) do
     let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
     let s ← getThe Core.State
@@ -206,7 +208,10 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Envi
       termState := {}
       termContext := {}
       tacticState := { goals }
-      tacticContext := { elaborator := .anonymous } }
+      tacticContext := { elaborator := .anonymous }
+      rootGoals := match rootGoals? with
+        | none => goals
+        | some gs => gs }
 
 open Lean.Core in
 /-- A copy of `Core.State` with the `Environment`, caches, and logging omitted. -/
@@ -270,7 +275,8 @@ def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
      p'.termState,
      ({ p'.termContext with } : CompactableTermContext),
      p'.tacticState,
-     p'.tacticContext)
+     p'.tacticContext,
+     p'.rootGoals)
 
 /--
 Unpickle a `ProofSnapshot`.
@@ -278,10 +284,10 @@ Unpickle a `ProofSnapshot`.
 def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
     IO (ProofSnapshot × CompactedRegion) := unsafe do
   let ((imports, map₂, coreState, coreContext, metaState, metaContext, termState, termContext,
-    tacticState, tacticContext), region) ←
+    tacticState, tacticContext, rootGoals), region) ←
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCoreState ×
       Core.Context × Meta.State × CompactableMetaContext × Term.State × CompactableTermContext ×
-      Tactic.State × Tactic.Context) path
+      Tactic.State × Tactic.Context × List MVarId) path
   let env ← match cmd? with
   | none =>
     enableInitializersExecution
@@ -296,7 +302,8 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
     termState
     termContext := { termContext with }
     tacticState
-    tacticContext }
+    tacticContext
+    rootGoals }
   let (_, p'') ← p'.runCoreM do
     for o in ← getOpenDecls do
       if let .simple ns _ := o then
