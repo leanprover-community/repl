@@ -259,13 +259,14 @@ When pickling the `Environment`, we do so relative to its imports.
 def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
   let env := p.coreState.env
   let p' := { p with coreState := { p.coreState with env := ← mkEmptyEnvironment }}
+  let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaContext p'.metaState
   _root_.pickle path
     (env.header.imports,
      env.constants.map₂,
      ({ p'.coreState with } : CompactableCoreState),
      p'.coreContext,
      p'.metaState,
-     ({ p'.metaContext with } : CompactableMetaContext),
+     ({ p'.metaContext with config := cfg } : CompactableMetaContext),
      p'.termState,
      ({ p'.termContext with } : CompactableTermContext),
      p'.tacticState,
