@@ -63,8 +63,8 @@ def kind : Info → String
   | .ofCustomInfo         _ => "CustomInfo"
   | .ofFVarAliasInfo      _ => "FVarAliasInfo"
   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
-  | .ofOmissionInfo       _ => "OmissionInfo"
   | .ofChoiceInfo         _ => "ChoiceInfo"
+  | .ofDelabTermInfo      _ => "DelabTermInfo"
 
 /-- The `Syntax` for a `Lean.Elab.Info`, if there is one. -/
 def stx? : Info → Option Syntax
@@ -80,8 +80,8 @@ def stx? : Info → Option Syntax
   | .ofCustomInfo         info => info.stx
   | .ofFVarAliasInfo      _    => none
   | .ofFieldRedeclInfo    info => info.stx
-  | .ofOmissionInfo       info => info.stx
   | .ofChoiceInfo         info => info.stx
+  | .ofDelabTermInfo      info => info.stx
 
 /-- Is the `Syntax` for this `Lean.Elab.Info` original, or synthetic? -/
 def isOriginal (i : Info) : Bool :=
@@ -154,13 +154,14 @@ partial def retainSubstantive (tree : InfoTree) : List InfoTree :=
   tree.filter fun | .ofTacticInfo i => i.isSubstantive | _ => true
 
 /-- Analogue of `Lean.Elab.InfoTree.findInfo?`, but that returns all results. -/
-partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info → Bool) :
+partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info → Bool)
+    (stop : Info → Bool := fun _ => false) :
     List (Info × Option ContextInfo) :=
   match t with
-  | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p
+  | context ctx t => t.findAllInfo (ctx.mergeIntoOuter? ctx?) p stop
   | node i ts  =>
     let info := if p i then [(i, ctx?)] else []
-    let rest := ts.toList.flatMap (fun t => t.findAllInfo ctx? p)
+    let rest := if stop i then [] else ts.toList.flatMap (fun t => t.findAllInfo ctx? p stop)
     info ++ rest
   | _ => []
 
@@ -189,9 +190,9 @@ def findSorryTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo) :=
 corresponding to explicit `sorry` terms,
 each equipped with its relevant `ContextInfo`. -/
 def findSorryTermNodes (t : InfoTree) : List (TermInfo × ContextInfo) :=
-  let infos := t.findAllInfo none fun i => match i with
-  | .ofTermInfo i => i.stx.isSorryTerm
-  | _ => false
+  let infos := t.findAllInfo none
+    (fun i => match i with | .ofTermInfo i => i.stx.isSorryTerm | _ => false)
+    (fun i => match i with | .ofTacticInfo i => i.stx.isSorryTactic | _ => false)
   infos.filterMap fun p => match p with
   | (.ofTermInfo i, some ctx) => (i, ctx)
   | _ => none
