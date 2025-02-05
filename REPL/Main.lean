@@ -236,7 +236,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
     let cmd ← IO.FS.readFile s.path
-    runCommand { s with env := none, cmd }
+    runCommand { s with env := s.env, cmd }
   catch e =>
     pure <| .inr ⟨e.toString⟩
 
@@ -264,7 +264,7 @@ partial def getLines : IO String := do
   if line.trim.isEmpty then
     return line
   else
-    return line ++ (← getLines)
+    return line.trimRight ++ (← getLines)
 
 instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with

@@ -1,0 +1,57 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 2, "column": 0},
+   "goal": "⊢ 1 = 1",
+   "endPos": {"line": 2, "column": 5}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 11},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 1,
+   "pos": {"line": 11, "column": 5},
+   "goal":
+   "case zero\nm : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0",
+   "endPos": {"line": 11, "column": 10}},
+  {"proofState": 2,
+   "pos": {"line": 24, "column": 5},
+   "goal":
+   "case succ\nm n : Nat\nih h_inductive : n + m = m + n\nh_pull_succ_out_from_right : m + n.succ = (m + n).succ\nh_flip_n_plus_m : (n + m).succ = (m + n).succ\nh_pull_succ_out_from_left : n.succ + m = (n + m).succ\n⊢ n + 1 + m = m + (n + 1)",
+   "endPos": {"line": 24, "column": 10}},
+  {"proofState": 3,
+   "pos": {"line": 7, "column": 31},
+   "goal": "m : Nat\n⊢ 0 + m = m",
+   "endPos": {"line": 7, "column": 36}},
+  {"proofState": 4,
+   "pos": {"line": 9, "column": 31},
+   "goal": "m : Nat\nh_base : 0 + m = m\n⊢ m + 0 = m",
+   "endPos": {"line": 9, "column": 36}},
+  {"proofState": 5,
+   "pos": {"line": 14, "column": 40},
+   "goal": "m n : Nat\nih : n + m = m + n\n⊢ n + m = m + n",
+   "endPos": {"line": 14, "column": 45}},
+  {"proofState": 6,
+   "pos": {"line": 17, "column": 75},
+   "goal":
+   "m n : Nat\nih h_inductive : n + m = m + n\n⊢ m + n.succ = (m + n).succ",
+   "endPos": {"line": 17, "column": 80}},
+  {"proofState": 7,
+   "pos": {"line": 19, "column": 66},
+   "goal":
+   "m n : Nat\nih h_inductive : n + m = m + n\nh_pull_succ_out_from_right : m + n.succ = (m + n).succ\n⊢ (n + m).succ = (m + n).succ",
+   "endPos": {"line": 19, "column": 71}},
+  {"proofState": 8,
+   "pos": {"line": 22, "column": 74},
+   "goal":
+   "m n : Nat\nih h_inductive : n + m = m + n\nh_pull_succ_out_from_right : m + n.succ = (m + n).succ\nh_flip_n_plus_m : (n + m).succ = (m + n).succ\n⊢ n.succ + m = (n + m).succ",
+   "endPos": {"line": 22, "column": 79}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 37},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
