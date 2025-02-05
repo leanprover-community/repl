@@ -1,0 +1,34 @@
+{"cmd": "theorem foo : 1 = 1 := by\n
+sorry"}
+
+{"cmd": "theorem add_comm_proved_formal_sketch : ∀ n m : Nat, n + m = m + n := by
+   -- Consider some n and m in Nats.\n
+   intros n m\n
+   -- Perform induction on n.\n
+   induction n with\n
+   | zero =>\n
+     /-
+      Base case: When n = 0, we need to show 0 + m = m + 0.
+      We have the fact 0 + m = m by the definition of addition.
+     -/\n
+     have h_base: 0 + m = m := sorry\n
+     -- We also have the fact m + 0 = m by the definition of addition.\n
+     have h_symm: m + 0 = m := sorry\n
+     -- Combine facts to close goal\n
+     sorry\n
+   | succ n ih =>\n
+     /- Inductive step: Assume n + m = m + n, we need to show succ n + m = m + succ n.
+      By the inductive hypothesis, we have n + m = m + n.
+     -/\n
+     have h_inductive: n + m = m + n := sorry\n
+     -- 1. Note we start with: Nat.succ n + m = m + Nat.succ n, so, pull the succ out from \n
+     -- m + Nat.succ n on the right side from the addition using addition facts Nat.add_succ.\n
+     have h_pull_succ_out_from_right: m + Nat.succ n = Nat.succ (m + n) := sorry\n
+     -- 2. then to flip m + S n to something like S (n + m) we need to use the IH.\n
+     have h_flip_n_plus_m: Nat.succ (n + m) = Nat.succ (m + n) := sorry\n
+     -- 3. Now the n & m are on the correct sides Nat.succ n + m = Nat.succ (n + m),\n
+     -- so let's use the def of addition to pull out the succ from the addition on the left using Nat.succ_add.\n
+     have h_pull_succ_out_from_left: Nat.succ n + m = Nat.succ (n + m) := sorry\n
+     -- Combine facts to close goal\n
+     sorry"}
+
