@@ -15,6 +15,7 @@
 {"sorries":
  [{"proofState": 1, "goal": "x : ℝ\nh0 : |x| > 1\n⊢ x = x"},
   {"proofState": 2, "goal": "x : ℝ\nh0 : |x| > 1\nh1 : x = x\n⊢ x = x"}],
+ "proofStatus": "Incomplete: open goals remain",
  "proofState": 3,
  "goals":
  ["case pos\nx : ℝ\nh0 : |x| > 1\nh1 h2 : x = x\nh3 : x < 0\n⊢ x < 0 ∨ 2 * x > 2",

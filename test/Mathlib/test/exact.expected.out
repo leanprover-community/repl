@@ -12,7 +12,8 @@
    "data": "declaration uses 'sorry'"}],
  "env": 1}
 
-{"proofState": 1,
+{"proofStatus": "Completed",
+ "proofState": 1,
  "messages":
  [{"severity": "info",
    "pos": {"line": 0, "column": 0},

@@ -24,11 +24,15 @@
    "data": "declaration uses 'sorry'"}],
  "env": 4}
 
-{"traces": ["37"], "proofState": 1, "goals": ["⊢ f = 37"]}
+{"traces": ["37"],
+ "proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["⊢ f = 37"]}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37",
   "[Meta.Tactic.simp.rewrite] eq_self:1000, 37 = 37 ==> True"],
+ "proofStatus": "Completed",
  "proofState": 2,
  "goals": []}
 
