@@ -192,6 +192,12 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+partial def removeChildren (t : InfoTree) : InfoTree :=
+  match t with
+  | InfoTree.context ctx t' => InfoTree.context ctx (removeChildren t')
+  | InfoTree.node i _ => InfoTree.node i PersistentArray.empty
+  | InfoTree.hole _ => t
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -232,10 +238,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
   | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
   | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
-  | some "no_children" => trees.map fun t => match t with
-    | InfoTree.context _ _ => t
-    | InfoTree.node i _ => InfoTree.node i (PersistentArray.empty)
-    | InfoTree.hole _ => t
+  | some "no_children" => trees.map removeChildren
   | _ => []
   let infotree ← if jsonTrees.isEmpty then
     pure none
