@@ -177,22 +177,35 @@ def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List Str
 
 -- TODO: solve rw_mod_cast
 
-def prettifySteps (stx : Syntax) (steps : List ProofStep) : List ProofStep := Id.run do
+def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : List ProofStep := Id.run do
+  let range := stx.toRange ctx
   let prettify (tStr : String) :=
     let res := tStr.trim.dropRightWhile (· == ',')
     -- rw puts final rfl on the "]" token
     if res == "]" then "rfl" else res
+  -- Each part of rw is a separate step none of them include the initial 'rw [' and final ']'.
+  -- So we add these to the first and last steps.
+  let extractRwStep (steps : List ProofStep) : List ProofStep := Id.run do
+    let rwSteps := steps.map fun a => { a with tacticString := s!"rw [{prettify a.tacticString}]" }
+    match rwSteps with
+    | [] => []
+    | [step] => [{ step with start := some range.start, finish := some range.finish }]
+    | steps =>
+      let first := { steps.head! with start := some range.start }
+      let last := { steps.getLast! with finish := some range.finish }
+      let middle := steps.drop 1 |>.dropLast
+      return first :: middle ++ [last]
+
   match stx with
   | `(tactic| rw [$_,*] $(_)?)
   | `(tactic| rewrite [$_,*] $(_)?) =>
-    return steps.map fun a => { a with tacticString := s!"rw [{prettify a.tacticString}]" }
+    return extractRwStep steps
   | `(tactic| rwa [$_,*] $(_)?) =>
-    let rwSteps := steps.map fun a => { a with tacticString := s!"rw [{prettify a.tacticString}]" }
+    let rwSteps := extractRwStep steps
     let assumptionSteps := (if rwSteps.isEmpty then [] else rwSteps.getLast!.goalsAfter).map fun g =>
       { tacticString := "assumption", goalBefore := g, goalsAfter := [], tacticDependsOn := [], spawnedGoals := [], start := none, finish := none }
     return rwSteps ++ assumptionSteps
   | _ => return steps
-
 -- Comparator for names, e.g. so that _uniq.34 and _uniq.102 go in the right order.
 -- That's not completely right because it doesn't compare prefixes but
 -- it's much shorter to write than correct version and serves the purpose.
@@ -216,7 +229,7 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
              (·.toString |>.splitOn "\n" |>.head!.trim)
         | return {steps, allGoals := allSubGoals}
 
-      let steps := prettifySteps tInfo.stx steps
+      let steps := prettifySteps tInfo.stx ctx steps
 
       let proofTreeEdges ← getGoalsChange ctx tInfo
       let currentGoals := proofTreeEdges.map (fun ⟨ _, g₁, gs ⟩ => g₁ :: gs)  |>.join
