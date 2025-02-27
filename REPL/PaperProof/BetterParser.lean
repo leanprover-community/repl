@@ -225,8 +225,7 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
       -- shortcut if it's not a tactic user wrote
       -- \n trim to avoid empty lines/comments until next tactic,
       -- especially at the end of theorem it will capture comment for the next one
-      let some tacticString := tInfo.stx.getSubstring?.map
-             (·.toString |>.splitOn "\n" |>.head!.trim)
+      let some tacticString := tInfo.stx.getSubstring?.map (·.toString)
         | return {steps, allGoals := allSubGoals}
 
       let steps := prettifySteps tInfo.stx ctx steps
