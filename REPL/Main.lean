@@ -212,7 +212,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
       { fileName := "",
         fileMap := default,
-        tacticCache? := none,
+        -- tacticCache? := none,
         snap? := none,
         cancelTk? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
