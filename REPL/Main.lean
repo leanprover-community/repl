@@ -11,6 +11,7 @@ import REPL.Lean.Environment
 import REPL.Lean.InfoTree
 import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
+import REPL.PaperProof.BetterParser
 
 /-!
 # A REPL for Lean.
@@ -125,6 +126,13 @@ def tactics (trees : List InfoTree) : M m (List Tactic) :=
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
+def proofTrees (infoTrees : List InfoTree) : M m (List (List PaperProof.ProofStep)) := do
+  infoTrees.mapM fun infoTree => do
+    let proofTree ← PaperProof.BetterParser infoTree
+    match proofTree with
+    | .some proofTree => return proofTree.steps
+    | .none => return []
+
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m ProofStepResponse := do
@@ -184,6 +192,12 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+partial def removeChildren (t : InfoTree) : InfoTree :=
+  match t with
+  | InfoTree.context ctx t' => InfoTree.context ctx (removeChildren t')
+  | InfoTree.node i _ => InfoTree.node i PersistentArray.empty
+  | InfoTree.hole _ => t
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -207,6 +221,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []
+  let proofTreeEdges ← match s.proofTrees with
+  | some true => some <$> proofTrees trees
+  | _ => pure none
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
@@ -220,6 +237,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
   | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
   | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
+  | some "no_children" => trees.map removeChildren
   | _ => []
   let infotree ← if jsonTrees.isEmpty then
     pure none
@@ -229,8 +247,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
-      infotree }
+      tactics,
+      infotree,
+      proofTreeEdges }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
