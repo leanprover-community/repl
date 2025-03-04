@@ -5,3 +5,4 @@
 /test/Mathlib/.lake
 /test/*.olean
 /test/*.olean.tmp
+/test/*.produced.out

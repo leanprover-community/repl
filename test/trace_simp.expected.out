@@ -9,7 +9,7 @@
    "pos": {"line": 1, "column": 23},
    "endPos": {"line": 1, "column": 27},
    "data":
-   "[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37\n[Meta.Tactic.simp.rewrite] eq_self:1000, 37 = 37 ==> True"}],
+   "[Meta.Tactic.simp.rewrite] f_def:1000:\n      f\n    ==>\n      37\n[Meta.Tactic.simp.rewrite] eq_self:1000: 37 = 37 ==> True"}],
  "env": 3}
 
 {"sorries":
@@ -27,8 +27,8 @@
 {"traces": ["37"], "proofState": 1, "goals": ["⊢ f = 37"]}
 
 {"traces":
- ["[Meta.Tactic.simp.rewrite] f_def:1000, f ==> 37",
-  "[Meta.Tactic.simp.rewrite] eq_self:1000, 37 = 37 ==> True"],
+ ["[Meta.Tactic.simp.rewrite] f_def:1000:\n      f\n    ==>\n      37",
+  "[Meta.Tactic.simp.rewrite] eq_self:1000:\n      37 = 37\n    ==>\n      True"],
  "proofState": 2,
  "goals": []}
 
