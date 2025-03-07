@@ -60,6 +60,7 @@ instance : Hashable GoalInfo where
 
 structure ProofStep where
   tacticString : String
+  infoTree : Option Json
   goalBefore : GoalInfo
   goalsAfter : List GoalInfo
   tacticDependsOn : List String
@@ -203,7 +204,7 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : 
   | `(tactic| rwa [$_,*] $(_)?) =>
     let rwSteps := extractRwStep steps
     let assumptionSteps := (if rwSteps.isEmpty then [] else rwSteps.getLast!.goalsAfter).map fun g =>
-      { tacticString := "assumption", goalBefore := g, goalsAfter := [], tacticDependsOn := [], spawnedGoals := [], start := none, finish := none }
+      { tacticString := "assumption", infoTree := none, goalBefore := g, goalsAfter := [], tacticDependsOn := [], spawnedGoals := [], start := none, finish := none }
     return rwSteps ++ assumptionSteps
   | _ => return steps
 -- Comparator for names, e.g. so that _uniq.34 and _uniq.102 go in the right order.
@@ -228,6 +229,8 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
       let some tacticString := tInfo.stx.getSubstring?.map (·.toString)
         | return {steps, allGoals := allSubGoals}
 
+      let infoTreeJson ← (InfoTree.node i PersistentArray.empty).toJson ctx
+
       let steps := prettifySteps tInfo.stx ctx steps
 
       let proofTreeEdges ← getGoalsChange ctx tInfo
@@ -251,7 +254,8 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
             tacticDependsOn,
             spawnedGoals := orphanedGoals,
             start := range.start,
-            finish := range.finish
+            finish := range.finish,
+            infoTree := some infoTreeJson
           }
 
       return { steps := newSteps ++ steps, allGoals }
