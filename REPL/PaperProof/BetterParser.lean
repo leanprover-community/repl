@@ -178,19 +178,34 @@ def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List Str
 
 -- TODO: solve rw_mod_cast
 
-def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : List ProofStep := Id.run do
+def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : IO (List ProofStep) := do
   let range := stx.toRange ctx
   let prettify (tStr : String) :=
     let res := tStr.trim.dropRightWhile (· == ',')
     -- rw puts final rfl on the "]" token
+    -- TODO: is this correct for `rewrite`?
     if res == "]" then "rfl" else res
   -- Each part of rw is a separate step none of them include the initial 'rw [' and final ']'.
   -- So we add these to the first and last steps.
-  let extractRwStep (steps : List ProofStep) : List ProofStep := Id.run do
-    let rwSteps := steps.map fun a => { a with tacticString := s!"rw [{prettify a.tacticString}]" }
+  let extractRwStep (steps : List ProofStep) (atClause? : Option Syntax) : IO (List ProofStep) := do
+    -- If atClause is present, call toJson on it and retrieve the `pp` field.
+    let atClauseStr? ← match atClause? with
+      | some atClause => do
+        let j ← atClause.toJson ctx (LocalContext.mkEmpty ())
+        pure j.pp
+      | none =>
+        pure none
+
+    -- Turn the `Option String` into a (possibly-empty) string so we can insert it.
+    let maybeAtClause := atClauseStr?.getD ""   -- getD "" returns `""` if `atClauseStr?` is `none`
+    let rwSteps := steps.map fun a =>
+      { a with tacticString := s!"rw [{prettify a.tacticString}]{maybeAtClause}" }
+
     match rwSteps with
-    | [] => []
-    | [step] => [{ step with start := some range.start, finish := some range.finish }]
+    | [] =>
+      return []
+    | [step] =>
+      return [{ step with start := some range.start, finish := some range.finish }]
     | steps =>
       let first := { steps.head! with start := some range.start }
       let last := { steps.getLast! with finish := some range.finish }
@@ -198,11 +213,11 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : 
       return first :: middle ++ [last]
 
   match stx with
-  | `(tactic| rw [$_,*] $(_)?)
-  | `(tactic| rewrite [$_,*] $(_)?) =>
-    return extractRwStep steps
-  | `(tactic| rwa [$_,*] $(_)?) =>
-    let rwSteps := extractRwStep steps
+  | `(tactic| rw [$_,*] $(at_clause)?)
+  | `(tactic| rewrite [$_,*] $(at_clause)?) =>
+    extractRwStep steps at_clause
+  | `(tactic| rwa [$_,*] $(at_clause)?) =>
+    let rwSteps ← extractRwStep steps at_clause
     let assumptionSteps := (if rwSteps.isEmpty then [] else rwSteps.getLast!.goalsAfter).map fun g =>
       { tacticString := "assumption", infoTree := none, goalBefore := g, goalsAfter := [], tacticDependsOn := [], spawnedGoals := [], start := none, finish := none }
     return rwSteps ++ assumptionSteps
@@ -231,7 +246,7 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
 
       let infoTreeJson ← (InfoTree.node i PersistentArray.empty).toJson ctx
 
-      let steps := prettifySteps tInfo.stx ctx steps
+      let steps ← prettifySteps tInfo.stx ctx steps
 
       let proofTreeEdges ← getGoalsChange ctx tInfo
       let currentGoals := proofTreeEdges.map (fun ⟨ _, g₁, gs ⟩ => g₁ :: gs)  |>.join
