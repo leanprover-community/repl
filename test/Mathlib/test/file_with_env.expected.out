@@ -1,0 +1,24 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 9, "column": 4},
+   "goal": "x y : ℝ\n⊢ ∀ (a b : ℚ), a * b = b * a",
+   "endPos": {"line": 9, "column": 9}}],
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 13, "column": 39},
+   "endPos": {"line": 13, "column": 44},
+   "data":
+   "type mismatch\n  seq_x\nhas type\n  ℕ → ℚ : Type\nbut is expected to have type\n  Prop : Type"},
+  {"severity": "error",
+   "pos": {"line": 1, "column": 59},
+   "endPos": {"line": 13, "column": 44},
+   "data":
+   "unsolved goals\ncase h_approx_x\nx y : ℝ\nh_rational : ∀ (a b : ℚ), a * b = b * a\n⊢ ∃ seq_x, sorry\n\nx y : ℝ\nh_rational : ∀ (a b : ℚ), a * b = b * a\nh_approx_x : ∃ seq_x, sorry\n⊢ x * y = y * x"},
+  {"severity": "error",
+   "pos": {"line": 13, "column": 45},
+   "endPos": null,
+   "data": "expected token"}],
+ "env": 1}
+

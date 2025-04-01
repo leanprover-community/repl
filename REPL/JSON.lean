@@ -28,8 +28,9 @@ structure Command extends CommandOptions where
   cmd : String
 deriving ToJson, FromJson
 
-/-- Process a Lean file in a fresh environment. -/
+/-- Process a Lean file in a fresh environment if `env` is not provided. -/
 structure File extends CommandOptions where
+  env: Option Nat
   path : System.FilePath
 deriving FromJson
 
