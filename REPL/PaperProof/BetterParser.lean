@@ -58,11 +58,33 @@ instance : BEq GoalInfo where
 instance : Hashable GoalInfo where
   hash g := hash g.id
 
+structure MetavarDecl.Json where
+  mvarId : String
+  userName : String
+  type : String
+deriving ToJson, FromJson
+
+structure MetavarContext.Json where
+  decls : Array MetavarDecl.Json
+deriving ToJson, FromJson
+
+def MetavarContext.toJson (mctx : MetavarContext) (ctx : ContextInfo) : IO MetavarContext.Json := do
+  let mut decls := #[]
+  for (mvarId, decl) in mctx.decls do
+    decls := decls.push {
+      mvarId := toString mvarId.name
+      userName := toString decl.userName
+      type := (← ctx.ppExpr {} decl.type).pretty
+    }
+  return { decls }
+
 structure ProofStep where
   tacticString : String
   infoTree : Option Json
   goalBefore : GoalInfo
   goalsAfter : List GoalInfo
+  mctxBefore : Option MetavarContext.Json
+  mctxAfter : Option MetavarContext.Json
   tacticDependsOn : List String
   spawnedGoals : List GoalInfo
   start : Option Lean.Position
@@ -219,7 +241,18 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : 
   | `(tactic| rwa [$_,*] $(at_clause)?) =>
     let rwSteps ← extractRwStep steps at_clause
     let assumptionSteps := (if rwSteps.isEmpty then [] else rwSteps.getLast!.goalsAfter).map fun g =>
-      { tacticString := "assumption", infoTree := none, goalBefore := g, goalsAfter := [], tacticDependsOn := [], spawnedGoals := [], start := none, finish := none }
+      {
+        tacticString := "assumption",
+        infoTree := none,
+        goalBefore := g,
+        goalsAfter := [],
+        mctxBefore := none,
+        mctxAfter := none,
+        tacticDependsOn := [],
+        spawnedGoals := [],
+        start := none,
+        finish := none
+      }
     return rwSteps ++ assumptionSteps
   | _ => return steps
 -- Comparator for names, e.g. so that _uniq.34 and _uniq.102 go in the right order.
@@ -256,6 +289,9 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
       let orphanedGoals := currentGoals.foldl Std.HashSet.erase (noInEdgeGoals allGoals steps)
         |>.toArray.insertionSort (nameNumLt ·.id.name ·.id.name) |>.toList
 
+      let mctxBeforeJson ← MetavarContext.toJson tInfo.mctxBefore ctx
+      let mctxAfterJson ← MetavarContext.toJson tInfo.mctxAfter ctx
+
       let newSteps := proofTreeEdges.filterMap fun ⟨ tacticDependsOn, goalBefore, goalsAfter ⟩ =>
        -- Leave only steps which are not handled in the subtree.
         if steps.map (·.goalBefore) |>.elem goalBefore then
@@ -266,6 +302,8 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
             tacticString,
             goalBefore,
             goalsAfter,
+            mctxBefore := mctxBeforeJson,
+            mctxAfter := mctxAfterJson,
             tacticDependsOn,
             spawnedGoals := orphanedGoals,
             start := range.start,
