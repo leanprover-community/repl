@@ -30,70 +30,15 @@ import Lean
 import Lean.Meta.Basic
 import Lean.Meta.CollectMVars
 import REPL.Lean.InfoTree.ToJson
+import REPL.JSON
 
-open Lean Elab Server
+open Lean Elab Server REPL
 
 namespace PaperProof
 
-structure Hypothesis where
-  username : String
-  type : String
-  value : Option String
-  -- unique identifier for the hypothesis, fvarId
-  id : String
-  isProof : String
-  deriving Inhabited, ToJson, FromJson
+def stepGoalsAfter (step : ProofStepInfo) : List GoalInfo := step.goalsAfter ++ step.spawnedGoals
 
-structure GoalInfo where
-  username : String
-  type : String
-  hyps : List Hypothesis
-  -- unique identifier for the goal, mvarId
-  id : MVarId
-  deriving Inhabited, ToJson, FromJson
-
-instance : BEq GoalInfo where
-  beq g1 g2 := g1.id == g2.id
-
-instance : Hashable GoalInfo where
-  hash g := hash g.id
-
-structure MetavarDecl.Json where
-  mvarId : String
-  userName : String
-  type : String
-deriving ToJson, FromJson
-
-structure MetavarContext.Json where
-  decls : Array MetavarDecl.Json
-deriving ToJson, FromJson
-
-def MetavarContext.toJson (mctx : MetavarContext) (ctx : ContextInfo) : IO MetavarContext.Json := do
-  let mut decls := #[]
-  for (mvarId, decl) in mctx.decls do
-    decls := decls.push {
-      mvarId := toString mvarId.name
-      userName := toString decl.userName
-      type := (← ctx.ppExpr {} decl.type).pretty
-    }
-  return { decls }
-
-structure ProofStep where
-  tacticString : String
-  infoTree : Option Json
-  goalBefore : GoalInfo
-  goalsAfter : List GoalInfo
-  mctxBefore : Option MetavarContext.Json
-  mctxAfter : Option MetavarContext.Json
-  tacticDependsOn : List String
-  spawnedGoals : List GoalInfo
-  start : Option Lean.Position
-  finish : Option Lean.Position
-  deriving Inhabited, ToJson, FromJson
-
-def stepGoalsAfter (step : ProofStep) : List GoalInfo := step.goalsAfter ++ step.spawnedGoals
-
-def noInEdgeGoals (allGoals : Std.HashSet GoalInfo) (steps : List ProofStep) : Std.HashSet GoalInfo :=
+def noInEdgeGoals (allGoals : Std.HashSet GoalInfo) (steps : List ProofStepInfo) : Std.HashSet GoalInfo :=
   -- Some of the orphaned goals might be matched by tactics in sibling subtrees, e.g. for tacticSeq.
   (steps.bind stepGoalsAfter).foldl Std.HashSet.erase allGoals
 
@@ -123,35 +68,6 @@ def findMVarsAssigned (goalId : MVarId) (mctxAfter : MetavarContext) : MetaM (Li
   let (_, s) ← (Meta.collectMVars expr).run {}
   return s.result.toList
 
-def mayBeProof (expr : Expr) : MetaM String := do
-  let type : Expr ← Lean.Meta.inferType expr
-  if ← Meta.isProof expr then
-    return "proof"
-  if type.isSort then
-    return "universe"
-  else
-    return "data"
-
-def printGoalInfo (printCtx : ContextInfo) (id : MVarId) : IO GoalInfo := do
-  let some decl := printCtx.mctx.findDecl? id
-    | panic! "printGoalInfo: goal not found in the mctx"
-  -- to get tombstones in name ✝ for unreachable hypothesis
-  let lctx := decl.lctx |>.sanitizeNames.run' {options := {}}
-  let ppContext := printCtx.toPPContext lctx
-  let hyps ← lctx.foldrM (init := []) (fun hypDecl acc => do
-    if hypDecl.isAuxDecl || hypDecl.isImplementationDetail then
-      return acc
-    let type ← liftM (ppExprWithInfos ppContext hypDecl.type)
-    let value ← liftM (hypDecl.value?.mapM (ppExprWithInfos ppContext))
-    let isProof : String ← printCtx.runMetaM decl.lctx (mayBeProof hypDecl.toExpr)
-    return ({
-      username := hypDecl.userName.toString,
-      type := type.fmt.pretty,
-      value := value.map (·.fmt.pretty),
-      id := hypDecl.fvarId.name.toString,
-      isProof := isProof
-    } : Hypothesis) :: acc)
-  return ⟨ decl.userName.toString, (← ppExprWithInfos ppContext decl.type).fmt.pretty, hyps, id⟩
 
 -- Returns unassigned goals from the provided list of goals
 def getUnassignedGoals (goals : List MVarId) (mctx : MetavarContext) : IO (List MVarId) := do
@@ -164,7 +80,7 @@ def getUnassignedGoals (goals : List MVarId) (mctx : MetavarContext) : IO (List 
     return some id
 
 structure Result where
-  steps : List ProofStep
+  steps : List ProofStepInfo
   allGoals : Std.HashSet GoalInfo
 
 def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List String × GoalInfo × List GoalInfo)) := do
@@ -200,7 +116,7 @@ def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List Str
 
 -- TODO: solve rw_mod_cast
 
-def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : IO (List ProofStep) := do
+def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo) : IO (List ProofStepInfo) := do
   let range := stx.toRange ctx
   let prettify (tStr : String) :=
     let res := tStr.trim.dropRightWhile (· == ',')
@@ -209,7 +125,7 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStep) : 
     if res == "]" then "rfl" else res
   -- Each part of rw is a separate step none of them include the initial 'rw [' and final ']'.
   -- So we add these to the first and last steps.
-  let extractRwStep (steps : List ProofStep) (atClause? : Option Syntax) : IO (List ProofStep) := do
+  let extractRwStep (steps : List ProofStepInfo) (atClause? : Option Syntax) : IO (List ProofStepInfo) := do
     -- If atClause is present, call toJson on it and retrieve the `pp` field.
     let atClauseStr? ← match atClause? with
       | some atClause => do

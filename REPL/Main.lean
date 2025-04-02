@@ -126,7 +126,7 @@ def tactics (trees : List InfoTree) : M m (List Tactic) :=
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
-def proofTrees (infoTrees : List InfoTree) : M m (List (List PaperProof.ProofStep)) := do
+def proofTrees (infoTrees : List InfoTree) : M m (List (List ProofStepInfo)) := do
   infoTrees.mapM fun infoTree => do
     let proofTree ← PaperProof.BetterParser infoTree
     match proofTree with
@@ -149,13 +149,21 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none
-  let id ← recordProofSnapshot proofState
+  let proofStateId ← recordProofSnapshot proofState
+  let (ctx, _) ← proofState.runMetaM do return { ← CommandContextInfo.save with }
+  let goalInfos ← proofState.tacticState.goals.mapM (fun mvarId => do
+    let goalInfo ← printGoalInfo ctx mvarId
+    return goalInfo)
+  let mctxAfterJson ← MetavarContext.toJson proofState.metaState.mctx ctx
   return {
-    proofState := id
+    proofState := proofStateId
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
     messages
     sorries
-    traces }
+    traces
+    goalInfos
+    mctxAfter := mctxAfterJson
+  }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do

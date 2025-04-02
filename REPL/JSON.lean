@@ -6,7 +6,9 @@ Authors: Scott Morrison
 import Lean.Data.Json
 import Lean.Message
 import Lean.Elab.InfoTree.Main
-import REPL.PaperProof.BetterParser
+import Lean.Meta.Basic
+import Lean.Meta.CollectMVars
+import REPL.Lean.InfoTree.ToJson
 
 open Lean Elab InfoTree
 
@@ -117,6 +119,97 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     proofState,
     usedConstants }
 
+structure Hypothesis where
+  username : String
+  type : String
+  value : Option String
+  -- unique identifier for the hypothesis, fvarId
+  id : String
+  isProof : String
+  deriving Inhabited, ToJson, FromJson
+
+structure GoalInfo where
+  username : String
+  type : String
+  hyps : List Hypothesis
+  -- unique identifier for the goal, mvarId
+  id : MVarId
+  deriving Inhabited, ToJson, FromJson
+
+private def mayBeProof (expr : Expr) : MetaM String := do
+  let type : Expr ← Lean.Meta.inferType expr
+  if ← Meta.isProof expr then
+    return "proof"
+  if type.isSort then
+    return "universe"
+  else
+    return "data"
+
+def printGoalInfo (printCtx : ContextInfo) (id : MVarId) : IO GoalInfo := do
+  let some decl := printCtx.mctx.findDecl? id
+    | panic! "printGoalInfo: goal not found in the mctx"
+  -- to get tombstones in name ✝ for unreachable hypothesis
+  let lctx := decl.lctx |>.sanitizeNames.run' {options := {}}
+  let ppContext := printCtx.toPPContext lctx
+
+  let hyps ← lctx.foldrM (init := []) (fun hypDecl acc => do
+    if hypDecl.isAuxDecl || hypDecl.isImplementationDetail then
+      return acc
+
+    let type ← liftM (ppExprWithInfos ppContext hypDecl.type)
+    let value ← liftM (hypDecl.value?.mapM (ppExprWithInfos ppContext))
+    let isProof : String ← printCtx.runMetaM decl.lctx (mayBeProof hypDecl.toExpr)
+    return ({
+      username := hypDecl.userName.toString,
+      type := type.fmt.pretty,
+      value := value.map (·.fmt.pretty),
+      id := hypDecl.fvarId.name.toString,
+      isProof := isProof,
+    } : Hypothesis) :: acc)
+  return ⟨ decl.userName.toString, (← ppExprWithInfos ppContext decl.type).fmt.pretty, hyps, id⟩
+
+
+instance : BEq GoalInfo where
+  beq g1 g2 := g1.id == g2.id
+
+instance : Hashable GoalInfo where
+  hash g := hash g.id
+structure MetavarDecl.Json where
+  mvarId : String
+  userName : String
+  type : String
+  mvarsInType : List MVarId
+deriving ToJson, FromJson
+
+structure MetavarContext.Json where
+  decls : Array MetavarDecl.Json
+deriving ToJson, FromJson
+
+def MetavarContext.toJson (mctx : MetavarContext) (ctx : ContextInfo) : IO MetavarContext.Json := do
+  let mut decls := #[]
+  for (mvarId, decl) in mctx.decls do
+    let (_, typeMVars) ← ctx.runMetaM decl.lctx ((Meta.collectMVars decl.type).run {})
+    decls := decls.push {
+      mvarId := toString mvarId.name
+      userName := toString decl.userName
+      type := (← ctx.ppExpr {} decl.type).pretty
+      mvarsInType := typeMVars.result.toList
+    }
+  return { decls }
+
+structure ProofStepInfo where
+  tacticString : String
+  infoTree : Option Json
+  goalBefore : GoalInfo
+  goalsAfter : List GoalInfo
+  mctxBefore : Option MetavarContext.Json
+  mctxAfter : Option MetavarContext.Json
+  tacticDependsOn : List String
+  spawnedGoals : List GoalInfo
+  start : Option Lean.Position
+  finish : Option Lean.Position
+  deriving Inhabited, ToJson, FromJson
+
 /--
 A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
@@ -127,7 +220,7 @@ structure CommandResponse where
   sorries : List Sorry := []
   tactics : List Tactic := []
   infotree : Option Json := none
-  proofTreeEdges : Option (List (List PaperProof.ProofStep)) := none
+  proofTreeEdges : Option (List (List ProofStepInfo)) := none
 deriving FromJson
 
 def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
@@ -156,6 +249,8 @@ structure ProofStepResponse where
   messages : List Message := []
   sorries : List Sorry := []
   traces : List String
+  goalInfos: List GoalInfo := []
+  mctxAfter : Option MetavarContext.Json
 deriving ToJson, FromJson
 
 instance : ToJson ProofStepResponse where
@@ -164,7 +259,9 @@ instance : ToJson ProofStepResponse where
     [("goals", toJson r.goals)],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
-    Json.nonemptyList "traces" r.traces
+    Json.nonemptyList "traces" r.traces,
+    Json.nonemptyList "goalInfos" r.goalInfos,
+    match r.mctxAfter with | some mctxAfter => [("mctxAfter", toJson mctxAfter)] | none => []
   ]
 
 /-- Json wrapper for an error. -/
