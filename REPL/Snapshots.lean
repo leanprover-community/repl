@@ -83,7 +83,7 @@ def unpickle (path : FilePath) : IO (CommandSnapshot × CompactedRegion) := unsa
   let ((imports, map₂, cmdState, cmdContext), region) ←
     _root_.unpickle (Array Import × PHashMap Name ConstantInfo × CompactableCommandSnapshot ×
       Command.Context) path
-  let env ← (← importModules imports {} 0).replay (Std.HashMap.ofList map₂.toList)
+  let env ← (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
   let p' : CommandSnapshot :=
   { cmdState := { cmdState with env }
     cmdContext }
@@ -285,7 +285,7 @@ def unpickle (path : FilePath) (cmd? : Option CommandSnapshot) :
   let env ← match cmd? with
   | none =>
     enableInitializersExecution
-    (← importModules imports {} 0).replay (Std.HashMap.ofList map₂.toList)
+    (← importModules imports {} 0 (loadExts := true)).replay (Std.HashMap.ofList map₂.toList)
   | some cmd =>
     cmd.cmdState.env.replay (Std.HashMap.ofList map₂.toList)
   let p' : ProofSnapshot :=
