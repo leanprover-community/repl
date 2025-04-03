@@ -1,6 +1,11 @@
 {"env": 0}
 
-{"env": 1}
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 40},
+   "data": "Goals accomplished!"}],
+ "env": 1}
 
 {"env": 2}
 
@@ -9,7 +14,11 @@
    "pos": {"line": 1, "column": 23},
    "endPos": {"line": 1, "column": 27},
    "data":
-   "[Meta.Tactic.simp.rewrite] f_def:1000:\n      f\n    ==>\n      37\n[Meta.Tactic.simp.rewrite] eq_self:1000: 37 = 37 ==> True"}],
+   "[Meta.Tactic.simp.rewrite] f_def:1000:\n      f\n    ==>\n      37\n[Meta.Tactic.simp.rewrite] eq_self:1000: 37 = 37 ==> True"},
+  {"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 27},
+   "data": "Goals accomplished!"}],
  "env": 3}
 
 {"sorries":
@@ -36,6 +45,10 @@
  [{"severity": "info",
    "pos": {"line": 2, "column": 2},
    "endPos": {"line": 2, "column": 7},
-   "data": "!"}],
+   "data": "!"},
+  {"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 3, "column": 9},
+   "data": "Goals accomplished!"}],
  "env": 5}
 

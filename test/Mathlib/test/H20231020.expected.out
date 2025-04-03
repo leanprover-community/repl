@@ -1,8 +1,23 @@
 {"env": 0}
 
-{"env": 1}
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 68},
+   "data": "Goals accomplished!"}],
+ "env": 1}
 
-{"env": 2}
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 112},
+   "data": "Goals accomplished!"}],
+ "env": 2}
 
-{"env": 3}
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 158},
+   "data": "Goals accomplished!"}],
+ "env": 3}
 
