@@ -74,11 +74,29 @@ def Message.of (m : Lean.Message) : IO Message := do pure <|
     | .error => .error,
     data := (← m.data.toString).trim }
 
+structure HypothesisInfo where
+  username : String
+  type : String
+  value : Option String
+  -- unique identifier for the hypothesis, fvarId
+  id : String
+  isProof : String
+  deriving Inhabited, ToJson, FromJson
+
+structure GoalInfo where
+  username : String
+  type : String
+  hyps : List HypothesisInfo
+  -- unique identifier for the goal, mvarId
+  id : MVarId
+  deriving Inhabited, ToJson, FromJson
+
 /-- A Lean `sorry`. -/
 structure Sorry where
   pos : Pos
   endPos : Pos
   goal : String
+  goalInfo: Option GoalInfo
   /--
   The index of the proof state at the sorry.
   You can use the `ProofStep` instruction to run a tactic at this state.
@@ -89,16 +107,20 @@ deriving FromJson
 instance : ToJson Sorry where
   toJson r := Json.mkObj <| .flatten [
     [("goal", r.goal)],
+    match r.goalInfo with
+    | some goalInfo => [("goalInfo", toJson goalInfo)]
+    | none => [],
     [("proofState", toJson r.proofState)],
     if r.pos.line ≠ 0 then [("pos", toJson r.pos)] else [],
     if r.endPos.line ≠ 0 then [("endPos", toJson r.endPos)] else [],
   ]
 
 /-- Construct the JSON representation of a Lean sorry. -/
-def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
+def Sorry.of (goal : String) (goalInfo : Option GoalInfo) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
     goal,
+    goalInfo,
     proofState }
 
 structure Tactic where
@@ -118,23 +140,6 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     tactic,
     proofState,
     usedConstants }
-
-structure Hypothesis where
-  username : String
-  type : String
-  value : Option String
-  -- unique identifier for the hypothesis, fvarId
-  id : String
-  isProof : String
-  deriving Inhabited, ToJson, FromJson
-
-structure GoalInfo where
-  username : String
-  type : String
-  hyps : List Hypothesis
-  -- unique identifier for the goal, mvarId
-  id : MVarId
-  deriving Inhabited, ToJson, FromJson
 
 private def mayBeProof (expr : Expr) : MetaM String := do
   let type : Expr ← Lean.Meta.inferType expr
@@ -165,7 +170,7 @@ def printGoalInfo (printCtx : ContextInfo) (id : MVarId) : IO GoalInfo := do
       value := value.map (·.fmt.pretty),
       id := hypDecl.fvarId.name.toString,
       isProof := isProof,
-    } : Hypothesis) :: acc)
+    } : HypothesisInfo) :: acc)
   return ⟨ decl.userName.toString, (← ppExprWithInfos ppContext decl.type).fmt.pretty, hyps, id⟩
 
 

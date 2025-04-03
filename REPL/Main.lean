@@ -109,7 +109,15 @@ def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorr
            pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
-        return Sorry.of goal pos endPos proofStateId
+        let goalInfo : Option GoalInfo ← match proofState with
+        | some proofState => do
+           match proofState.tacticState.goals[0]? with
+           | some goalId => do
+             let info ← printGoalInfo ctx goalId
+             pure (some info)
+           | none => pure none
+        | none => pure none
+        return Sorry.of goal goalInfo pos endPos proofStateId
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
