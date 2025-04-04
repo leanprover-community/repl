@@ -1,0 +1,20 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 17},
+   "goal": "⊢ 1 = 1",
+   "endPos": {"line": 1, "column": 17}},
+  {"proofState": 1,
+   "pos": {"line": 5, "column": 22},
+   "goal": "⊢ 1 + 1 = 2",
+   "endPos": {"line": 5, "column": 22}}],
+ "messages":
+ [{"severity": "info",
+   "pos": {"line": 3, "column": 2},
+   "endPos": {"line": 3, "column": 8},
+   "data": "Try this: exact rfl"}],
+ "env": 0}
+
+{"proofStatus": "Completed", "proofState": 2, "goals": []}
+
+{"proofStatus": "Completed", "proofState": 3, "goals": []}
+

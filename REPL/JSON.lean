@@ -13,6 +13,7 @@ namespace REPL
 
 structure CommandOptions where
   allTactics : Option Bool := none
+  rootGoals : Option Bool := none
   /--
   Should be "full", "tactics", "original", or "substantive".
   Anything else is ignored.
