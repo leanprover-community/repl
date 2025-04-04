@@ -15,6 +15,10 @@
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
-   "data": "unknown identifier 'my_fake_premise'"}],
+   "data": "unknown identifier 'my_fake_premise'"},
+  {"severity": "warning",
+   "pos": {"line": 0, "column": 0},
+   "endPos": null,
+   "data": "Proof contains sorry"}],
  "goals": []}
 
