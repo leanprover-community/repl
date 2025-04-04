@@ -232,6 +232,46 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
       tactics
       infotree }
 
+def runCommandsParrallel (commands : Array Command) : M IO (Array (CommandResponse ⊕ Error)) := do
+    let tasks ← (commands.mapM ((fun cmd => IO.asTask <| IO.processInput cmd.cmd none)))
+    let result := ← IO.wait <| ← IO.mapTasks (·.mapM' (pure ·)) tasks.toList
+    match result with
+    | .ok results => {
+      let womp : List (CommandResponse ⊕ Error) ← results.mapM
+        (fun x => do
+          match x with
+          | .ok ⟨_, messages, infotrees⟩ => do
+              return .inl
+                { env := 0,
+                  messages := ← messages.mapM fun m => Message.of m,
+                  sorries :=  ← sorries infotrees none,
+                  tactics := [], -- ← tactics infotrees,
+                  infotree := none} -- Json.arr (← infotrees.mapM fun t => t.toJson none).toArray}
+          | .error _ => pure <| .inr (Error.mk "failed")
+        )
+      return womp.toArray
+    }
+    | .error _ => return #[]
+
+def runCommandsSequential (commands : Array Command) : M IO (Array (CommandResponse ⊕ Error)) := do
+  let (cmdSnapshot?, _) ← do match (← get).cmdStates[0]? with
+    | some env => pure (some env, false)
+    | none => pure (none, true)
+  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
+  let results ← commands.mapM (fun cmd => do
+    IO.println "brr"
+    IO.processInput cmd.cmd initialCmdState?
+  )
+  results.mapM (fun ⟨_, messages, infotrees⟩ => do
+    return .inl
+      { env := 0,
+        messages := ← messages.mapM fun m => Message.of m,
+        sorries :=  ← sorries infotrees none,
+        tactics := ← tactics infotrees,
+        infotree := Json.arr (← infotrees.mapM fun t => t.toJson none).toArray
+        }
+    )
+
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
     let cmd ← IO.FS.readFile s.path
@@ -269,6 +309,22 @@ instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with
   | .inl a => toJson a
   | .inr b => toJson b
+
+
+structure Batch where
+  header : String
+  proofs : Array String
+deriving FromJson, ToJson
+
+
+def parseBatch (query : String) : IO Batch := do
+  let json := Json.parse query
+  match json with
+  | .error e => throw <| IO.userError <| toString <| toJson <|
+      (⟨"Could not parse JSON:\n" ++ e⟩ : Error)
+  | .ok j => match fromJson? j with
+    | .ok (r : Batch) => return r
+    | .error e => throw <| IO.userError <| toString <| toJson <| (⟨"Could not parse JSON batch:\n" ++ e⟩ : Error)
 
 /-- Commands accepted by the REPL. -/
 inductive Input
@@ -328,7 +384,29 @@ where loop : M IO Unit := do
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 
+
+def testSeqential: M IO Unit := do
+  let query ← getLines
+  let ⟨header, proofs⟩ ← parseBatch query
+  let _ ← (runCommand (⟨⟨none, none⟩, none, header⟩))
+  let comm : Array REPL.Command := proofs.map (fun pf => ⟨⟨none, none⟩, some 0, pf⟩)
+  let q ← (runCommandsSequential comm)
+  for l in q do
+    IO.println (toJson l)
+
+-- #check Command.mk
+-- #check CommandOptions.mk
+def testParrallel : IO Unit := do
+  let _ ← StateT.run' (runCommand (⟨⟨none, none⟩, some 0, "#eval 0"⟩)) {}
+  let comm : Array REPL.Command := ((List.range 10).map (fun _ => ⟨⟨none, none⟩, some 0, "theorem womp (a b c : ℕ) : a + b + c = c + (b + a) := by sorry"⟩)).toArray
+  let q ← StateT.run' (runCommandsParrallel comm) {}
+  for l in q do
+    IO.println (toJson l)
+
+-- #eval (do testSeqential.run' {})
+
 /-- Main executable function, run as `lake exe repl`. -/
 unsafe def main (_ : List String) : IO Unit := do
-  initSearchPath (← Lean.findSysroot)
-  repl
+  -- initSearchPath (← Lean.findSysroot)
+  -- repl
+  testSeqential.run' {}

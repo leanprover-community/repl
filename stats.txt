@@ -1,0 +1,7 @@
+# all profiling is one using meaure-command
+
+# test run on 1000 samples of
+# theorem womp (a b c : ℕ) : a + b + c = c + (b + a) := by sorry
+
+batch verify repl only, without env sharing: 78.0058819 seconds
+batch verify repl only, with env sharing: 2.0209996 seconds
