@@ -192,7 +192,8 @@ For convenience, we also allow a list of `Expr`s, and these are appended to the 
 as fresh metavariables with the given types.
 -/
 def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Environment)
-    (goals : List MVarId) (types : List Expr := []) : IO ProofSnapshot := do
+    (goals : List MVarId) (initGoals? : Option (List MVarId)) (types : List Expr := [])
+    : IO ProofSnapshot := do
   ctx.runMetaM (lctx?.getD {}) do
     let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
     let s ← getThe Core.State
@@ -208,7 +209,9 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Envi
       termContext := {}
       tacticState := { goals }
       tacticContext := { elaborator := .anonymous }
-      initialGoals := goals }
+      initialGoals := match initGoals? with
+        | none => goals
+        | some gs => gs }
 
 open Lean.Core in
 /-- A copy of `Core.State` with the `Environment`, caches, and logging omitted. -/

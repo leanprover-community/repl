@@ -33,11 +33,15 @@
    "data": "declaration uses 'sorry'"}],
  "env": 4}
 
-{"traces": ["37"], "proofState": 1, "goals": ["⊢ f = 37"]}
+{"traces": ["37"],
+ "proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["⊢ f = 37"]}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] f_def:1000:\n      f\n    ==>\n      37",
   "[Meta.Tactic.simp.rewrite] eq_self:1000:\n      37 = 37\n    ==>\n      True"],
+ "proofStatus": "Completed",
  "proofState": 2,
  "goals": []}
 
@@ -51,4 +55,3 @@
    "endPos": {"line": 3, "column": 9},
    "data": "Goals accomplished!"}],
  "env": 5}
-

@@ -11,31 +11,40 @@
  "env": 0}
 
 {"sorries": [{"proofState": 1, "goal": "x : Int\nh0 : x > 0\n⊢ x > 0"}],
+ "proofStatus": "Incomplete: open goals remain",
  "proofState": 2,
  "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
 
-{"proofState": 3, "goals": []}
+{"proofStatus": "Incomplete: contains metavariable(s)",
+ "proofState": 3,
+ "goals": []}
 
-{"proofState": 4, "goals": []}
+{"proofStatus": "Incomplete: contains metavariable(s)",
+ "proofState": 4,
+ "goals": []}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] of_eq_true (eq_true h0):1000:\n      x > 0\n    ==>\n      True"],
+ "proofStatus": "Incomplete: contains metavariable(s)",
  "proofState": 5,
  "goals": []}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000:\n      x > 0\n    ==>\n      0 < x",
   "[Meta.Tactic.simp.rewrite] h0:1000:\n      0 < x\n    ==>\n      True"],
+ "proofStatus": "Incomplete: contains metavariable(s)",
  "proofState": 6,
  "goals": []}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000:\n      x > 0\n    ==>\n      0 < x",
   "[Meta.Tactic.simp.rewrite] h0:1000:\n      0 < x\n    ==>\n      True"],
+ "proofStatus": "Incomplete: contains metavariable(s)",
  "proofState": 7,
  "goals": []}
 
-{"proofState": 8,
+{"proofStatus": "Incomplete: contains sorry",
+ "proofState": 8,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
@@ -43,11 +52,11 @@
    "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
  "goals": []}
 
-{"proofState": 9,
+{"proofStatus": "Incomplete: contains sorry",
+ "proofState": 9,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
  "goals": []}
-
