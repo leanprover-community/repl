@@ -9,13 +9,13 @@ ds = load_dataset("Goedel-LM/Lean-workbook-proofs")
 
 proofs = []
 
-for data in ds["train"].select(range(20)):
+for data in ds["train"].select(range(1000)):
     proof = data["full_proof"].split(header)[1]
     proofs.append(proof)
-    # print(header, proof)
+    print(header, proof)
 
-batchCmd = { "header": header, "proofs" : proofs}
-tmp = json.dumps(batchCmd)
+# batchCmd = { "header": header, "proofs": proofs}
+# tmp = json.dumps(batchCmd)
 
 print("done loading")
 
@@ -30,9 +30,14 @@ process = subprocess.Popen(
     encoding="utf-8"
 )
 
-# Write input directly to the process
-process.stdin.write(tmp + "\n")
-process.stdin.flush()  # Ensure it's sent immediately
+# # Write input directly to the process
+process.stdin.write(json.dumps({"header" : header, "proofs": proofs}) + "\n")
+process.stdin.flush()
+# process.stdin.write(json.dumps({ "cmd" : header}) + "\n\n")
+# process.stdin.flush()
+# for proof in proofs:
+#     process.stdin.write(json.dumps({ "cmd" : proof, "env" : 0}) + "\n\n")
+#     process.stdin.flush()  # Ensure it's sent immediately
 
 # Read output
 stdout, stderr = process.communicate()

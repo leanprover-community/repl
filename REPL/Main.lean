@@ -232,45 +232,91 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
       tactics
       infotree }
 
-def runCommandsParrallel (commands : Array Command) : M IO (Array (CommandResponse ⊕ Error)) := do
-    let tasks ← (commands.mapM ((fun cmd => IO.asTask <| IO.processInput cmd.cmd none)))
-    let result := ← IO.wait <| ← IO.mapTasks (·.mapM' (pure ·)) tasks.toList
-    match result with
-    | .ok results => {
-      let womp : List (CommandResponse ⊕ Error) ← results.mapM
-        (fun x => do
-          match x with
-          | .ok ⟨_, messages, infotrees⟩ => do
-              return .inl
-                { env := 0,
-                  messages := ← messages.mapM fun m => Message.of m,
-                  sorries :=  ← sorries infotrees none,
-                  tactics := [], -- ← tactics infotrees,
-                  infotree := none} -- Json.arr (← infotrees.mapM fun t => t.toJson none).toArray}
-          | .error _ => pure <| .inr (Error.mk "failed")
-        )
-      return womp.toArray
-    }
-    | .error _ => return #[]
+def splitArray {α : Type} (arr : Array α) (n : Nat) : Array (Array α) := Id.run do
+  if n ≤ 0 then #[]
+  else if n = 1 then #[arr]
+  else if arr.size = 0 then Array.replicate n #[]
+  else
+    let baseSize := arr.size / n
+    let remainder := arr.size % n
 
-def runCommandsSequential (commands : Array Command) : M IO (Array (CommandResponse ⊕ Error)) := do
-  let (cmdSnapshot?, _) ← do match (← get).cmdStates[0]? with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
-  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let results ← commands.mapM (fun cmd => do
-    IO.println "brr"
-    IO.processInput cmd.cmd initialCmdState?
+    let mut result : Array (Array α) := #[]
+    let mut start : Nat := 0
+
+    for i in List.range n do
+      let extraElem := if i < remainder then 1 else 0
+      let endPos := start + baseSize + extraElem
+      let subArray := arr.extract start endPos
+      result := result.push subArray
+      start := start + baseSize + extraElem
+    result
+
+#eval splitArray #[1] 4
+
+unsafe def getHeaderEnv (header : String) : IO Command.State := do
+  Lean.initSearchPath (← Lean.findSysroot)
+  enableInitializersExecution
+  let inputCtx   := Parser.mkInputContext header "<input>"
+  let (header, parserState, messages)  ← Parser.parseHeader inputCtx
+  let (env, _) ← processHeader header {} messages inputCtx
+  let commandState := (Command.mkState env messages {})
+  let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
+  pure s
+
+unsafe def runCommandsSequential (commandState : Command.State)  (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
+  proofs.mapM (fun pf => do
+    let inputCtx   := Parser.mkInputContext pf "<input>"
+    let parserState := { : Parser.ModuleParserState }
+    let (_, msgs, _) ← Lean.Elab.IO.processCommandsWithInfoTrees inputCtx parserState commandState
+    return .inl ({ env := 0,
+                    messages := ← msgs.mapM fun m => Message.of m,
+                    sorries := [],
+                    tactics := [],
+                    infotree := none })
   )
-  results.mapM (fun ⟨_, messages, infotrees⟩ => do
-    return .inl
-      { env := 0,
-        messages := ← messages.mapM fun m => Message.of m,
-        sorries :=  ← sorries infotrees none,
-        tactics := ← tactics infotrees,
-        infotree := Json.arr (← infotrees.mapM fun t => t.toJson none).toArray
-        }
+
+unsafe def runCommandsParrallelNaive (header : String) (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
+  let commandState ← getHeaderEnv header
+  let tasks : Array (Task (Except IO.Error CommandResponse)) ← (proofs.mapM <| fun proof => IO.asTask <| do
+    let inputCtx   := Parser.mkInputContext proof "<input>"
+    let parserState := { : Parser.ModuleParserState }
+    let (_, msgs, _) ← Lean.Elab.IO.processCommandsWithInfoTrees inputCtx parserState commandState
+    return ({ env := 0,
+              messages := ← msgs.mapM fun m => Message.of m,
+              sorries := [],
+              tactics := [],
+              infotree := none
+            })
+  )
+  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList
+  match result with
+  | .ok results =>
+    return (results.map
+      fun x =>
+        match x with
+        | .ok cmdres => .inl cmdres
+        | .error e => .inr (Error.mk e.toString)
+      ).toArray
+  | .error _ => return #[]
+
+#check Except
+unsafe def runCommandsParrallel (header : String) (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
+  let commandState ← getHeaderEnv header
+  let tasks ← (splitArray proofs 100 |>.mapM <| fun bucket => IO.asTask ( (runCommandsSequential commandState bucket)))
+  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList
+  match result with
+  | .ok results => {
+    let womp : List (Array (CommandResponse ⊕ Error)) ← results.mapM (
+      fun x => do
+        match x with
+        | .ok bucket => pure bucket
+        | .error e =>
+          IO.println e
+          pure #[]
     )
+    return womp.toArray.flatMap id
+  }
+  | .error _ => return #[]
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
@@ -385,21 +431,20 @@ where loop : M IO Unit := do
   loop
 
 
-def testSeqential: M IO Unit := do
+unsafe def testSeqential: M IO Unit := do
   let query ← getLines
   let ⟨header, proofs⟩ ← parseBatch query
-  let _ ← (runCommand (⟨⟨none, none⟩, none, header⟩))
-  let comm : Array REPL.Command := proofs.map (fun pf => ⟨⟨none, none⟩, some 0, pf⟩)
-  let q ← (runCommandsSequential comm)
+  let commandState ← getHeaderEnv header
+  let q ← (runCommandsSequential commandState proofs)
   for l in q do
     IO.println (toJson l)
 
--- #check Command.mk
+#check Command.mk
 -- #check CommandOptions.mk
-def testParrallel : IO Unit := do
-  let _ ← StateT.run' (runCommand (⟨⟨none, none⟩, some 0, "#eval 0"⟩)) {}
-  let comm : Array REPL.Command := ((List.range 10).map (fun _ => ⟨⟨none, none⟩, some 0, "theorem womp (a b c : ℕ) : a + b + c = c + (b + a) := by sorry"⟩)).toArray
-  let q ← StateT.run' (runCommandsParrallel comm) {}
+unsafe def testParrallel : IO Unit := do
+  let query ← getLines
+  let ⟨header, proofs⟩ ← parseBatch query
+  let q ← (runCommandsParrallelNaive header proofs)
   for l in q do
     IO.println (toJson l)
 
@@ -409,4 +454,4 @@ def testParrallel : IO Unit := do
 unsafe def main (_ : List String) : IO Unit := do
   -- initSearchPath (← Lean.findSysroot)
   -- repl
-  testSeqential.run' {}
+  testParrallel
