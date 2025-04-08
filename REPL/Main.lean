@@ -251,7 +251,7 @@ def splitArray {α : Type} (arr : Array α) (n : Nat) : Array (Array α) := Id.r
       start := start + baseSize + extraElem
     result
 
-#eval splitArray #[1] 4
+-- #eval splitArray #[1] 4
 
 unsafe def getHeaderEnv (header : String) : IO Command.State := do
   Lean.initSearchPath (← Lean.findSysroot)
@@ -263,7 +263,7 @@ unsafe def getHeaderEnv (header : String) : IO Command.State := do
   let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
   pure s
 
-unsafe def runCommandsSequential (commandState : Command.State)  (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
+unsafe def batchVerifySequential (commandState : Command.State)  (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
   proofs.mapM (fun pf => do
     let inputCtx   := Parser.mkInputContext pf "<input>"
     let parserState := { : Parser.ModuleParserState }
@@ -275,7 +275,7 @@ unsafe def runCommandsSequential (commandState : Command.State)  (proofs : Array
                     infotree := none })
   )
 
-unsafe def runCommandsParrallelNaive (header : String) (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
+unsafe def batchVerifyParrallelNaive (header : String) (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
   let commandState ← getHeaderEnv header
   let tasks : Array (Task (Except IO.Error CommandResponse)) ← (proofs.mapM <| fun proof => IO.asTask <| do
     let inputCtx   := Parser.mkInputContext proof "<input>"
@@ -299,10 +299,13 @@ unsafe def runCommandsParrallelNaive (header : String) (proofs : Array String) :
       ).toArray
   | .error _ => return #[]
 
-#check Except
-unsafe def runCommandsParrallel (header : String) (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
+unsafe def batchVerifyParrallel (header : String) (proofs : Array String) (buckets : Option Nat): IO (Array (CommandResponse ⊕ Error)) := do
+  let buckets :=
+    match buckets with
+    | some x => x
+    | none => max 50 proofs.size
   let commandState ← getHeaderEnv header
-  let tasks ← (splitArray proofs 100 |>.mapM <| fun bucket => IO.asTask ( (runCommandsSequential commandState bucket)))
+  let tasks ← (splitArray proofs buckets |>.mapM <| fun bucket => IO.asTask ( (batchVerifySequential commandState bucket)))
   let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList
   match result with
   | .ok results => {
@@ -324,6 +327,18 @@ def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
     runCommand { s with env := none, cmd }
   catch e =>
     pure <| .inr ⟨e.toString⟩
+
+unsafe def runBatchVerify (batch : BatchVerify) : IO (Array (CommandResponse ⊕ Error)) := do
+  match batch.mode with
+  | some x =>
+    if x = "naive" then do
+      return ← batchVerifyParrallelNaive batch.header batch.proofs
+    if x = "parrallel" then do
+      return ← batchVerifyParrallel batch.header batch.proofs batch.buckets
+  | none =>
+    pure ()
+  let commandState ← getHeaderEnv batch.header
+  batchVerifySequential commandState batch.proofs
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
@@ -381,6 +396,7 @@ inductive Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
 | pickleProofSnapshot : REPL.PickleProofState → Input
 | unpickleProofSnapshot : REPL.UnpickleProofState → Input
+| batchVerify : REPL.BatchVerify → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -400,6 +416,8 @@ def parse (query : String) : IO Input := do
     | .ok (r : REPL.UnpickleProofState) => return .unpickleProofSnapshot r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.Command) => return .command r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.BatchVerify) => return .batchVerify r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.File) => return .file r
     | .error e => throw <| IO.userError <| toString <| toJson <|
@@ -421,6 +439,7 @@ where loop : M IO Unit := do
   if query.startsWith "#" || query.startsWith "--" then loop else
   IO.println <| toString <| ← match ← parse query with
   | .command r => return toJson (← runCommand r)
+  | .batchVerify r => return toJson (← runBatchVerify r)
   | .file r => return toJson (← processFile r)
   | .proofStep r => return toJson (← runProofStep r)
   | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
@@ -435,23 +454,20 @@ unsafe def testSeqential: M IO Unit := do
   let query ← getLines
   let ⟨header, proofs⟩ ← parseBatch query
   let commandState ← getHeaderEnv header
-  let q ← (runCommandsSequential commandState proofs)
+  let q ← (batchVerifySequential commandState proofs)
   for l in q do
     IO.println (toJson l)
 
-#check Command.mk
 -- #check CommandOptions.mk
 unsafe def testParrallel : IO Unit := do
   let query ← getLines
   let ⟨header, proofs⟩ ← parseBatch query
-  let q ← (runCommandsParrallelNaive header proofs)
+  let q ← (batchVerifyParrallelNaive header proofs)
   for l in q do
     IO.println (toJson l)
 
--- #eval (do testSeqential.run' {})
 
 /-- Main executable function, run as `lake exe repl`. -/
 unsafe def main (_ : List String) : IO Unit := do
-  -- initSearchPath (← Lean.findSysroot)
-  -- repl
-  testParrallel
+  initSearchPath (← Lean.findSysroot)
+  repl

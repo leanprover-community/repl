@@ -28,6 +28,18 @@ structure Command extends CommandOptions where
   cmd : String
 deriving ToJson, FromJson
 
+structure BatchVerifyOptions where
+  /-
+    "sequential", "naive", "parrallel"
+  -/
+  mode : Option String
+  buckets : Option Nat
+
+structure BatchVerify extends BatchVerifyOptions where
+  header : String
+  proofs : Array String
+deriving ToJson, FromJson
+
 /-- Process a Lean file in a fresh environment. -/
 structure File extends CommandOptions where
   path : System.FilePath
