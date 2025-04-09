@@ -262,10 +262,10 @@ instance : ToJson ProofStepResponse where
   toJson r := Json.mkObj <| .flatten [
     [("proofState", r.proofState)],
     [("goals", toJson r.goals)],
+    [("goalInfos", toJson r.goalInfos)],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "traces" r.traces,
-    Json.nonemptyList "goalInfos" r.goalInfos,
     match r.mctxAfter with | some mctxAfter => [("mctxAfter", toJson mctxAfter)] | none => []
   ]
 
