@@ -113,6 +113,7 @@ def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorr
         | some proofState => do
            match proofState.tacticState.goals[0]? with
            | some goalId => do
+             -- TODO: this does not work when it's just `sorry` instead of `by sorry`
              let info ← printGoalInfo ctx goalId
              pure (some info)
            | none => pure none
