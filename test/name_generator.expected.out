@@ -60,3 +60,4 @@
    "endPos": {"line": 0, "column": 0},
    "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
  "goals": []}
+

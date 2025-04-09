@@ -1,0 +1,10 @@
+{"cmd": "example : 1 = 0 := by\n  cases 1\n  rfl\n  apply ?succ"}
+
+{"cmd": "example : 1 = 0 := sorry"}
+
+{"tactic": "cases 1", "proofState": 0}
+
+{"tactic": "rfl", "proofState": 1}
+
+{"tactic": "apply ?succ", "proofState": 2}
+
