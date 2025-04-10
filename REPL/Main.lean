@@ -121,19 +121,19 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   catch _ =>
     pure "<failed to pretty print>"
 
-def tactics (trees : List InfoTree) : M m (List Tactic) :=
+def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tactic) :=
   trees.flatMap InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none none goals rootGoals)
+      let proofState := some (← ProofSnapshot.create ctx none env? goals rootGoals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let tactic := Format.pretty (← ppTactic ctx stx)
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
-def collectRootGoalsAsSorries (trees : List InfoTree) : M m (List Sorry) := do
+def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none none goals goals)
+      let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goals pos pos proofStateId
@@ -310,10 +310,10 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees initialCmdState.env none
   let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees))
+  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees initialCmdState.env))
   | _ => pure sorries
   let tactics ← match s.allTactics with
-  | some true => tactics trees
+  | some true => tactics trees initialCmdState.env
   | _ => pure []
   let cmdSnapshot :=
   { cmdState
