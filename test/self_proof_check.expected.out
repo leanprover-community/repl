@@ -1,0 +1,89 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 25},
+   "endPos": {"line": 1, "column": 31},
+   "data":
+   "`exact?` could not close the goal. Try `apply?` to see partial suggestions."}],
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 22},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 27}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"message":
+ "Lean error:\n`exact?` could not close the goal. Try `apply?` to see partial suggestions."}
+
+{"sorries":
+ [{"proofState": 1,
+   "pos": {"line": 1, "column": 25},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 30}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 2}
+
+{"message":
+ "Lean error:\n`exact?` could not close the goal. Try `apply?` to see partial suggestions."}
+
+{"tactics":
+ [{"usedConstants":
+   ["False",
+    "sorryAx",
+    "instOfNatNat",
+    "Lean.Name.num",
+    "Lean.Name.str",
+    "Lean.Name.anonymous",
+    "Nat",
+    "Lean.Name",
+    "OfNat.ofNat",
+    "Bool.false"],
+   "tactic": "sorry",
+   "proofState": 3,
+   "pos": {"line": 1, "column": 25},
+   "goals": "⊢ False",
+   "endPos": {"line": 1, "column": 30}}],
+ "sorries":
+ [{"proofState": 2,
+   "pos": {"line": 1, "column": 25},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 30}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 3}
+
+{"message":
+ "Lean error:\n`exact?` could not close the goal. Try `apply?` to see partial suggestions."}
+
+{"sorries":
+ [{"proofState": 4,
+   "pos": {"line": 1, "column": 25},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 30}},
+  {"proofState": 5,
+   "pos": {"line": 1, "column": 22},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 22}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 4}
+
+{"message":
+ "Lean error:\n`exact?` could not close the goal. Try `apply?` to see partial suggestions."}
+

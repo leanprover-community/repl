@@ -1,0 +1,18 @@
+{"cmd": "theorem ex : False := by exact?"}
+
+{"cmd": "theorem ex : False := sorry"}
+
+{"proofState": 0, "tactic": "exact?"}
+
+{"cmd": "theorem ex : False := by sorry"}
+
+{"proofState": 1, "tactic": "exact?"}
+
+{"cmd": "theorem ex : False := by sorry", "allTactics": true}
+
+{"proofState": 3, "tactic": "exact?"}
+
+{"cmd": "theorem ex : False := by sorry", "rootGoals": true}
+
+{"proofState": 5, "tactic": "exact?"}
+
