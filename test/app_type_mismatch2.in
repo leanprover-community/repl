@@ -1,0 +1,14 @@
+{"cmd": "example : 1 = 0 := by\n  cases 1\n  rfl\n  have: true := by\n    apply ?succ\n    trivial"}
+
+{"cmd": "example : 1 = 0 := sorry"}
+
+{"tactic": "cases 1", "proofState": 0}
+
+{"tactic": "rfl", "proofState": 1}
+
+{"tactic": "have: true := by\n    apply ?succ\n    trivial", "proofState": 2}
+
+{"tactic": "have: true := sorry", "proofState": 2}
+
+{"tactic": "apply ?succ", "proofState": 4}
+
