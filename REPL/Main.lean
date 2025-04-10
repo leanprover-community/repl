@@ -126,7 +126,7 @@ def tactics (trees : List InfoTree) : M m (List Tactic) :=
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
-def rootGoals (trees : List InfoTree) : M m (List Sorry) := do
+def collectRootGoalsAsSorries (trees : List InfoTree) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none none goals goals)
@@ -134,7 +134,15 @@ def rootGoals (trees : List InfoTree) : M m (List Sorry) := do
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goals pos pos proofStateId
 
-/-- Get the status of the whole proof up to this point. Inspired from LeanDojo REPL. -/
+/--
+Evaluates the current status of a proof, returning a string description.
+Main states include:
+- "Completed": Proof is complete and type checks successfully
+- "Incomplete": When goals remain, or proof contains sorry/metavariables
+- "Error": When kernel type checking errors occur
+
+Inspired by LeanDojo REPL's status tracking.
+-/
 def getProofStatus (proofState : ProofSnapshot) : M m String := do
   match proofState.tacticState.goals with
     | [] =>
@@ -252,7 +260,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees (initialCmdState?.map (·.env)) none
   let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← rootGoals trees))
+  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees))
   | _ => pure sorries
   let tactics ← match s.allTactics with
   | some true => tactics trees

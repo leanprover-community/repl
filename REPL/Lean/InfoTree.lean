@@ -165,8 +165,8 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
     info ++ rest
   | _ => []
 
-/-- Analogue of `Lean.Elab.InfoTree.findAllInfo` but specialized to `TacticInfo` to return root goals. -/
-partial def findAllInfoTactics (t : InfoTree) (ctx? : Option ContextInfo) (rootGoals : List MVarId) :
+/-- Analogue of `findAllInfo` but specialized to tactics. It additionally returns root goals. -/
+partial def findAllInfoTactics (t : InfoTree) (ctx? : Option ContextInfo) (rootGoals : List MVarId := []) :
   List (Info × Option ContextInfo × List MVarId) :=
   match t with
   | .context ctx t => t.findAllInfoTactics (ctx.mergeIntoOuter? ctx?) rootGoals
@@ -185,11 +185,12 @@ partial def findAllInfoTactics (t : InfoTree) (ctx? : Option ContextInfo) (rootG
 /-- Return all `TacticInfo` nodes in an `InfoTree` with "original" syntax,
 each equipped with its relevant `ContextInfo`. -/
 def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo × List MVarId) :=
-  let infos := t.findAllInfoTactics none []
+  let infos := t.findAllInfoTactics none
   infos.filterMap fun p => match p with
   | (.ofTacticInfo i, some ctx, rootGoals) => (i, ctx, rootGoals)
   | _ => none
 
+/-- Returns the root goals for a given `InfoTree`. -/
 partial def findRootGoals (t : InfoTree) (ctx? : Option ContextInfo := none) :
   List (TacticInfo × ContextInfo × List MVarId) :=
   match t with

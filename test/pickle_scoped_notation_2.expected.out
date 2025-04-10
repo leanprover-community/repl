@@ -1,9 +1,0 @@
-{"env": 0}
-
-{"messages":
- [{"severity": "error",
-   "pos": {"line": 1, "column": 18},
-   "endPos": {"line": 1, "column": 21},
-   "data": "unexpected token ':='; expected term"}],
- "env": 1}
-
