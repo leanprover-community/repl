@@ -1,0 +1,8 @@
+{"cmd": "example (x y z : Nat) (h1 : x = y) (h2 : y = z) : x = z := by sorry"}
+
+{"tactic": "exact Eq.trans h1 h2", "proofState": 0}
+
+{"cmd": "example (f : Nat → Nat) (n : Nat) (h : n = 3) : f n = f 3 := by sorry"}
+
+{"tactic": "exact congrArg f h", "proofState": 2}
+

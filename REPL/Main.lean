@@ -102,11 +102,15 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
       fun ⟨ctx, g, pos, endPos⟩ => do
         let (goal, proofState) ← match g with
         | .tactic g => do
-           let s ← ProofSnapshot.create ctx none env? [g] rootGoals?
-           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+          let lctx ← ctx.runMetaM {} do
+              match ctx.mctx.findDecl? g with
+              | some decl => return decl.lctx
+              | none => throwError "unknown metavariable '{g}'"
+          let s ← ProofSnapshot.create ctx lctx env? [g] rootGoals?
+          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term lctx (some t) => do
-           let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
-           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+          let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
+          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
         return Sorry.of goal pos endPos proofStateId
@@ -134,6 +138,38 @@ def collectRootGoalsAsSorries (trees : List InfoTree) : M m (List Sorry) := do
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goals pos pos proofStateId
 
+
+private def collectFVarsAux : Expr → NameSet
+  | .fvar fvarId => NameSet.empty.insert fvarId.name
+  | .app fm arg => (collectFVarsAux fm).union $ collectFVarsAux arg
+  | .lam _ binderType body _ => (collectFVarsAux binderType).union $ collectFVarsAux body
+  | .forallE _ binderType body _ => (collectFVarsAux binderType).union $ collectFVarsAux body
+  | .letE _ type value body _ => ((collectFVarsAux type).union $ collectFVarsAux value).union $ collectFVarsAux body
+  | .mdata _ expr => collectFVarsAux expr
+  | .proj _ _ struct => collectFVarsAux struct
+  | _ => NameSet.empty
+
+/-- Collect all fvars in the expression, and return their names. -/
+private def collectFVars (e : Expr) : MetaM (Array Expr) := do
+  let names := collectFVarsAux e
+  let mut fvars := #[]
+  for ldecl in ← getLCtx do
+    if ldecl.isImplementationDetail then
+      continue
+    if names.contains ldecl.fvarId.name then
+      fvars := fvars.push $ .fvar ldecl.fvarId
+  return fvars
+
+
+private def abstractAllLambdaFVars (e : Expr) : MetaM Expr := do
+  let mut e' := e
+  while e'.hasFVar do
+    let fvars ← collectFVars e'
+    if fvars.isEmpty then
+      break
+    e' ← Meta.mkLambdaFVars fvars e'
+  return e'
+
 /--
 Evaluates the current status of a proof, returning a string description.
 Main states include:
@@ -153,20 +189,33 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
           | none => return "Error: Goal not assigned"
           | some pf => do
             let pf ← instantiateMVars pf
+
+            -- First check that the proof has the expected type
             let pft ← Meta.inferType pf >>= instantiateMVars
+            let expectedType ← Meta.inferType (mkMVar goalId) >>= instantiateMVars
+            unless (← Meta.isDefEq pft expectedType) do
+              return s!"Error: proof has type {pft} but root goal has type {expectedType}"
+
+            let pf ← goalId.withContext $ abstractAllLambdaFVars pf
+            let pft ← Meta.inferType pf >>= instantiateMVars
+
             if pf.hasSorry then
               return "Incomplete: contains sorry"
             if pf.hasExprMVar then
               return "Incomplete: contains metavariable(s)"
 
-            let decl := Declaration.defnDecl ({
+            -- Find all level parameters
+            let usedLevels := collectLevelParams {} pft
+            let usedLevels := collectLevelParams usedLevels pf
+
+            let decl := Declaration.defnDecl {
               name := Name.anonymous,
               type := pft,
               value := pf,
-              levelParams := (collectLevelParams {} pft).params.toList,
+              levelParams := usedLevels.params.toList,
               hints := ReducibilityHints.opaque,
               safety := DefinitionSafety.safe
-            })
+            }
 
             try
               let _ ← addDecl decl

@@ -1,0 +1,10 @@
+{"cmd": "theorem complex_and (p q r : Prop) (h1 : p ∧ q) (h2 : q → r) : p ∧ r := by sorry"}
+
+{"tactic": "apply And.intro", "proofState": 0}
+
+{"tactic": "exact h1.left", "proofState": 1}
+
+{"tactic": "apply h2", "proofState": 2}
+
+{"tactic": "exact h1.right", "proofState": 3}
+
