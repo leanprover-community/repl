@@ -1,6 +1,0 @@
-{"cmd": "theorem ex : False := by exact?"}
-
-{"cmd": "theorem ex : False := sorry"}
-
-{"proofState": 0, "tactic": "exact?"}
-
