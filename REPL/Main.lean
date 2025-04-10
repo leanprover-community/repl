@@ -199,8 +199,6 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
             let pf ← goalId.withContext $ abstractAllLambdaFVars pf
             let pft ← Meta.inferType pf >>= instantiateMVars
 
-            if pf.hasSorry then
-              return "Incomplete: contains sorry"
             if pf.hasExprMVar then
               return "Incomplete: contains metavariable(s)"
 
@@ -221,6 +219,9 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
               let _ ← addDecl decl
             catch ex =>
               return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+
+            if pf.hasSorry then
+              return "Incomplete: contains sorry"
             return "Completed"
 
         | _ => return "Not verified: more than one initial goal"
@@ -300,14 +301,14 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (cmdState, messages, trees) ← try
+  let (initialCmdState, cmdState, messages, trees) ← try
     IO.processInput s.cmd initialCmdState?
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdState?.map (·.env)) none
+  let sorries ← sorries trees initialCmdState.env none
   let sorries ← match s.rootGoals with
   | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees))
   | _ => pure sorries
