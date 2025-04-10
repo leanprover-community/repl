@@ -36,7 +36,7 @@ structure BatchVerifyOptions where
   buckets : Option Nat
 
 structure BatchVerify extends BatchVerifyOptions where
-  header : String
+  env : Option Nat
   proofs : Array String
 deriving ToJson, FromJson
 
@@ -138,6 +138,10 @@ structure CommandResponse where
   tactics : List Tactic := []
   infotree : Option Json := none
 deriving FromJson
+
+structure VerifyResponse where
+  messages : List Message := []
+deriving FromJson, ToJson
 
 def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
   | [] => []
