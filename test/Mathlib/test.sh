@@ -32,8 +32,8 @@ for infile in $IN_DIR/*.in; do
         rm "$tmpfile"
     else
         echo "$base: FAILED"
-        # Remove the temporary file
-        rm "$tmpfile"
+        # Rename the temporary file instead of removing it
+        mv "$tmpfile" "${expectedfile/.expected.out/.produced.out}"
         exit 1
     fi
 

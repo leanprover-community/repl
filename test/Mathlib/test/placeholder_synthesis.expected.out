@@ -1,0 +1,30 @@
+{"env": 0}
+
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 3, "column": 19},
+   "endPos": {"line": 3, "column": 20},
+   "data":
+   "don't know how to synthesize placeholder\ncontext:\nn : ℕ\nh : n ≠ 2\n⊢ n = 2"}],
+ "env": 1}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 19},
+   "goal": "⊢ 1 = 0",
+   "endPos": {"line": 1, "column": 24}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 2}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["case intro\nn : ℕ\nh : n ≠ 2\n⊢ 1 = 0"]}
+
+{"proofStatus": "Incomplete: contains metavariable(s)",
+ "proofState": 2,
+ "goals": []}
+

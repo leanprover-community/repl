@@ -1,0 +1,31 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "(kernel) declaration has metavariables '_example'"}],
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 19},
+   "goal": "⊢ 1 = 0",
+   "endPos": {"line": 1, "column": 24}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["case zero\n⊢ 0 = 0", "case succ\nn✝ : Nat\n⊢ n✝ + 1 = 0"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["case succ\nn✝ : Nat\n⊢ n✝ + 1 = 0"]}
+
+{"proofStatus": "Incomplete: contains metavariable(s)",
+ "proofState": 3,
+ "goals": []}
+

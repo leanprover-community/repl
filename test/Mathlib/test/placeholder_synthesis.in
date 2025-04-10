@@ -1,0 +1,9 @@
+{"cmd": "import Mathlib"}
+
+{"cmd": "example : 1 = 0 := by\n  cases' exists_ne 2 with n h\n  simpa [] using h _", "env": 0}
+
+{"cmd": "example : 1 = 0 := sorry", "env": 0}
+
+{"tactic": "cases' exists_ne 2 with n h", "proofState": 0}
+
+{"tactic": "simpa [] using h _", "proofState": 1}
