@@ -263,32 +263,22 @@ unsafe def getHeaderEnv (header : String) : IO Command.State := do
   let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
   pure s
 
-unsafe def batchVerifySequential (commandState : Command.State)  (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
+unsafe def batchVerifySequential (commandState : Command.State)  (proofs : Array String) : IO (Array (VerifyResponse ⊕ Error)) := do
   proofs.mapM (fun pf => do
     let inputCtx   := Parser.mkInputContext pf "<input>"
     let parserState := { : Parser.ModuleParserState }
     let (_, msgs, _) ← Lean.Elab.IO.processCommandsWithInfoTrees inputCtx parserState commandState
-    return .inl ({ env := 0,
-                    messages := ← msgs.mapM fun m => Message.of m,
-                    sorries := [],
-                    tactics := [],
-                    infotree := none })
+    return .inl ({ messages := ← msgs.mapM fun m => Message.of m })
   )
 
-unsafe def batchVerifyParrallelNaive (header : String) (proofs : Array String) : IO (Array (CommandResponse ⊕ Error)) := do
-  let commandState ← getHeaderEnv header
-  let tasks : Array (Task (Except IO.Error CommandResponse)) ← (proofs.mapM <| fun proof => IO.asTask <| do
+unsafe def batchVerifyParrallelNaive (commandState : Command.State) (proofs : Array String) : IO (Array (VerifyResponse ⊕ Error)) := do
+  let tasks : Array (Task (Except IO.Error VerifyResponse)) ← (proofs.mapM <| fun proof => IO.asTask <| do
     let inputCtx   := Parser.mkInputContext proof "<input>"
     let parserState := { : Parser.ModuleParserState }
     let (_, msgs, _) ← Lean.Elab.IO.processCommandsWithInfoTrees inputCtx parserState commandState
-    return ({ env := 0,
-              messages := ← msgs.mapM fun m => Message.of m,
-              sorries := [],
-              tactics := [],
-              infotree := none
-            })
+    return ({ messages := ← msgs.mapM fun m => Message.of m})
   )
-  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList
+  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList (prio := Task.Priority.max)
   match result with
   | .ok results =>
     return (results.map
@@ -299,17 +289,16 @@ unsafe def batchVerifyParrallelNaive (header : String) (proofs : Array String) :
       ).toArray
   | .error _ => return #[]
 
-unsafe def batchVerifyParrallel (header : String) (proofs : Array String) (buckets : Option Nat): IO (Array (CommandResponse ⊕ Error)) := do
+unsafe def batchVerifyParrallel (commandState : Command.State) (proofs : Array String) (buckets : Option Nat): IO (Array (VerifyResponse ⊕ Error)) := do
   let buckets :=
     match buckets with
     | some x => x
     | none => max 50 proofs.size
-  let commandState ← getHeaderEnv header
   let tasks ← (splitArray proofs buckets |>.mapM <| fun bucket => IO.asTask ( (batchVerifySequential commandState bucket)))
-  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList
+  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList (prio := Task.Priority.max)
   match result with
   | .ok results => {
-    let womp : List (Array (CommandResponse ⊕ Error)) ← results.mapM (
+    let womp : List (Array (VerifyResponse ⊕ Error)) ← results.mapM (
       fun x => do
         match x with
         | .ok bucket => pure bucket
@@ -328,17 +317,33 @@ def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   catch e =>
     pure <| .inr ⟨e.toString⟩
 
-unsafe def runBatchVerify (batch : BatchVerify) : IO (Array (CommandResponse ⊕ Error)) := do
+unsafe def runBatchVerify (batch : BatchVerify) : M IO (Array (VerifyResponse ⊕ Error) ⊕ Error) := do
+  let (cmdSnapshot?, notFound) ← do match batch.env with
+  | none => pure (none, false)
+  | some i => do match (← get).cmdStates[i]? with
+    | some env => pure (some env, false)
+    | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
+  let cmdState? := cmdSnapshot?.map fun c => c.cmdState
+  let commandState ← match cmdState? with
+  | none => do
+    let inputCtx   := Parser.mkInputContext "" "<input>"
+    let (header, _, messages) ← Parser.parseHeader inputCtx
+    let (env, messages) ← processHeader header {} messages inputCtx
+    pure (Command.mkState env messages {})
+  | some cmdState => do
+    pure cmdState
   match batch.mode with
   | some x =>
     if x = "naive" then do
-      return ← batchVerifyParrallelNaive batch.header batch.proofs
+      return .inl <| ← batchVerifyParrallelNaive commandState batch.proofs
     if x = "parrallel" then do
-      return ← batchVerifyParrallel batch.header batch.proofs batch.buckets
+      return .inl <| ← batchVerifyParrallel commandState batch.proofs batch.buckets
   | none =>
     pure ()
-  let commandState ← getHeaderEnv batch.header
-  batchVerifySequential commandState batch.proofs
+
+  return .inl <| ← batchVerifySequential commandState batch.proofs
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
@@ -462,7 +467,8 @@ unsafe def testSeqential: M IO Unit := do
 unsafe def testParrallel : IO Unit := do
   let query ← getLines
   let ⟨header, proofs⟩ ← parseBatch query
-  let q ← (batchVerifyParrallelNaive header proofs)
+  let commandState ← getHeaderEnv header
+  let q ← (batchVerifyParrallelNaive commandState proofs)
   for l in q do
     IO.println (toJson l)
 

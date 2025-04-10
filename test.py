@@ -9,13 +9,10 @@ ds = load_dataset("Goedel-LM/Lean-workbook-proofs")
 
 proofs = []
 
-for data in ds["train"].select(range(1000)):
+for data in ds["train"].select(range(2000)):
     proof = data["full_proof"].split(header)[1]
     proofs.append(proof)
     print(header, proof)
-
-# batchCmd = { "header": header, "proofs": proofs}
-# tmp = json.dumps(batchCmd)
 
 print("done loading")
 
@@ -30,21 +27,20 @@ process = subprocess.Popen(
     encoding="utf-8"
 )
 
-# # Write input directly to the process
-process.stdin.write(json.dumps({"header" : header, "proofs": proofs}) + "\n")
-process.stdin.flush()
-# process.stdin.write(json.dumps({ "cmd" : header}) + "\n\n")
-# process.stdin.flush()
-# for proof in proofs:
-#     process.stdin.write(json.dumps({ "cmd" : proof, "env" : 0}) + "\n\n")
-#     process.stdin.flush()  # Ensure it's sent immediately
+start = time.time()
 
-# Read output
+process.stdin.write(json.dumps({"cmd": header}) + "\n\n")
+
+# # Write input directly to the process
+process.stdin.write(json.dumps({"env": 0, "proofs": proofs, "mode": "parrallel", "buckets": 50}) + "\n\n")
+process.stdin.flush()
+
 stdout, stderr = process.communicate()
+
+end = time.time()
 
 # Print results
 print("STDOUT:", stdout)
 print("STDERR:", stderr)
 
-repl_time = time.time() - start_repl_time
-print(f"REPL execution completed in {repl_time:.2f} seconds.")
+print("time: ", end - start)
