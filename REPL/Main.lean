@@ -94,17 +94,18 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
-def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) :=
+def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Option (List MVarId))
+: M m (List Sorry) :=
   trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
     | .term _ none => false
     | _ => true ) |>.mapM
       fun ⟨ctx, g, pos, endPos⟩ => do
         let (goal, proofState) ← match g with
         | .tactic g => do
-           let s ← ProofSnapshot.create ctx none env? [g]
+           let s ← ProofSnapshot.create ctx none env? [g] rootGoals?
            pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term lctx (some t) => do
-           let s ← ProofSnapshot.create ctx lctx env? [] [t]
+           let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
            pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
@@ -118,12 +119,65 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
 
 def tactics (trees : List InfoTree) : M m (List Tactic) :=
   trees.flatMap InfoTree.tactics |>.mapM
-    fun ⟨ctx, stx, goals, pos, endPos, ns⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none none goals)
+    fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
+      let proofState := some (← ProofSnapshot.create ctx none none goals rootGoals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let tactic := Format.pretty (← ppTactic ctx stx)
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
+
+def collectRootGoalsAsSorries (trees : List InfoTree) : M m (List Sorry) := do
+  trees.flatMap InfoTree.rootGoals |>.mapM
+    fun ⟨ctx, goals, pos⟩ => do
+      let proofState := some (← ProofSnapshot.create ctx none none goals goals)
+      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let proofStateId ← proofState.mapM recordProofSnapshot
+      return Sorry.of goals pos pos proofStateId
+
+/--
+Evaluates the current status of a proof, returning a string description.
+Main states include:
+- "Completed": Proof is complete and type checks successfully
+- "Incomplete": When goals remain, or proof contains sorry/metavariables
+- "Error": When kernel type checking errors occur
+
+Inspired by LeanDojo REPL's status tracking.
+-/
+def getProofStatus (proofState : ProofSnapshot) : M m String := do
+  match proofState.tacticState.goals with
+    | [] =>
+      let res := proofState.runMetaM do
+        match proofState.rootGoals with
+        | [goalId] =>
+          match proofState.metaState.mctx.getExprAssignmentCore? goalId with
+          | none => return "Error: Goal not assigned"
+          | some pf => do
+            let pf ← instantiateMVars pf
+            let pft ← Meta.inferType pf >>= instantiateMVars
+            if pf.hasSorry then
+              return "Incomplete: contains sorry"
+            if pf.hasExprMVar then
+              return "Incomplete: contains metavariable(s)"
+
+            let decl := Declaration.defnDecl ({
+              name := Name.anonymous,
+              type := pft,
+              value := pf,
+              levelParams := (collectLevelParams {} pft).params.toList,
+              hints := ReducibilityHints.opaque,
+              safety := DefinitionSafety.safe
+            })
+
+            try
+              let _ ← addDecl decl
+            catch ex =>
+              return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+            return "Completed"
+
+        | _ => return "Not verified: more than one initial goal"
+      return (← res).fst
+
+    | _ => return "Incomplete: open goals remain"
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
@@ -140,14 +194,15 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   | none => pure trees
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees none
+  let sorries ← sorries trees none (some proofState.rootGoals)
   let id ← recordProofSnapshot proofState
   return {
     proofState := id
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
     messages
     sorries
-    traces }
+    traces
+    proofStatus := (← getProofStatus proofState) }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
@@ -203,7 +258,10 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdState?.map (·.env))
+  let sorries ← sorries trees (initialCmdState?.map (·.env)) none
+  let sorries ← match s.rootGoals with
+  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees))
+  | _ => pure sorries
   let tactics ← match s.allTactics with
   | some true => tactics trees
   | _ => pure []

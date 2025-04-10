@@ -165,15 +165,44 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
     info ++ rest
   | _ => []
 
+/-- Analogue of `findAllInfo` but specialized to tactics. It additionally returns root goals. -/
+partial def findAllInfoTactics (t : InfoTree) (ctx? : Option ContextInfo) (rootGoals : List MVarId := []) :
+  List (Info × Option ContextInfo × List MVarId) :=
+  match t with
+  | .context ctx t => t.findAllInfoTactics (ctx.mergeIntoOuter? ctx?) rootGoals
+  | .node info ts =>
+    let tInfo := match info with
+    | .ofTacticInfo i =>
+      if info.isOriginal && i.isSubstantive then
+        let rootGoals := if rootGoals.isEmpty then i.goalsBefore else rootGoals
+        [(info, ctx?, rootGoals)]
+      else
+        []
+    | _ => []
+    tInfo ++ ts.toList.flatMap (fun t => t.findAllInfoTactics ctx? rootGoals)
+  | _ => []
+
 /-- Return all `TacticInfo` nodes in an `InfoTree` with "original" syntax,
 each equipped with its relevant `ContextInfo`. -/
-def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo) :=
-  let infos := t.findAllInfo none fun i => match i with
-  | .ofTacticInfo i' => i.isOriginal && i'.isSubstantive
-  | _ => false
+def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo × List MVarId) :=
+  let infos := t.findAllInfoTactics none
   infos.filterMap fun p => match p with
-  | (.ofTacticInfo i, some ctx) => (i, ctx)
+  | (.ofTacticInfo i, some ctx, rootGoals) => (i, ctx, rootGoals)
   | _ => none
+
+/-- Returns the root goals for a given `InfoTree`. -/
+partial def findRootGoals (t : InfoTree) (ctx? : Option ContextInfo := none) :
+  List (TacticInfo × ContextInfo × List MVarId) :=
+  match t with
+  | .context ctx t => t.findRootGoals (ctx.mergeIntoOuter? ctx?)
+  | .node info ts =>
+    match info with
+    | .ofTacticInfo i =>
+      match ctx? with
+      | some ctx => [(i, ctx, i.goalsBefore)]
+      | _ => []
+    | _ => ts.toList.flatMap (fun t => t.findRootGoals ctx?)
+  | _ => []
 
 /-- Return all `TacticInfo` nodes in an `InfoTree`
 corresponding to explicit invocations of the `sorry` tactic,
@@ -217,17 +246,24 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
     (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
 
-def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × Position × Position × Array Name) :=
+def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × List MVarId × Position × Position × Array Name) :=
     -- HACK: creating a child ngen
-  t.findTacticNodes.map fun ⟨i, ctx⟩ =>
+  t.findTacticNodes.map fun ⟨i, ctx, rootGoals⟩ =>
     let range := stxRange ctx.fileMap i.stx
     ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 },
       i.stx,
+      rootGoals,
       i.goalsBefore,
       range.fst,
       range.snd,
       i.getUsedConstantsAsSet.toArray )
 
+def rootGoals (t : InfoTree) : List (ContextInfo × List MVarId × Position) :=
+  t.findRootGoals.map fun ⟨i, ctx, rootGoals⟩ =>
+    let range := stxRange ctx.fileMap i.stx
+    ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 },
+      rootGoals,
+      range.fst )
 
 end Lean.Elab.InfoTree
 
@@ -282,7 +318,7 @@ namespace Lean.Elab.InfoTree
 Finds all tactic invocations in an `InfoTree`,
 ignoring structuring tactics (e.g. `by`, `;`, multiline tactics, parenthesized tactics).
 -/
-def substantiveTactics (t : InfoTree) : List (TacticInfo × ContextInfo) :=
+def substantiveTactics (t : InfoTree) : List (TacticInfo × ContextInfo × List MVarId) :=
   t.findTacticNodes.filter fun i => i.1.isSubstantive
 
 end Lean.Elab.InfoTree

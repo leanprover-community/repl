@@ -10,7 +10,9 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"proofState": 1, "goals": ["x : Unit\n⊢ Int"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["x : Unit\n⊢ Int"]}
 
-{"proofState": 2, "goals": []}
+{"proofStatus": "Completed", "proofState": 2, "goals": []}
 

@@ -12,15 +12,25 @@
    "data": "declaration uses 'sorry'"}],
  "env": 1}
 
-{"proofState": 1, "goals": ["⊢ Nat"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["⊢ Nat"]}
 
-{"proofState": 2, "goals": ["⊢ Nat"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["⊢ Nat"]}
 
-{"proofState": 3, "goals": ["t : Nat\n⊢ Nat"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 3,
+ "goals": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 4, "goals": ["t : Nat\n⊢ Nat"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 4,
+ "goals": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 5, "goals": ["t : Nat\n⊢ Nat"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 5,
+ "goals": ["t : Nat\n⊢ Nat"]}
 
-{"proofState": 6, "goals": []}
+{"proofStatus": "Completed", "proofState": 6, "goals": []}
 

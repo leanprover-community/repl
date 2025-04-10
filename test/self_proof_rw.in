@@ -1,0 +1,5 @@
+{"cmd": "theorem self_application : 1 = 0 := by rw [self_application]"}
+
+{"cmd": "theorem self_application : 1 = 0 := by sorry"}
+
+{"proofState": 0, "tactic": "rw [self_application]"}
