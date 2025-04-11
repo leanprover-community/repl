@@ -24,7 +24,7 @@ deriving ToJson
 
 structure Syntax.Json where
   pp : Option String
-  -- raw : String
+  raw : String
   range : Range
 deriving ToJson
 
@@ -42,7 +42,7 @@ def _root_.Lean.Syntax.toJson (stx : Syntax) (ctx : ContextInfo) (lctx : LocalCo
     pp := match (← ctx.ppSyntax lctx stx).pretty with
       | "failed to pretty print term (use 'set_option pp.rawOnError true' for raw representation)" => none
       | pp => some pp
-    -- raw := toString stx
+    raw := toString stx
     range := stx.toRange ctx }
 
 structure TacticInfo.Json where
@@ -58,7 +58,7 @@ def TacticInfo.toJson (i : TacticInfo) (ctx : ContextInfo) : IO TacticInfo.Json 
     name := i.name?
     stx :=
     { pp := Format.pretty (← i.pp ctx),
-      -- raw := toString i.info.stx,
+      raw := toString i.stx,
       range := i.stx.toRange ctx },
     goalsBefore := (← i.goalState ctx).map Format.pretty,
     goalsAfter := (← i.goalStateAfter ctx).map Format.pretty }

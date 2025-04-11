@@ -11,6 +11,7 @@ import REPL.Lean.Environment
 import REPL.Lean.InfoTree
 import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
+import REPL.PaperProof.BetterParser
 
 /-!
 # A REPL for Lean.
@@ -113,7 +114,16 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
-        return Sorry.of goal pos endPos proofStateId
+        let goalInfo : Option GoalInfo ← match proofState with
+        | some proofState => do
+           match proofState.tacticState.goals[0]? with
+           | some goalId => do
+             -- TODO: this does not work when it's just `sorry` instead of `by sorry` - allow printGoalInfo to return none
+             let info ← printGoalInfo ctx goalId
+             pure (some info)
+           | none => pure none
+        | none => pure none
+        return Sorry.of goal goalInfo pos endPos proofStateId
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
@@ -130,13 +140,20 @@ def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tact
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
+def proofTrees (infoTrees : List InfoTree) : M m (List (List ProofStepInfo)) := do
+  infoTrees.mapM fun infoTree => do
+    let proofTree ← PaperProof.BetterParser infoTree
+    match proofTree with
+    | .some proofTree => return proofTree.steps
+    | .none => return []
+
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let proofStateId ← proofState.mapM recordProofSnapshot
-      return Sorry.of goals pos pos proofStateId
+      return Sorry.of goals none pos pos proofStateId
 
 
 private def collectFVarsAux : Expr → NameSet
@@ -245,13 +262,20 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none (some proofState.rootGoals)
-  let id ← recordProofSnapshot proofState
+  let proofStateId ← recordProofSnapshot proofState
+  let (ctx, _) ← proofState.runMetaM do return { ← CommandContextInfo.save with }
+  let goalInfos ← proofState.tacticState.goals.mapM (fun mvarId => do
+    let goalInfo ← printGoalInfo ctx mvarId
+    return goalInfo)
+  let mctxAfterJson ← MetavarContext.toJson proofState.metaState.mctx ctx
   return {
-    proofState := id
+    proofState := proofStateId
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
     messages
     sorries
     traces
+    goalInfos
+    mctxAfter := mctxAfterJson
     proofStatus := (← getProofStatus proofState) }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
@@ -289,6 +313,12 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+partial def removeChildren (t : InfoTree) : InfoTree :=
+  match t with
+  | InfoTree.context ctx t' => InfoTree.context ctx (removeChildren t')
+  | InfoTree.node i _ => InfoTree.node i PersistentArray.empty
+  | InfoTree.hole _ => t
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -315,6 +345,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tactics trees initialCmdState.env
   | _ => pure []
+  let proofTreeEdges ← match s.proofTrees with
+  | some true => some <$> proofTrees trees
+  | _ => pure none
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
@@ -328,6 +361,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
   | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
   | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
+  | some "no_children" => trees.map removeChildren
   | _ => []
   let infotree ← if jsonTrees.isEmpty then
     pure none
@@ -337,8 +371,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
-      infotree }
+      tactics,
+      infotree,
+      proofTreeEdges }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
