@@ -1,0 +1,7 @@
+{"cmd": "def f := 37"}
+
+{"cmd": "#eval true", "gc": true}
+
+{"cmd": "#eval false", "env":1}
+
+{"cmd": "#eval f", "env":0}
