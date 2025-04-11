@@ -23,6 +23,8 @@ structure CommandOptions where
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).
 If `env = some n`, builds on the existing environment `n`.
+Setting `gc = true` will discard the environment after execution, useful for memory management.
+When `gc = true`, the response's `env` field will be `none`.
 -/
 structure Command extends CommandOptions where
   env : Option Nat

@@ -20,6 +20,19 @@ Commands may be of the form
 { "cmd" : "example : f = 2 := rfl", "env" : 1 }
 ```
 
+```json
+{ "cmd" : "example : f = 2 := rfl", "env" : 1, "gc": true }
+```
+
+The input includes:
+* A required `cmd` field containing the Lean command to execute
+* An optional `env` field specifying a previous environment ID to build upon
+* An optional `gc` field (default: false) to discard the environment after execution
+* Optional fields for additional information:
+  * `allTactics`: when true, includes all tactic steps in the response
+  * `rootGoals`: when true, includes root goals as sorries
+  * `infotree`: specifies the level of info tree detail ("full", "tactics", "original", or "substantive")
+
 The `env` field, if present,
 must contain a number received in the `env` field of a previous response,
 and causes the command to be run in the existing environment.
@@ -33,6 +46,7 @@ You can backtrack simply by using earlier values for `env`.
 The response includes:
 * A numeric label for the `Environment` after your command,
   which you can use as the starting point for subsequent commands.
+  This will be `none` if `gc` was enabled.
 * Any messages generated while processing your command.
 * A list of the `sorry`s in your command, including
   * their expected type, and
