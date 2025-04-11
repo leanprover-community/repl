@@ -1,0 +1,44 @@
+# single cmd vs batch command with 7 items (in naive mode)
+
+done loading
+loadded header
+[0] Time Cmd: 12.56s, Memory: 5.84 MB
+[0] Time Batch: 11.94s, Memory: 5.84 MB
+[1] Time Cmd: 12.21s, Memory: 5.84 MB
+[1] Time Batch: 12.36s, Memory: 5.84 MB
+[2] Time Cmd: 12.31s, Memory: 5.84 MB
+[2] Time Batch: 12.16s, Memory: 5.84 MB
+[3] Time Cmd: 16.09s, Memory: 5.84 MB
+[3] Time Batch: 20.35s, Memory: 4.17 MB
+[4] Time Cmd: 19.22s, Memory: 2.19 MB
+[4] Time Batch: 22.80s, Memory: 0.45 MB
+[5] Time Cmd: 19.09s, Memory: 0.45 MB
+[5] Time Batch: 19.34s, Memory: 0.41 MB
+[6] Time Cmd: 11.88s, Memory: 0.41 MB
+[6] Time Batch: 11.79s, Memory: 0.41 MB
+[7] Time Cmd: 15.72s, Memory: 0.41 MB
+[7] Time Batch: 13.86s, Memory: 0.31 MB
+[8] Time Cmd: 11.00s, Memory: 0.25 MB
+[8] Time Batch: 11.92s, Memory: 1.43 MB
+[9] Time Cmd: 11.34s, Memory: 1.43 MB
+[9] Time Batch: 11.30s, Memory: 1.43 MB
+[10] Time Cmd: 11.10s, Memory: 1.43 MB
+[10] Time Batch: 11.33s, Memory: 1.43 MB
+[11] Time Cmd: 10.84s, Memory: 1.43 MB
+[11] Time Batch: 12.03s, Memory: 1.43 MB
+[12] Time Cmd: 16.42s, Memory: 1.42 MB
+[12] Time Batch: 11.26s, Memory: 1.48 MB
+[13] Time Cmd: 10.94s, Memory: 1.48 MB
+[13] Time Batch: 13.73s, Memory: 1.47 MB
+[14] Time Cmd: 19.77s, Memory: 1.47 MB
+[14] Time Batch: 16.88s, Memory: 1.47 MB
+[15] Time Cmd: 12.80s, Memory: 1.47 MB
+[15] Time Batch: 13.76s, Memory: 1.47 MB
+[16] Time Cmd: 11.82s, Memory: 1.47 MB
+[16] Time Batch: 16.25s, Memory: 1.45 MB
+[17] Time Cmd: 15.12s, Memory: 1.45 MB
+[17] Time Batch: 20.97s, Memory: 1.45 MB
+[18] Time Cmd: 18.38s, Memory: 1.45 MB
+[18] Time Batch: 20.46s, Memory: 1.45 MB
+[19] Time Cmd: 18.88s, Memory: 1.51 MB
+[19] Time Batch: 19.58s, Memory: 1.51 MB

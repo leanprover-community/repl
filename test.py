@@ -2,6 +2,7 @@ from datasets import load_dataset
 import json
 import subprocess
 import time
+import psutil
 
 header = "import Mathlib\nimport Aesop\n\nset_option maxHeartbeats 0\n\nopen BigOperators Real Nat Topology Rat\n\n"
 # Login using e.g. `huggingface-cli login` to access this dataset
@@ -9,10 +10,10 @@ ds = load_dataset("Goedel-LM/Lean-workbook-proofs")
 
 proofs = []
 
-for data in ds["train"].select(range(2000)):
+for data in ds["train"].select(range(7)):
     proof = data["full_proof"].split(header)[1]
     proofs.append(proof)
-    print(header, proof)
+    # print(header, proof)
 
 print("done loading")
 
@@ -27,20 +28,67 @@ process = subprocess.Popen(
     encoding="utf-8"
 )
 
-start = time.time()
+p = psutil.Process(process.pid)
 
 process.stdin.write(json.dumps({"cmd": header}) + "\n\n")
-
-# # Write input directly to the process
-process.stdin.write(json.dumps({"env": 0, "proofs": proofs, "mode": "parrallel", "buckets": 50}) + "\n\n")
 process.stdin.flush()
+while True:
+    line = process.stdout.readline().strip()
+    if not line:
+        break
 
-stdout, stderr = process.communicate()
+print("loadded header")
 
-end = time.time()
+for i in range(20):
+    start = time.time()
 
-# Print results
-print("STDOUT:", stdout)
-print("STDERR:", stderr)
+    # # Write input directly to the process
+    process.stdin.write(json.dumps({"env": 0, "cmd": proofs[0]}) + "\n\n")
+    process.stdin.flush()
 
-print("time: ", end - start)
+    output_lines = []
+    while True:
+        line = process.stdout.readline().strip()
+        if not line:
+            break
+        output_lines.append(line)
+
+    stdout = "\n".join(output_lines)
+    # print(stdout)
+
+    end = time.time()
+
+    # Monitor memory in MB
+    mem_info = p.memory_info()
+    memory_mb = mem_info.rss / (1024 ** 2)
+
+    print(f"[{i}] Time Cmd: {end - start:.2f}s, Memory: {memory_mb:.2f} MB")
+
+    # ----------------------------------
+
+    start = time.time()
+
+    # # Write input directly to the process
+    process.stdin.write(json.dumps({"env": 0, "proofs": proofs, "mode": "naive"}) + "\n\n")
+    process.stdin.flush()
+
+    output_lines = []
+    while True:
+        line = process.stdout.readline().strip()
+        if not line:
+            break
+        output_lines.append(line)
+
+    stdout = "\n".join(output_lines)
+    # print(stdout)
+
+    end = time.time()
+
+    # Monitor memory in MB
+    mem_info = p.memory_info()
+    memory_mb = mem_info.rss / (1024 ** 2)
+
+    print(f"[{i}] Time Batch: {end - start:.2f}s, Memory: {memory_mb:.2f} MB")
+
+process.stdin.close()
+process.wait()

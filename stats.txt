@@ -5,3 +5,20 @@
 
 batch verify repl only, without env sharing: 78.0058819 seconds
 batch verify repl only, with env sharing: 2.0209996 seconds
+
+
+# first 20 from lean Goedel LM
+
+batch verify sequenctial: 472 seconds
+batch verify with 2 parrallel tasks: 444.80 seconds
+
+# first 1000 from lean Goedel LM
+
+batch verify sequenctial: 8930.02 seconds
+batch verify parrallel naive (1 proof per task): 1618.84 seconds
+batch verify with 2 parrallel tasks: 
+batch verify with 5 parrallel tasks:
+batch verify with 25 parrallel tasks: 1273.84 
+batch verify with 50 parrallel tasks: 1253.51 
+batch verify with 100 parrallel tasks: 1554.14
+batch verify with 200 parrallel tasks: 1613.46
