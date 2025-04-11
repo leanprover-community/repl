@@ -171,6 +171,8 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
           | some pf => do
             let pf ← instantiateMVars pf
             let pft ← Meta.inferType pf >>= instantiateMVars
+            if pf.hasSorry then
+              return "Incomplete: contains sorry"
             if pf.hasExprMVar then
               return "Incomplete: contains metavariable(s)"
 
@@ -187,10 +189,6 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
               let _ ← addDecl decl
             catch ex =>
               return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
-
-            if pf.hasSorry then
-              return "Incomplete: contains sorry"
-
             return "Completed"
 
         | _ => return "Not verified: more than one initial goal"
