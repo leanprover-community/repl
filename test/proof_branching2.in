@@ -1,0 +1,14 @@
+{"cmd": "example (p q : Prop) : p ∧ q → q ∧ p := by sorry"}
+
+{"tactic": "intro h", "proofState": 0}
+
+{"tactic": "have hp : p := h.left", "proofState": 1}
+
+{"tactic": "have hq : q := h.right", "proofState": 2}
+
+{"tactic": "apply And.intro", "proofState": 3}
+
+{"tactic": "exact hq", "proofState": 4}
+
+{"tactic": "exact hp", "proofState": 5}
+

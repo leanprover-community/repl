@@ -43,7 +43,7 @@
  "proofState": 7,
  "goals": []}
 
-{"proofStatus": "Incomplete: contains sorry",
+{"proofStatus": "Incomplete: contains metavariable(s)",
  "proofState": 8,
  "messages":
  [{"severity": "error",
@@ -52,7 +52,7 @@
    "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
  "goals": []}
 
-{"proofStatus": "Incomplete: contains sorry",
+{"proofStatus": "Incomplete: contains metavariable(s)",
  "proofState": 9,
  "messages":
  [{"severity": "error",
