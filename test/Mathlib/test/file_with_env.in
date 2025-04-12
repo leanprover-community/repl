@@ -1,0 +1,3 @@
+{"cmd": "import Mathlib\nopen Real"}
+
+{"path": "test/file_with_env.lean", "env": 0}
