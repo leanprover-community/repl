@@ -102,11 +102,15 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
       fun ⟨ctx, g, pos, endPos⟩ => do
         let (goal, proofState) ← match g with
         | .tactic g => do
-           let s ← ProofSnapshot.create ctx none env? [g] rootGoals?
-           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+          let lctx ← ctx.runMetaM {} do
+              match ctx.mctx.findDecl? g with
+              | some decl => return decl.lctx
+              | none => throwError "unknown metavariable '{g}'"
+          let s ← ProofSnapshot.create ctx lctx env? [g] rootGoals?
+          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term lctx (some t) => do
-           let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
-           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+          let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
+          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
         return Sorry.of goal pos endPos proofStateId
@@ -117,22 +121,54 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   catch _ =>
     pure "<failed to pretty print>"
 
-def tactics (trees : List InfoTree) : M m (List Tactic) :=
+def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tactic) :=
   trees.flatMap InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none none goals rootGoals)
+      let proofState := some (← ProofSnapshot.create ctx none env? goals rootGoals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let tactic := Format.pretty (← ppTactic ctx stx)
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
-def collectRootGoalsAsSorries (trees : List InfoTree) : M m (List Sorry) := do
+def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none none goals goals)
+      let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goals pos pos proofStateId
+
+
+private def collectFVarsAux : Expr → NameSet
+  | .fvar fvarId => NameSet.empty.insert fvarId.name
+  | .app fm arg => (collectFVarsAux fm).union $ collectFVarsAux arg
+  | .lam _ binderType body _ => (collectFVarsAux binderType).union $ collectFVarsAux body
+  | .forallE _ binderType body _ => (collectFVarsAux binderType).union $ collectFVarsAux body
+  | .letE _ type value body _ => ((collectFVarsAux type).union $ collectFVarsAux value).union $ collectFVarsAux body
+  | .mdata _ expr => collectFVarsAux expr
+  | .proj _ _ struct => collectFVarsAux struct
+  | _ => NameSet.empty
+
+/-- Collect all fvars in the expression, and return their names. -/
+private def collectFVars (e : Expr) : MetaM (Array Expr) := do
+  let names := collectFVarsAux e
+  let mut fvars := #[]
+  for ldecl in ← getLCtx do
+    if ldecl.isImplementationDetail then
+      continue
+    if names.contains ldecl.fvarId.name then
+      fvars := fvars.push $ .fvar ldecl.fvarId
+  return fvars
+
+
+private def abstractAllLambdaFVars (e : Expr) : MetaM Expr := do
+  let mut e' := e
+  while e'.hasFVar do
+    let fvars ← collectFVars e'
+    if fvars.isEmpty then
+      break
+    e' ← Meta.mkLambdaFVars fvars e'
+  return e'
 
 /--
 Evaluates the current status of a proof, returning a string description.
@@ -153,25 +189,39 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
           | none => return "Error: Goal not assigned"
           | some pf => do
             let pf ← instantiateMVars pf
+
+            -- First check that the proof has the expected type
             let pft ← Meta.inferType pf >>= instantiateMVars
-            if pf.hasSorry then
-              return "Incomplete: contains sorry"
+            let expectedType ← Meta.inferType (mkMVar goalId) >>= instantiateMVars
+            unless (← Meta.isDefEq pft expectedType) do
+              return s!"Error: proof has type {pft} but root goal has type {expectedType}"
+
+            let pf ← goalId.withContext $ abstractAllLambdaFVars pf
+            let pft ← Meta.inferType pf >>= instantiateMVars
+
             if pf.hasExprMVar then
               return "Incomplete: contains metavariable(s)"
 
-            let decl := Declaration.defnDecl ({
+            -- Find all level parameters
+            let usedLevels := collectLevelParams {} pft
+            let usedLevels := collectLevelParams usedLevels pf
+
+            let decl := Declaration.defnDecl {
               name := Name.anonymous,
               type := pft,
               value := pf,
-              levelParams := (collectLevelParams {} pft).params.toList,
+              levelParams := usedLevels.params.toList,
               hints := ReducibilityHints.opaque,
               safety := DefinitionSafety.safe
-            })
+            }
 
             try
               let _ ← addDecl decl
             catch ex =>
               return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+
+            if pf.hasSorry then
+              return "Incomplete: contains sorry"
             return "Completed"
 
         | _ => return "Not verified: more than one initial goal"
@@ -251,19 +301,19 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (cmdState, messages, trees) ← try
+  let (initialCmdState, cmdState, messages, trees) ← try
     IO.processInput s.cmd initialCmdState?
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdState?.map (·.env)) none
+  let sorries ← sorries trees initialCmdState.env none
   let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees))
+  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees initialCmdState.env))
   | _ => pure sorries
   let tactics ← match s.allTactics with
-  | some true => tactics trees
+  | some true => tactics trees initialCmdState.env
   | _ => pure []
   let cmdSnapshot :=
   { cmdState

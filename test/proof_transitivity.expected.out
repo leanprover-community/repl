@@ -1,0 +1,28 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 62},
+   "goal": "x y z : Nat\nh1 : x = y\nh2 : y = z\n⊢ x = z",
+   "endPos": {"line": 1, "column": 67}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"proofStatus": "Completed", "proofState": 1, "goals": []}
+
+{"sorries":
+ [{"proofState": 2,
+   "pos": {"line": 1, "column": 64},
+   "goal": "f : Nat → Nat\nn : Nat\nh : n = 3\n⊢ f n = f 3",
+   "endPos": {"line": 1, "column": 69}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofStatus": "Completed", "proofState": 3, "goals": []}
+
