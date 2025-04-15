@@ -57,6 +57,26 @@ Example output:
 
 showing any messages generated, and sorries with their goal states.
 
+## Batch Command mode
+
+Multiple commands can be run in a single batch using
+
+```json
+{ "cmds": ["theorem womp : 2 + 2 = 4 := by rfl", "theorem womp1 : 2 + 4 = 6 := by rfl"]}
+```
+
+All the same options from Command can be used and will be applied to each command in the `cmds` array. Additionally, you can specify the parrallelism mode using `mode`
+
+```json
+{ "cmds": ["theorem womp : 2 + 2 = 4 := by rfl", "theorem womp1 : 2 + 4 = 6 := by rfl"], "mode": "sequential"}
+{ "cmds": ["theorem womp : 2 + 2 = 4 := by rfl", "theorem womp1 : 2 + 4 = 6 := by rfl"], "mode": "naive"}
+{ "cmds": ["theorem womp : 2 + 2 = 4 := by rfl", "theorem womp1 : 2 + 4 = 6 := by rfl"], "mode": "parrallel", "buckets": 10}
+```
+`sequential` runs all of the commands sequentially. `naive` runs each command as its own multithreading task. `parrallel` splits the commands into `buckets` number of buckets and runs each bucket as a multithreading task.
+By default the parrallelism mode will be `sequential`
+
+Note that for parrallelism, both Command and Proof snapshots will not be saved.
+
 ## File mode
 
 There is a simple wrapper around command mode that allows reading in an entire file.
