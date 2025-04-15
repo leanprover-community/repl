@@ -1,0 +1,9 @@
+{"cmd": "example  : 2=2 := by"}
+
+{"cmd": "example  : 2=2 := by\nrfl"}
+
+{"cmd": "theorem gc_demo (P Q R : Prop) : (P → Q) → (Q → R) → (P → R) := by", "discard": true}
+
+{"cmd": "theorem gc_demo (P Q R : Prop) : (P → Q) → (Q → R) → (P → R) := by\nintro h1 h2 p", "discard": true}
+
+{"cmd": "theorem gc_demo (P Q R : Prop) : (P → Q) → (Q → R) → (P → R) := by\nintro h1 h2 p\napply?", "discard": true}

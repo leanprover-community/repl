@@ -1,0 +1,30 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 93},
+   "goal": "⊢ (2000 + 2001 + 2002 + 2003 + 2004 + 2005 + 2006) % 7 = 0",
+   "endPos": {"line": 1, "column": 98}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 30},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofStatus": "Completed", "proofState": 1, "goals": []}
+
+{"sorries":
+ [{"proofState": 2,
+   "pos": {"line": 1, "column": 93},
+   "goal": "⊢ (2000 + 2001 + 2002 + 2003 + 2004 + 2005 + 2006) % 7 = 0",
+   "endPos": {"line": 1, "column": 98}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 30},
+   "data": "declaration uses 'sorry'"}],
+ "env": 2}
+
+{"proofStatus": "Completed", "proofState": 3, "goals": []}
+

@@ -322,7 +322,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
         fileMap := default,
         snap? := none,
         cancelTk? := none } }
-  let env ← match s.gc with
+  let env ← match s.discard with
   | some true => pure none
   | _ => do
     let id ← recordCommandSnapshot cmdSnapshot
