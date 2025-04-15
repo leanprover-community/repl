@@ -230,8 +230,8 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
     | _ => return "Incomplete: open goals remain"
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
-def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
-    M m ProofStepResponse := do
+def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none)
+  (record : Option Bool := true) : M m ProofStepResponse := do
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
@@ -245,7 +245,9 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none (some proofState.rootGoals)
-  let id ← recordProofSnapshot proofState
+  let id ← match record with
+  | some false => pure none
+  | _ => some <$> recordProofSnapshot proofState
   return {
     proofState := id
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
@@ -362,7 +364,7 @@ def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
   | some proofState =>
     try
       let proofState' ← proofState.runString s.tactic
-      return .inl (← createProofStepReponse proofState' proofState)
+      return .inl (← createProofStepReponse proofState' proofState s.record)
     catch ex =>
       return .inr ⟨"Lean error:\n" ++ ex.toString⟩
 

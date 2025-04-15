@@ -43,6 +43,7 @@ Run a tactic in a proof state.
 structure ProofStep where
   proofState : Nat
   tactic : String
+  record: Option Bool := true
 deriving ToJson, FromJson
 
 /-- Line and column information for error messages and sorries. -/
@@ -153,7 +154,7 @@ A response to a Lean tactic.
 `proofState` can be used in later calls, to run further tactics.
 -/
 structure ProofStepResponse where
-  proofState : Nat
+  proofState : Option Nat
   goals : List String
   messages : List Message := []
   sorries : List Sorry := []
@@ -163,7 +164,7 @@ deriving ToJson, FromJson
 
 instance : ToJson ProofStepResponse where
   toJson r := Json.mkObj <| .flatten [
-    [("proofState", r.proofState)],
+    Json.optField "proofState" r.proofState,
     [("goals", toJson r.goals)],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
