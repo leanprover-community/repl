@@ -322,11 +322,12 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
         fileMap := default,
         snap? := none,
         cancelTk? := none } }
-  let env ← match s.discard with
-  | some true => pure none
-  | _ => do
+  let env ← match s.record with
+  | some false => do pure none
+  | _ =>
     let id ← recordCommandSnapshot cmdSnapshot
     pure (some id)
+
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo

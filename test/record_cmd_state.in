@@ -1,6 +1,6 @@
-{"cmd": "example : 1=1 := by sorry", "discard": true}
+{"cmd": "example : 1=1 := by sorry", "record": false}
 
-{"cmd": "example : 1=1 := by sorry", "discard": false}
+{"cmd": "example : 1=1 := by sorry", "record": true}
 
 {"cmd": "example : 1=1 := by sorry"}
 

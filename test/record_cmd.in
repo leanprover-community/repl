@@ -1,6 +1,6 @@
 {"cmd": "def f := 37"}
 
-{"cmd": "#eval true", "discard": true}
+{"cmd": "#eval true", "record": false}
 
 {"cmd": "#eval false", "env":1}
 

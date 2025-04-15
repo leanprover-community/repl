@@ -9,8 +9,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 30},
-   "data": "declaration uses 'sorry'"}],
- "env": 1}
+   "data": "declaration uses 'sorry'"}]}
 
 {"proofStatus": "Completed", "proofState": 1, "goals": []}
 
@@ -24,7 +23,7 @@
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 30},
    "data": "declaration uses 'sorry'"}],
- "env": 2}
+ "env": 1}
 
 {"proofStatus": "Completed", "proofState": 3, "goals": []}
 

@@ -23,13 +23,13 @@ structure CommandOptions where
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).
 If `env = some n`, builds on the existing environment `n`.
-Setting `discard = true` will discard the environment after execution, useful for memory management.
-When `discard = true`, the response's `env` field will be `none`.
+Setting `record = false` will discard the environment after execution, useful for memory management.
+When `record = false`, the response's `env` field will be `none`.
 -/
 structure Command extends CommandOptions where
   env : Option Nat
   cmd : String
-  discard : Option Bool := false
+  record : Option Bool := true
 deriving ToJson, FromJson
 
 /-- Process a Lean file in a fresh environment. -/
