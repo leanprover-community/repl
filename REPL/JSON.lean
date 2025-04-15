@@ -26,18 +26,20 @@ If `env = some n`, builds on the existing environment `n`.
 structure Command extends CommandOptions where
   env : Option Nat
   cmd : String
+  gc : Option Bool := false
 deriving ToJson, FromJson
 
-structure BatchVerifyOptions where
+structure BatchCommandOptions extends CommandOptions where
   /-
-    "sequential", "naive", "parrallel"
+    mode = "sequential", "naive", "parrallel"
+    buckets is unused if mode is "sequential" or "naive"
   -/
   mode : Option String
   buckets : Option Nat
 
-structure BatchVerify extends BatchVerifyOptions where
+structure BatchCommand extends BatchCommandOptions where
   env : Option Nat
-  proofs : Array String
+  cmds : Array String
 deriving ToJson, FromJson
 
 /-- Process a Lean file in a fresh environment. -/
@@ -132,16 +134,12 @@ A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
 -/
 structure CommandResponse where
-  env : Nat
+  env : Option Nat
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
   infotree : Option Json := none
 deriving FromJson
-
-structure VerifyResponse where
-  messages : List Message := []
-deriving FromJson, ToJson
 
 def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
   | [] => []
@@ -149,7 +147,9 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
 
 instance : ToJson CommandResponse where
   toJson r := Json.mkObj <| .flatten [
-    [("env", r.env)],
+    match r.env with
+    | some x => [("env", x)]
+    | none => [],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,

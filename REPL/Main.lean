@@ -110,6 +110,21 @@ def sorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorr
         let proofStateId ← proofState.mapM recordProofSnapshot
         return Sorry.of goal pos endPos proofStateId
 
+def sorriesGC (trees : List InfoTree) (env? : Option Environment) : IO (List Sorry) :=
+  trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
+    | .term _ none => false
+    | _ => true ) |>.mapM
+      fun ⟨ctx, g, pos, endPos⟩ => do
+        let (goal, _) ← match g with
+        | .tactic g => do
+           let s ← ProofSnapshot.create ctx none env? [g]
+           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+        | .term lctx (some t) => do
+           let s ← ProofSnapshot.create ctx lctx env? [] [t]
+           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+        | .term _ none => unreachable!
+        return Sorry.of goal pos endPos none
+
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
     Lean.PrettyPrinter.ppTactic ⟨stx⟩
@@ -124,6 +139,13 @@ def tactics (trees : List InfoTree) : M m (List Tactic) :=
       let tactic := Format.pretty (← ppTactic ctx stx)
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
+
+def tacticsGC (trees : List InfoTree) : IO (List Tactic) :=
+  trees.flatMap InfoTree.tactics |>.mapM
+    fun ⟨ctx, stx, goals, pos, endPos, ns⟩ => do
+      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let tactic := Format.pretty (← ppTactic ctx stx)
+      return Tactic.of goals tactic pos endPos none ns
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
@@ -184,37 +206,25 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
-/--
-Run a command, returning the id of the new environment, and any messages and sorries.
--/
-def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
-  let (cmdSnapshot?, notFound) ← do match s.env with
+
+def getCommandSnapshot (env : Option Nat) :  M IO (Option CommandSnapshot × Bool) :=  do match env with
   | none => pure (none, false)
   | some i => do match (← get).cmdStates[i]? with
     | some env => pure (some env, false)
     | none => pure (none, true)
-  if notFound then
-    return .inr ⟨"Unknown environment."⟩
-  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (cmdState, messages, trees) ← try
+
+def runCommandGCAux (initialCmdState? : Option Command.State) (s : Command) : IO (CommandResponse ⊕ Error):= do
+  let (_, messages, trees) ← try
     IO.processInput s.cmd initialCmdState?
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees (initialCmdState?.map (·.env))
+  let sorries ← sorriesGC trees (initialCmdState?.map (·.env))
   let tactics ← match s.allTactics with
-  | some true => tactics trees
+  | some true => tacticsGC trees
   | _ => pure []
-  let cmdSnapshot :=
-  { cmdState
-    cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
-      { fileName := "",
-        fileMap := default,
-        snap? := none,
-        cancelTk? := none } }
-  let env ← recordCommandSnapshot cmdSnapshot
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
@@ -226,11 +236,62 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   else
     pure <| some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
   return .inl
-    { env,
+    { env := none,
       messages,
       sorries,
       tactics
       infotree }
+
+def runCommandAux (cmdSnapshot? : Option CommandSnapshot) (initialCmdState? : Option Command.State) (s : Command) : M IO (CommandResponse ⊕ Error) := do
+  let (cmdState, messages, trees) ← try
+    IO.processInput s.cmd initialCmdState?
+  catch ex =>
+    return .inr ⟨ex.toString⟩
+  let messages ← messages.mapM fun m => Message.of m
+  -- For debugging purposes, sometimes we print out the trees here:
+  -- trees.forM fun t => do IO.println (← t.format)
+  let sorries ← sorries trees (initialCmdState?.map (·.env))
+  let tactics ← match s.allTactics with
+  | some true => tactics trees
+  | _ => pure []
+  let jsonTrees := match s.infotree with
+  | some "full" => trees
+  | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
+  | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
+  | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
+  | _ => []
+  let infotree ← if jsonTrees.isEmpty then
+    pure none
+  else
+    pure <| some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
+
+  let cmdSnapshot :=
+  { cmdState
+    cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
+      { fileName := "",
+        fileMap := default,
+        snap? := none,
+        cancelTk? := none } }
+  let env ← recordCommandSnapshot cmdSnapshot
+  return .inl
+    { env := some env,
+      messages,
+      sorries,
+      tactics
+      infotree }
+
+/--
+Run a command, returning the id of the new environment, and any messages and sorries.
+-/
+def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
+  let (cmdSnapshot?, notFound) ← getCommandSnapshot s.env
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
+  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
+  if s.gc = some true then
+    runCommandGCAux initialCmdState? s
+  else
+    runCommandAux cmdSnapshot? initialCmdState? s
 
 def splitArray {α : Type} (arr : Array α) (n : Nat) : Array (Array α) := Id.run do
   if n ≤ 0 then #[]
@@ -251,64 +312,33 @@ def splitArray {α : Type} (arr : Array α) (n : Nat) : Array (Array α) := Id.r
       start := start + baseSize + extraElem
     result
 
--- #eval splitArray #[1] 4
+unsafe def batchVerifySequential (initialCmdState : Command.State) (cmds : Array Command) : IO (Array (CommandResponse ⊕ Error)) := cmds.mapM (fun cmd => runCommandGCAux initialCmdState cmd)
 
-unsafe def getHeaderEnv (header : String) : IO Command.State := do
-  Lean.initSearchPath (← Lean.findSysroot)
-  enableInitializersExecution
-  let inputCtx   := Parser.mkInputContext header "<input>"
-  let (header, parserState, messages)  ← Parser.parseHeader inputCtx
-  let (env, _) ← processHeader header {} messages inputCtx
-  let commandState := (Command.mkState env messages {})
-  let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
-  pure s
-
-unsafe def batchVerifySequential (commandState : Command.State)  (proofs : Array String) : IO (Array (VerifyResponse ⊕ Error)) := do
-  proofs.mapM (fun pf => do
-    let inputCtx   := Parser.mkInputContext pf "<input>"
-    let parserState := { : Parser.ModuleParserState }
-    let (_, msgs, _) ← Lean.Elab.IO.processCommandsWithInfoTrees inputCtx parserState commandState
-    return .inl ({ messages := ← msgs.mapM fun m => Message.of m })
+unsafe def batchVerifyParrallelNaive (initialCmdState : Command.State) (cmds : Array Command) : IO (Array (CommandResponse ⊕ Error)) := do
+  let tasks : Array (Task (Except IO.Error (CommandResponse ⊕ Error))) ← (cmds.mapM <| fun cmd => IO.asTask (runCommandGCAux initialCmdState cmd)
   )
+  tasks.mapM fun task => do
+    try
+      match task.get with
+      | .ok cmdres => return cmdres
+      | .error e => return .inr ⟨e.toString⟩
+    catch e =>
+      return .inr ⟨e.toString⟩
 
-unsafe def batchVerifyParrallelNaive (commandState : Command.State) (proofs : Array String) : IO (Array (VerifyResponse ⊕ Error)) := do
-  let tasks : Array (Task (Except IO.Error VerifyResponse)) ← (proofs.mapM <| fun proof => IO.asTask <| do
-    let inputCtx   := Parser.mkInputContext proof "<input>"
-    let parserState := { : Parser.ModuleParserState }
-    let (_, msgs, _) ← Lean.Elab.IO.processCommandsWithInfoTrees inputCtx parserState commandState
-    return ({ messages := ← msgs.mapM fun m => Message.of m})
-  )
-  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList (prio := Task.Priority.max)
-  match result with
-  | .ok results =>
-    return (results.map
-      fun x =>
-        match x with
-        | .ok cmdres => .inl cmdres
-        | .error e => .inr (Error.mk e.toString)
-      ).toArray
-  | .error _ => return #[]
-
-unsafe def batchVerifyParrallel (commandState : Command.State) (proofs : Array String) (buckets : Option Nat): IO (Array (VerifyResponse ⊕ Error)) := do
+unsafe def batchVerifyParrallel (commandState : Command.State) (cmds : Array Command) (buckets : Option Nat): IO (Array (CommandResponse ⊕ Error)) := do
   let buckets :=
     match buckets with
     | some x => x
-    | none => max 50 proofs.size
-  let tasks ← (splitArray proofs buckets |>.mapM <| fun bucket => IO.asTask ( (batchVerifySequential commandState bucket)))
-  let result := ← IO.wait <| ← IO.mapTasks (·.mapM (pure ·)) tasks.toList (prio := Task.Priority.max)
-  match result with
-  | .ok results => {
-    let womp : List (Array (VerifyResponse ⊕ Error)) ← results.mapM (
-      fun x => do
-        match x with
-        | .ok bucket => pure bucket
-        | .error e =>
-          IO.println e
-          pure #[]
-    )
-    return womp.toArray.flatMap id
-  }
-  | .error _ => return #[]
+    | none => max 50 cmds.size
+  let tasks ← (splitArray cmds buckets |>.mapM <| fun bucket => IO.asTask ( (batchVerifySequential commandState bucket)))
+  tasks.flatMapM <|
+    fun task => do
+      try
+        match task.get with
+        | .ok cmdres => return cmdres
+        | .error e => return Array.replicate buckets (.inr ⟨e.toString⟩)
+      catch e =>
+        return Array.replicate buckets (.inr ⟨e.toString⟩)
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
@@ -317,33 +347,30 @@ def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   catch e =>
     pure <| .inr ⟨e.toString⟩
 
-unsafe def runBatchVerify (batch : BatchVerify) : M IO (Array (VerifyResponse ⊕ Error) ⊕ Error) := do
-  let (cmdSnapshot?, notFound) ← do match batch.env with
-  | none => pure (none, false)
-  | some i => do match (← get).cmdStates[i]? with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
+unsafe def runBatchVerify (batch : BatchCommand) : M IO (Array (CommandResponse ⊕ Error) ⊕ Error) := do
+  let (cmdSnapshot?, notFound) ← getCommandSnapshot batch.env
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let cmdState? := cmdSnapshot?.map fun c => c.cmdState
   let commandState ← match cmdState? with
-  | none => do
-    let inputCtx   := Parser.mkInputContext "" "<input>"
-    let (header, _, messages) ← Parser.parseHeader inputCtx
-    let (env, messages) ← processHeader header {} messages inputCtx
-    pure (Command.mkState env messages {})
-  | some cmdState => do
-    pure cmdState
+    | none => do
+      let inputCtx   := Parser.mkInputContext "" "<input>"
+      let (header, _, messages) ← Parser.parseHeader inputCtx
+      let (env, messages) ← processHeader header {} messages inputCtx
+      pure (Command.mkState env messages {})
+    | some cmdState => do
+      pure cmdState
+  let cmds : Array Command := (batch.cmds.map fun cmd => { toCommandOptions := batch.toCommandOptions, env := none, cmd := cmd})
   match batch.mode with
   | some x =>
     if x = "naive" then do
-      return .inl <| ← batchVerifyParrallelNaive commandState batch.proofs
+      return .inl <| ← batchVerifyParrallelNaive commandState cmds
     if x = "parrallel" then do
-      return .inl <| ← batchVerifyParrallel commandState batch.proofs batch.buckets
+      return .inl <| ← batchVerifyParrallel commandState cmds batch.buckets
   | none =>
     pure ()
 
-  return .inl <| ← batchVerifySequential commandState batch.proofs
+  return .inl <| ← batchVerifySequential commandState cmds
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
@@ -382,16 +409,6 @@ structure Batch where
   proofs : Array String
 deriving FromJson, ToJson
 
-
-def parseBatch (query : String) : IO Batch := do
-  let json := Json.parse query
-  match json with
-  | .error e => throw <| IO.userError <| toString <| toJson <|
-      (⟨"Could not parse JSON:\n" ++ e⟩ : Error)
-  | .ok j => match fromJson? j with
-    | .ok (r : Batch) => return r
-    | .error e => throw <| IO.userError <| toString <| toJson <| (⟨"Could not parse JSON batch:\n" ++ e⟩ : Error)
-
 /-- Commands accepted by the REPL. -/
 inductive Input
 | command : REPL.Command → Input
@@ -401,7 +418,7 @@ inductive Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
 | pickleProofSnapshot : REPL.PickleProofState → Input
 | unpickleProofSnapshot : REPL.UnpickleProofState → Input
-| batchVerify : REPL.BatchVerify → Input
+| batchVerify : REPL.BatchCommand → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -422,7 +439,7 @@ def parse (query : String) : IO Input := do
     | .error _ => match fromJson? j with
     | .ok (r : REPL.Command) => return .command r
     | .error _ => match fromJson? j with
-    | .ok (r : REPL.BatchVerify) => return .batchVerify r
+    | .ok (r : REPL.BatchCommand) => return .batchVerify r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.File) => return .file r
     | .error e => throw <| IO.userError <| toString <| toJson <|
@@ -453,25 +470,6 @@ where loop : M IO Unit := do
   | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
-
-
-unsafe def testSeqential: M IO Unit := do
-  let query ← getLines
-  let ⟨header, proofs⟩ ← parseBatch query
-  let commandState ← getHeaderEnv header
-  let q ← (batchVerifySequential commandState proofs)
-  for l in q do
-    IO.println (toJson l)
-
--- #check CommandOptions.mk
-unsafe def testParrallel : IO Unit := do
-  let query ← getLines
-  let ⟨header, proofs⟩ ← parseBatch query
-  let commandState ← getHeaderEnv header
-  let q ← (batchVerifyParrallelNaive commandState proofs)
-  for l in q do
-    IO.println (toJson l)
-
 
 /-- Main executable function, run as `lake exe repl`. -/
 unsafe def main (_ : List String) : IO Unit := do

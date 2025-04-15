@@ -10,7 +10,7 @@ ds = load_dataset("Goedel-LM/Lean-workbook-proofs")
 
 proofs = []
 
-for data in ds["train"].select(range(7)):
+for data in ds["train"].select(range(8)):
     proof = data["full_proof"].split(header)[1]
     proofs.append(proof)
     # print(header, proof)
@@ -39,7 +39,7 @@ while True:
 
 print("loadded header")
 
-for i in range(20):
+for i in range(5):
     start = time.time()
 
     # # Write input directly to the process
@@ -69,7 +69,7 @@ for i in range(20):
     start = time.time()
 
     # # Write input directly to the process
-    process.stdin.write(json.dumps({"env": 0, "proofs": proofs, "mode": "naive"}) + "\n\n")
+    process.stdin.write(json.dumps({"env": 0, "cmds": proofs, "mode": "sequential"}) + "\n\n")
     process.stdin.flush()
 
     output_lines = []
