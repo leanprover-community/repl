@@ -247,13 +247,22 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
     | _ => return "Incomplete: open goals remain"
 
 /--
-Returns a list of pairs of metavariables and their assignments from a proof state.
-Each pair contains the MVarId and its assigned Expr.
+Returns a list of newly assigned metavariables and their expressions,
+comparing the current proof state with an optional old proof state.
+If no old state is provided, returns all assigned MVars.
 -/
-def getAssignedMVars (proofState : ProofSnapshot) : M m (List (MVarId × Expr)) := do
+def getNewlyAssignedMVars (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
+    M m (List (MVarId × Expr)) := do
+  -- Get all goals from both states
+  let allGoals := match oldProofState? with
+  | none => proofState.tacticState.goals
+  | some oldState =>
+    (proofState.tacticState.goals ++ oldState.tacticState.goals).eraseDups
+
+  -- Check which have assignments in new state
   let (assignments, _) ← proofState.runMetaM do
     let mut assignments := []
-    for goalId in proofState.tacticState.goals do
+    for goalId in allGoals do
       match proofState.metaState.mctx.getExprAssignmentCore? goalId with
       | none => continue
       | some pf => do
@@ -261,31 +270,6 @@ def getAssignedMVars (proofState : ProofSnapshot) : M m (List (MVarId × Expr)) 
         assignments := (goalId, pf) :: assignments
     return assignments
   return assignments
-
-/--
-Returns a list of newly assigned metavariables and their expressions,
-comparing the current proof state with an optional old proof state.
-If no old state is provided, returns all assigned MVars.
-Returns assignments from both states, preferring new assignments in case of conflicts.
--/
-def getNewlyAssignedMVars (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
-    M m (List (MVarId × Expr)) := do
-  let newAssignments ← getAssignedMVars proofState
-  match oldProofState? with
-  | none => return newAssignments
-  | some oldState => do
-    let oldAssignments ← getAssignedMVars oldState
-    -- Get all assignments from both states, preferring new assignments
-    let mut result := []
-    -- First add all new assignments
-    for assignment in newAssignments do
-      result := assignment :: result
-    -- Then add old assignments that don't have a corresponding new one
-    for (mvarId, expr) in oldAssignments do
-      if !newAssignments.any (·.1 == mvarId) then
-        result := (mvarId, expr) :: result
-
-    return result
 
 /--
 Verifies that all assigned goals in the proof state have valid assignments that type check.
