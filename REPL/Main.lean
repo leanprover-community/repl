@@ -269,18 +269,26 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
         | none => return s!"Goal {oldGoal.name} was not solved"
         | some pf => do
           let pf ← instantiateMVars pf
+          let pft ← Meta.inferType pf >>= instantiateMVars
 
           -- Check that all MVars in the proof are goals in new state
-          -- let mvars ← Meta.getMVars pf
           let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
-          IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
+          -- IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
+          let mut pfWithSorries := pf
           for mvar in mvars.result do
             -- If the metavariable in the assignment is a new goal, it's fine.
             unless proofState.tacticState.goals.contains mvar do
               return s!"Goal {oldGoal.name} assignment contains metavariables"
 
+            -- If the metavariable is a new goal, replace it with sorry so that we can check the proof.
+            let sorryTerm ← Meta.mkSorry pft false
+            pfWithSorries ← pure $ pfWithSorries.replace (
+              fun e => if e == mkMVar mvar then some sorryTerm else none
+            )
+          let pf := pfWithSorries
+          -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
+
           -- Check that proof has expected type
-          let pft ← Meta.inferType pf >>= instantiateMVars
           let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
           unless (← Meta.isDefEq pft expectedType) do
             return s!"Error: proof has type {pft} but goal has type {expectedType}"

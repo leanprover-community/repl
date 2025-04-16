@@ -185,6 +185,7 @@ structure MetavarDecl.Json where
   userName : String
   type : String
   mvarsInType : List MVarId
+  value : Option String
 deriving ToJson, FromJson
 
 structure MetavarContext.Json where
@@ -200,6 +201,7 @@ def MetavarContext.toJson (mctx : MetavarContext) (ctx : ContextInfo) : IO Metav
       userName := toString decl.userName
       type := (← ctx.ppExpr {} decl.type).pretty
       mvarsInType := typeMVars.result.toList
+      value := (mctx.getExprAssignmentCore? mvarId).map toString
     }
   return { decls }
 
