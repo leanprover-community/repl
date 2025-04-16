@@ -258,6 +258,7 @@ structure ProofStepResponse where
   goalInfos: List GoalInfo := []
   mctxAfter : Option MetavarContext.Json
   proofStatus : String
+  stepVerification : String
 deriving ToJson, FromJson
 
 instance : ToJson ProofStepResponse where
@@ -269,7 +270,8 @@ instance : ToJson ProofStepResponse where
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "traces" r.traces,
     match r.mctxAfter with | some mctxAfter => [("mctxAfter", toJson mctxAfter)] | none => [],
-    [("proofStatus", r.proofStatus)]
+    [("proofStatus", r.proofStatus)],
+    [("stepVerification", r.stepVerification)]
   ]
 
 /-- Json wrapper for an error. -/
