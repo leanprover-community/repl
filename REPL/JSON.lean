@@ -201,7 +201,8 @@ def MetavarContext.toJson (mctx : MetavarContext) (ctx : ContextInfo) : IO Metav
       userName := toString decl.userName
       type := (← ctx.ppExpr {} decl.type).pretty
       mvarsInType := typeMVars.result.toList
-      value := (mctx.getExprAssignmentCore? mvarId).map toString
+      -- value := (mctx.getExprAssignmentCore? mvarId).map toString
+      value := "N/A"
     }
   return { decls }
 

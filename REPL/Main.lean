@@ -385,7 +385,8 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     goalInfos
     mctxAfter := mctxAfterJson
     proofStatus := (← getProofStatus proofState)
-    stepVerification := (← verifyGoalAssignment ctx proofState old?) }
+    -- stepVerification := (← verifyGoalAssignment ctx proofState old?) }
+    stepVerification := "N/A"}
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
