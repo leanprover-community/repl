@@ -246,6 +246,18 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
 
     | _ => return "Incomplete: open goals remain"
 
+def replaceWithPrint (f? : Expr → Option Expr) (e : Expr) : MetaM Expr := do
+  IO.println s!"Processing expression: {e}"
+  match f? e with
+  | some eNew => return eNew
+  | none      => match e with
+    | .forallE _ d b _ => let d ← replaceWithPrint f? d; let b ← replaceWithPrint f? b; return e.updateForallE! d b
+    | .lam _ d b _     => let d ← replaceWithPrint f? d; let b ← replaceWithPrint f? b; return e.updateLambdaE! d b
+    | .mdata _ b       => let b ← replaceWithPrint f? b; return e.updateMData! b
+    | .letE _ t v b _  => let t ← replaceWithPrint f? t; let v ← replaceWithPrint f? v; let b ← replaceWithPrint f? b; return e.updateLet! t v b
+    | .app f a         => let f ← replaceWithPrint f? f; let a ← replaceWithPrint f? a; return e.updateApp! f a
+    | .proj _ _ b      => let b ← replaceWithPrint f? b; return e.updateProj! b
+    | e                => return e
 /--
 Verifies that all goals from the old state are properly handled in the new state.
 Returns either "OK" or an error message describing the first failing goal.
@@ -265,6 +277,7 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
 
       let (res, _) ← proofState.runMetaM do
         -- Check if goal is assigned in new state
+        -- TODO: maybe we need to check delayed assignment as well
         match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
         | none => return s!"Goal {oldGoal.name} was not solved"
         | some pf => do
@@ -274,8 +287,23 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
           -- Check that all MVars in the proof are goals in new state
           let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
           -- IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
+          -- for mvar in mvars.result do
+          --   let assignment? ← getExprMVarAssignment? mvar
+          --   let delayedAssignment? ← getDelayedMVarAssignment? mvar
+          --   match assignment?, delayedAssignment? with
+          --   | some a, _ => IO.println s!"Assignment for {mvar.name}: {a}"
+          --   | _, some d => IO.println s!"Delayed assignment for {mvar.name}: {d.mvarIdPending.name}"
+          --   | none, none => IO.println s!"No assignment for {mvar.name}"
+
           let mut pfWithSorries := pf
           for mvar in mvars.result do
+            let assigned ← mvar.isAssigned
+            let delayedAssigned ← mvar.isDelayedAssigned
+            -- We only care about the leaf metavariables.
+            -- TODO: verify this reasoning (especially for delayed assignments)
+            if assigned || delayedAssigned then
+              continue
+
             -- If the metavariable in the assignment is a new goal, it's fine.
             unless proofState.tacticState.goals.contains mvar do
               return s!"Goal {oldGoal.name} assignment contains metavariables"
@@ -285,8 +313,12 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
             pfWithSorries ← pure $ pfWithSorries.replace (
               fun e => if e == mkMVar mvar then some sorryTerm else none
             )
+            -- pfWithSorries ← replaceWithPrint (
+            --   fun e => if e == mkMVar mvar then some sorryTerm else none
+            -- ) pfWithSorries
           let pf := pfWithSorries
-          -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
+          let pf ← instantiateMVars pf
+          IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
 
           -- Check that proof has expected type
           let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
