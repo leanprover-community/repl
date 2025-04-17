@@ -11,6 +11,7 @@ import REPL.Lean.Environment
 import REPL.Lean.InfoTree
 import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
+import REPL.PaperProof.BetterParser
 
 /-!
 # A REPL for Lean.
@@ -113,7 +114,16 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
-        return Sorry.of goal pos endPos proofStateId
+        let goalInfo : Option GoalInfo ← match proofState with
+        | some proofState => do
+           match proofState.tacticState.goals[0]? with
+           | some goalId => do
+             -- TODO: this does not work when it's just `sorry` instead of `by sorry` - allow printGoalInfo to return none
+             let info ← printGoalInfo ctx goalId
+             pure (some info)
+           | none => pure none
+        | none => pure none
+        return Sorry.of goal goalInfo pos endPos proofStateId
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
@@ -130,13 +140,20 @@ def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tact
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
+def proofTrees (infoTrees : List InfoTree) : M m (List (List ProofStepInfo)) := do
+  infoTrees.mapM fun infoTree => do
+    let proofTree ← PaperProof.BetterParser infoTree
+    match proofTree with
+    | .some proofTree => return proofTree.steps
+    | .none => return []
+
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let proofStateId ← proofState.mapM recordProofSnapshot
-      return Sorry.of goals pos pos proofStateId
+      return Sorry.of goals none pos pos proofStateId
 
 
 private def collectFVarsAux : Expr → NameSet
@@ -229,6 +246,114 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
 
     | _ => return "Incomplete: open goals remain"
 
+def replaceWithPrint (f? : Expr → Option Expr) (e : Expr) : MetaM Expr := do
+  IO.println s!"Processing expression: {e}"
+  match f? e with
+  | some eNew => return eNew
+  | none      => match e with
+    | .forallE _ d b _ => let d ← replaceWithPrint f? d; let b ← replaceWithPrint f? b; return e.updateForallE! d b
+    | .lam _ d b _     => let d ← replaceWithPrint f? d; let b ← replaceWithPrint f? b; return e.updateLambdaE! d b
+    | .mdata _ b       => let b ← replaceWithPrint f? b; return e.updateMData! b
+    | .letE _ t v b _  => let t ← replaceWithPrint f? t; let v ← replaceWithPrint f? v; let b ← replaceWithPrint f? b; return e.updateLet! t v b
+    | .app f a         => let f ← replaceWithPrint f? f; let a ← replaceWithPrint f? a; return e.updateApp! f a
+    | .proj _ _ b      => let b ← replaceWithPrint f? b; return e.updateProj! b
+    | e                => return e
+/--
+Verifies that all goals from the old state are properly handled in the new state.
+Returns either "OK" or an error message describing the first failing goal.
+-/
+def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
+    M m String := do
+  match oldProofState? with
+  | none => return "OK"  -- Nothing to verify
+  | some oldState => do
+    let mut allOk := true
+    let mut errorMsg := ""
+
+    for oldGoal in oldState.tacticState.goals do
+      -- If the goal is still present in the new proofState, we don't need to verify it yet.
+      if proofState.tacticState.goals.contains oldGoal then
+        continue
+
+      let (res, _) ← proofState.runMetaM do
+        -- Check if goal is assigned in new state
+        -- TODO: maybe we need to check delayed assignment as well
+        match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
+        | none => return s!"Goal {oldGoal.name} was not solved"
+        | some pf => do
+          let pf ← instantiateMVars pf
+          let pft ← Meta.inferType pf >>= instantiateMVars
+
+          -- Check that all MVars in the proof are goals in new state
+          let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
+          -- IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
+          -- for mvar in mvars.result do
+          --   let assignment? ← getExprMVarAssignment? mvar
+          --   let delayedAssignment? ← getDelayedMVarAssignment? mvar
+          --   match assignment?, delayedAssignment? with
+          --   | some a, _ => IO.println s!"Assignment for {mvar.name}: {a}"
+          --   | _, some d => IO.println s!"Delayed assignment for {mvar.name}: {d.mvarIdPending.name}"
+          --   | none, none => IO.println s!"No assignment for {mvar.name}"
+
+          let mut pfWithSorries := pf
+          for mvar in mvars.result do
+            let assigned ← mvar.isAssigned
+            let delayedAssigned ← mvar.isDelayedAssigned
+            -- We only care about the leaf metavariables.
+            -- TODO: verify this reasoning (especially for delayed assignments)
+            if assigned || delayedAssigned then
+              continue
+
+            -- If the metavariable in the assignment is a new goal, it's fine.
+            unless proofState.tacticState.goals.contains mvar do
+              return s!"Goal {oldGoal.name} assignment contains metavariables"
+
+            -- If the metavariable is a new goal, replace it with sorry so that we can check the proof.
+            let sorryTerm ← Meta.mkSorry pft false
+            pfWithSorries ← pure $ pfWithSorries.replace (
+              fun e => if e == mkMVar mvar then some sorryTerm else none
+            )
+            -- pfWithSorries ← replaceWithPrint (
+            --   fun e => if e == mkMVar mvar then some sorryTerm else none
+            -- ) pfWithSorries
+          let pf := pfWithSorries
+          let pf ← instantiateMVars pf
+          -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
+
+          -- Check that proof has expected type
+          let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
+          unless (← Meta.isDefEq pft expectedType) do
+            return s!"Error: proof has type {pft} but goal has type {expectedType}"
+
+          let pf ← oldGoal.withContext $ abstractAllLambdaFVars pf
+          let pft ← Meta.inferType pf >>= instantiateMVars
+
+          -- Find level parameters
+          let usedLevels := collectLevelParams {} pft
+          let usedLevels := collectLevelParams usedLevels pf
+
+          let decl := Declaration.defnDecl {
+            name := Name.anonymous,
+            type := pft,
+            value := pf,
+            levelParams := usedLevels.params.toList,
+            hints := ReducibilityHints.opaque,
+            safety := DefinitionSafety.safe
+          }
+
+          try
+            let _ ← addDecl decl
+            return "OK"
+          catch ex =>
+            return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+
+      if res != "OK" then
+        allOk := false
+        errorMsg := res
+        break
+
+    return if allOk then "OK" else errorMsg
+
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m ProofStepResponse := do
@@ -245,14 +370,23 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none (some proofState.rootGoals)
-  let id ← recordProofSnapshot proofState
+  let proofStateId ← recordProofSnapshot proofState
+  let (ctx, _) ← proofState.runMetaM do return { ← CommandContextInfo.save with }
+  let goalInfos ← proofState.tacticState.goals.mapM (fun mvarId => do
+    let goalInfo ← printGoalInfo ctx mvarId
+    return goalInfo)
+  let mctxAfterJson ← MetavarContext.toJson proofState.metaState.mctx ctx
   return {
-    proofState := id
+    proofState := proofStateId
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
     messages
     sorries
     traces
-    proofStatus := (← getProofStatus proofState) }
+    goalInfos
+    mctxAfter := mctxAfterJson
+    proofStatus := (← getProofStatus proofState)
+    -- stepVerification := (← verifyGoalAssignment ctx proofState old?) }
+    stepVerification := "N/A"}
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
@@ -289,6 +423,12 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+partial def removeChildren (t : InfoTree) : InfoTree :=
+  match t with
+  | InfoTree.context ctx t' => InfoTree.context ctx (removeChildren t')
+  | InfoTree.node i _ => InfoTree.node i PersistentArray.empty
+  | InfoTree.hole _ => t
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -315,6 +455,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tactics trees initialCmdState.env
   | _ => pure []
+  let proofTreeEdges ← match s.proofTrees with
+  | some true => some <$> proofTrees trees
+  | _ => pure none
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
@@ -328,6 +471,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
   | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
   | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
+  | some "no_children" => trees.map removeChildren
   | _ => []
   let infotree ← if jsonTrees.isEmpty then
     pure none
@@ -337,8 +481,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
-      infotree }
+      tactics,
+      infotree,
+      proofTreeEdges }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
   try
