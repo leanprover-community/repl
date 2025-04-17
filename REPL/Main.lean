@@ -318,7 +318,7 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
             -- ) pfWithSorries
           let pf := pfWithSorries
           let pf ← instantiateMVars pf
-          IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
+          -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
 
           -- Check that proof has expected type
           let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
