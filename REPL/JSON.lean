@@ -36,6 +36,7 @@ structure BatchCommandOptions extends CommandOptions where
   -/
   mode : Option String
   buckets : Option Nat
+  timeout : Option Nat
 
 structure BatchCommand extends BatchCommandOptions where
   env : Option Nat

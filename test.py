@@ -65,11 +65,36 @@ for i in range(5):
     print(f"[{i}] Time Cmd: {end - start:.2f}s, Memory: {memory_mb:.2f} MB")
 
     # ----------------------------------
+    start = time.time()
+
+    # # Write input directly to the process
+    process.stdin.write(json.dumps({"env": 0, "cmd": proofs[0], "gc": True}) + "\n\n")
+    process.stdin.flush()
+
+    output_lines = []
+    while True:
+        line = process.stdout.readline().strip()
+        if not line:
+            break
+        output_lines.append(line)
+
+    stdout = "\n".join(output_lines)
+    # print(stdout)
+
+    end = time.time()
+
+    # Monitor memory in MB
+    mem_info = p.memory_info()
+    memory_mb = mem_info.rss / (1024 ** 2)
+
+    print(f"[{i}] Time Cmd GC: {end - start:.2f}s, Memory: {memory_mb:.2f} MB")
+
+    # ----------------------------------
 
     start = time.time()
 
     # # Write input directly to the process
-    process.stdin.write(json.dumps({"env": 0, "cmds": proofs, "mode": "sequential"}) + "\n\n")
+    process.stdin.write(json.dumps({"env": 0, "cmds": proofs, "mode": "naive",  "timeout": 60000}) + "\n\n")
     process.stdin.flush()
 
     output_lines = []

@@ -213,7 +213,7 @@ def getCommandSnapshot (env : Option Nat) :  M IO (Option CommandSnapshot × Boo
     | some env => pure (some env, false)
     | none => pure (none, true)
 
-def runCommandGCAux (initialCmdState? : Option Command.State) (s : Command) : IO (CommandResponse ⊕ Error):= do
+def runCommandGCAux (initialCmdState? : Option Command.State) (s : Command) : IO (CommandResponse ⊕ Error) := do
   let (_, messages, trees) ← try
     IO.processInput s.cmd initialCmdState?
   catch ex =>
@@ -241,6 +241,11 @@ def runCommandGCAux (initialCmdState? : Option Command.State) (s : Command) : IO
       sorries,
       tactics
       infotree }
+
+def runCommandGCAuxTimeout (initialCmdState? : Option Command.State) (s : Command) (timeout : Nat) : IO (CommandResponse ⊕ Error) := do
+  match ← IO.withTimeout (runCommandGCAux initialCmdState? s) timeout with
+  | .ok res => return res
+  | .error e => return .inr ⟨e.toString⟩
 
 def runCommandAux (cmdSnapshot? : Option CommandSnapshot) (initialCmdState? : Option Command.State) (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let (cmdState, messages, trees) ← try
@@ -312,10 +317,19 @@ def splitArray {α : Type} (arr : Array α) (n : Nat) : Array (Array α) := Id.r
       start := start + baseSize + extraElem
     result
 
-unsafe def batchVerifySequential (initialCmdState : Command.State) (cmds : Array Command) : IO (Array (CommandResponse ⊕ Error)) := cmds.mapM (fun cmd => runCommandGCAux initialCmdState cmd)
+unsafe def batchVerifySequential (initialCmdState : Command.State) (cmds : Array Command) (timeout : Option Nat): IO (Array (CommandResponse ⊕ Error)) :=
+  let commandRunner :=
+    match timeout with
+    | some t => fun cmd => runCommandGCAuxTimeout initialCmdState cmd t
+    | none => runCommandGCAux initialCmdState
+  cmds.mapM commandRunner
 
-unsafe def batchVerifyParrallelNaive (initialCmdState : Command.State) (cmds : Array Command) : IO (Array (CommandResponse ⊕ Error)) := do
-  let tasks : Array (Task (Except IO.Error (CommandResponse ⊕ Error))) ← (cmds.mapM <| fun cmd => IO.asTask (runCommandGCAux initialCmdState cmd)
+unsafe def batchVerifyParrallelNaive (initialCmdState : Command.State) (cmds : Array Command) (timeout : Option Nat) : IO (Array (CommandResponse ⊕ Error)) := do
+  let commandRunner :=
+    match timeout with
+    | some t => fun cmd => runCommandGCAuxTimeout initialCmdState cmd t
+    | none => runCommandGCAux initialCmdState
+  let tasks : Array (Task (Except IO.Error (CommandResponse ⊕ Error))) ← (cmds.mapM <| fun cmd => IO.asTask (commandRunner cmd)
   )
   tasks.mapM fun task => do
     try
@@ -325,12 +339,12 @@ unsafe def batchVerifyParrallelNaive (initialCmdState : Command.State) (cmds : A
     catch e =>
       return .inr ⟨e.toString⟩
 
-unsafe def batchVerifyParrallel (commandState : Command.State) (cmds : Array Command) (buckets : Option Nat): IO (Array (CommandResponse ⊕ Error)) := do
+unsafe def batchVerifyParrallel (commandState : Command.State) (cmds : Array Command) (buckets : Option Nat) (timeout : Option Nat) : IO (Array (CommandResponse ⊕ Error)) := do
   let buckets :=
     match buckets with
     | some x => x
     | none => max 50 cmds.size
-  let tasks ← (splitArray cmds buckets |>.mapM <| fun bucket => IO.asTask ( (batchVerifySequential commandState bucket)))
+  let tasks ← (splitArray cmds buckets |>.mapM <| fun bucket => IO.asTask ( (batchVerifySequential commandState bucket timeout)))
   tasks.flatMapM <|
     fun task => do
       try
@@ -364,13 +378,13 @@ unsafe def runBatchVerify (batch : BatchCommand) : M IO (Array (CommandResponse 
   match batch.mode with
   | some x =>
     if x = "naive" then do
-      return .inl <| ← batchVerifyParrallelNaive commandState cmds
+      return .inl <| ← batchVerifyParrallelNaive commandState cmds batch.timeout
     if x = "parrallel" then do
-      return .inl <| ← batchVerifyParrallel commandState cmds batch.buckets
+      return .inl <| ← batchVerifyParrallel commandState cmds batch.buckets batch.timeout
   | none =>
     pure ()
 
-  return .inl <| ← batchVerifySequential commandState cmds
+  return .inl <| ← batchVerifySequential commandState cmds batch.timeout
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.

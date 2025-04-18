@@ -45,3 +45,18 @@ def processInput (input : String) (cmdState? : Option Command.State)
   | some cmdState => do
     pure ({ : Parser.ModuleParserState }, cmdState)
   processCommandsWithInfoTrees inputCtx parserState commandState
+
+
+/-
+  asTask but with a timeout
+-/
+def withTimeout {α : Type} (act : IO α) (timeoutMs : Nat) (prio := Task.Priority.default) : IO (Except IO.Error α) := do
+  let task ← IO.asTask act prio
+  for _ in [0:timeoutMs / 1000] do
+    if ← IO.hasFinished task then
+      return task.get
+    else
+      IO.sleep 1000
+  IO.cancel task
+  -- I'm not sure what the actual error code should be
+  return .error <| IO.Error.timeExpired 0 "timeout exceeded"
