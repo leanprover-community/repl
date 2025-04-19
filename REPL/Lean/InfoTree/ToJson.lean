@@ -26,7 +26,14 @@ structure Syntax.Json where
   pp : Option String
   -- raw : String
   range : Range
+  kind: String
+  argKinds: Array String
 deriving ToJson
+
+
+def _root_.Lean.Syntax.argKinds (stx : Syntax) : Array String :=
+  stx.getArgs.map fun s => s.getKind.toString
+
 
 def _root_.Lean.Syntax.toRange (stx : Syntax) (ctx : ContextInfo) : Syntax.Range :=
   let pos    := stx.getPos?.getD 0
@@ -43,6 +50,8 @@ def _root_.Lean.Syntax.toJson (stx : Syntax) (ctx : ContextInfo) (lctx : LocalCo
       | "failed to pretty print term (use 'set_option pp.rawOnError true' for raw representation)" => none
       | pp => some pp
     -- raw := toString stx
+    kind := stx.getKind.toString
+    argKinds := stx.argKinds
     range := stx.toRange ctx }
 
 structure TacticInfo.Json where
@@ -59,6 +68,8 @@ def TacticInfo.toJson (i : TacticInfo) (ctx : ContextInfo) : IO TacticInfo.Json 
     stx :=
     { pp := Format.pretty (← i.pp ctx),
       -- raw := toString i.info.stx,
+      kind := i.stx.getKind.toString,
+      argKinds := i.stx.argKinds,
       range := i.stx.toRange ctx },
     goalsBefore := (← i.goalState ctx).map Format.pretty,
     goalsAfter := (← i.goalStateAfter ctx).map Format.pretty }
