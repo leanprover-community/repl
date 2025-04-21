@@ -201,9 +201,10 @@ def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
     let (newGoals, result') ← result.runMetaM do
       let processExpr (acc : List MVarId) (mvarId : MVarId) (expr : Expr) : MetaM (List MVarId) := do
         if expr.hasSorry then
-          let (newExpr, exprHoles) ← sorryToHole expr |>.run []
-          mvarId.assign newExpr
-          pure (acc ++ exprHoles)
+          mvarId.withContext do
+            let (newExpr, exprHoles) ← sorryToHole expr |>.run []
+            mvarId.assign newExpr
+            pure (acc ++ exprHoles)
         else
           pure acc
 
