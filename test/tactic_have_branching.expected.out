@@ -1,0 +1,33 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 22},
+   "goal": "⊢ 1 = 1",
+   "endPos": {"line": 1, "column": 27}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"proofStatus": "Completed", "proofState": 1, "goals": []}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["this : 2 = 2\n⊢ 1 = 1", "⊢ 2 = 2"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 3,
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "unknown identifier 'h1'"}],
+ "goals": ["⊢ 2 = 2", "this : 2 = 2\n⊢ 1 = 1"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 4,
+ "goals": ["⊢ 2 = 2"]}
+
+{"proofStatus": "Completed", "proofState": 5, "goals": []}
+

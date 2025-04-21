@@ -22,8 +22,7 @@
    "data": "declaration uses 'sorry'"}],
  "env": 1}
 
-{"sorries": [{"proofState": 2, "goal": "x : Int\n⊢ x = 1"}],
- "proofStatus": "Incomplete: open goals remain",
- "proofState": 3,
- "goals": ["x : Int\nh : x = 1\n⊢ x = 1"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["x : Int\nh : x = 1\n⊢ x = 1", "x : Int\n⊢ x = 1"]}
 

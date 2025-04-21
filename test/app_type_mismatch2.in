@@ -12,3 +12,5 @@
 
 {"tactic": "apply ?succ", "proofState": 4}
 
+{"tactic": "rfl", "proofState": 5}
+
