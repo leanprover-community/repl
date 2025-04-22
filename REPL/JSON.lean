@@ -38,6 +38,11 @@ structure File extends CommandOptions where
   path : System.FilePath
 deriving FromJson
 
+structure PruneSnapshots where
+  cmdFromId : Option Nat
+  proofFromId : Option Nat
+deriving ToJson, FromJson
+
 /--
 Run a tactic in a proof state.
 -/

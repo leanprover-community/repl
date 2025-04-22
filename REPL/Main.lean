@@ -95,6 +95,14 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
+/-- Delete all command snapshots with index >= id. -/
+def deleteCommandSnapshotsAfter (id : Nat) : M m Unit := do
+  modify fun s => { s with cmdStates := s.cmdStates.shrink id }
+
+/-- Delete all proof snapshots with index >= id. -/
+def deleteProofSnapshotsAfter (id : Nat) : M m Unit := do
+  modify fun s => { s with proofStates := s.proofStates.shrink id }
+
 def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Option (List MVarId))
 : M m (List Sorry) :=
   trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
@@ -423,6 +431,15 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+def pruneSnapshots (n : PruneSnapshots) : M m String := do
+  match n.cmdFromId with
+  | some id => deleteCommandSnapshotsAfter id
+  | none => pure ()
+  match n.proofFromId with
+  | some id => deleteProofSnapshotsAfter id
+  | none => pure ()
+  return "OK"
+
 partial def removeChildren (t : InfoTree) : InfoTree :=
   match t with
   | InfoTree.context ctx t' => InfoTree.context ctx (removeChildren t')
@@ -532,6 +549,7 @@ inductive Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
 | pickleProofSnapshot : REPL.PickleProofState → Input
 | unpickleProofSnapshot : REPL.UnpickleProofState → Input
+| pruneSnapshots : REPL.PruneSnapshots → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -553,6 +571,8 @@ def parse (query : String) : IO Input := do
     | .ok (r : REPL.Command) => return .command r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.File) => return .file r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.PruneSnapshots) => return .pruneSnapshots r
     | .error e => throw <| IO.userError <| toString <| toJson <|
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : Error)
 
@@ -578,6 +598,7 @@ where loop : M IO Unit := do
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
   | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
   | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
+  | .pruneSnapshots r => return toJson (← pruneSnapshots r)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 
