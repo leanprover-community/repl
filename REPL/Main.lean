@@ -299,6 +299,49 @@ partial def getFullAssignment (mctx : MetavarContext) (mvarId : MVarId) : Option
         | some da => goMVar da.mvarIdPending
         | none    => none
 
+partial def getFullAssignment2 (mctx : MetavarContext) (mvarId : MVarId) : IO (Option Expr) :=
+  goMVar mvarId
+where
+  /-- Traverse an Expr, inlining any mvars via goMVar, but first print it. -/
+  goExpr (e : Expr) : IO Expr := do
+    IO.println s!"[goExpr] ▶ {e}"
+    match e with
+    | .mvar mid =>
+      -- try to inline that mvar
+      match (← goMVar mid) with
+      | some e' => pure e'
+      | none    => pure e
+    | .forallE nm ty bd bi  =>
+      pure $ .forallE nm (← goExpr ty) (← goExpr bd) bi
+    | .lam      nm ty bd bi =>
+      pure $ .lam      nm (← goExpr ty) (← goExpr bd) bi
+    | .app      f a         =>
+      pure $ .app      (← goExpr f) (← goExpr a)
+    | .letE     nm ty v bd bi =>
+      pure $ .letE nm (← goExpr ty) (← goExpr v) (← goExpr bd) bi
+    | .mdata    md b        =>
+      pure $ .mdata    md (← goExpr b)
+    | .proj     s i b       =>
+      pure $ .proj     s i (← goExpr b)
+    | other                =>
+      pure other
+
+  /-- Lookup the “core” or delayed assignment of a mvar, printing the mvar first. -/
+  goMVar (mid : MVarId) : IO (Option Expr) := do
+    IO.println s!"[goMVar] ▶ {mid.name}"
+    match mctx.getExprAssignmentCore? mid with
+    | some e =>
+      -- directly assigned: inline and return
+      some <$> goExpr e
+    | none   =>
+      match mctx.getDelayedMVarAssignmentCore? mid with
+      | some da =>
+        -- there’s a pending delayed assignment
+        goMVar da.mvarIdPending
+      | none    =>
+        -- not assigned at all
+        pure none
+
 /--
 Verifies that all goals from the old state are properly handled in the new state.
 Returns either "OK" or an error message describing the first failing goal.
@@ -318,16 +361,21 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
 
       let (res, _) ← proofState.runMetaM do
         IO.println s!"Verifying goal {oldGoal.name}"
+        -- let x ← getFullAssignment proofState.metaState.mctx oldGoal
+        -- IO.println s!"DONE {x}\n"
         -- Check if goal is assigned in new state (now handling delayed assigns too)
         match getFullAssignment proofState.metaState.mctx oldGoal with
         | none         => return s!"Goal {oldGoal.name} was not solved"
         | some pfRaw   => do
+          IO.println s!"pfRaw ▶ {pfRaw}\n"
           let pf ← instantiateMVars pfRaw
-          let pft ← Meta.inferType pf >>= instantiateMVars
+          IO.println s!"pf ▶ {pf}\n"
+          -- let pft ← Meta.inferType pf >>= instantiateMVars
+          -- IO.println s!"[verifyGoalAssignment] ▶ {pft}"
 
           -- Check that all MVars in the proof are goals in new state
           let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
-          IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
+          IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})\n"
           -- for mvar in mvars.result do
           --   let assignment? ← getExprMVarAssignment? mvar
           --   let delayedAssignment? ← getDelayedMVarAssignment? mvar
@@ -350,7 +398,8 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
               return s!"Goal {oldGoal.name} assignment contains metavariables"
 
             -- If the metavariable is a new goal, replace it with sorry so that we can check the proof.
-            let sorryTerm ← Meta.mkSorry pft false
+            let mvarType ← Meta.inferType (.mvar mvar)
+            let sorryTerm ← Meta.mkSorry mvarType false
             pfWithSorries ← pure $ pfWithSorries.replace (
               fun e => if e == mkMVar mvar then some sorryTerm else none
             )
@@ -359,6 +408,9 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
             -- ) pfWithSorries
           let pf := pfWithSorries
           let pf ← instantiateMVars pf
+          IO.println s!"pf with sorries ▶ {pf}\n"
+          let pft ← Meta.inferType pf >>= instantiateMVars
+          IO.println s!"pft ▶ {pft}\n"
           -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
 
           -- Check that proof has expected type
