@@ -34,14 +34,15 @@
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 4,
  "goals":
- ["case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0",
-  "n✝ : Nat\n⊢ true = true"]}
+ ["n✝ : Nat\n⊢ true = true",
+  "case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 5,
- "goals": ["n✝ : Nat\n⊢ true = true"]}
+ "goals": ["case succ\nn✝ : Nat\n⊢ true = true"]}
 
-{"proofStatus": "Incomplete: contains metavariable(s)",
+{"proofStatus":
+ "Error: kernel type check failed: (kernel) application type mismatch\n  let_fun this := of_decide_eq_true (id (Eq.refl true));\n  of_decide_eq_true (id (Eq.refl true))\nargument has type\n  true = true → true = true\nbut function has type\n  (∀ (x : true = true), (fun this => n✝ + 1 = 0) x) → (fun this => n✝ + 1 = 0) ⋯",
  "proofState": 6,
  "goals": []}
 
