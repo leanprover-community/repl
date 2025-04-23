@@ -266,6 +266,39 @@ def replaceWithPrint (f? : Expr → Option Expr) (e : Expr) : MetaM Expr := do
     | .app f a         => let f ← replaceWithPrint f? f; let a ← replaceWithPrint f? a; return e.updateApp! f a
     | .proj _ _ b      => let b ← replaceWithPrint f? b; return e.updateProj! b
     | e                => return e
+
+/--
+  Given a metavar‐context `mctx` and a metavariable `mvarId`,
+  first lookup its "core" assignment or delayed assignment,
+  then recursively replace any immediate `?m` occurrences in that Expr
+  by their own core/delayed assignments.
+  Returns `none` if no assignment of either kind is found.
+-/
+partial def getFullAssignment (mctx : MetavarContext) (mvarId : MVarId) : Option Expr :=
+  goMVar mvarId
+  where
+    -- goExpr: traverse an Expr, inlining any mvars via goMVar
+    goExpr (e : Expr) : Expr :=
+      match e with
+      | .mvar mid =>
+        match goMVar mid with
+        | some e' => e'
+        | none    => e
+      | .forallE nm ty bd bi  => .forallE nm (goExpr ty) (goExpr bd) bi
+      | .lam      nm ty bd bi => .lam      nm (goExpr ty) (goExpr bd) bi
+      | .app      f a         => .app      (goExpr f) (goExpr a)
+      | .letE     nm ty v bd bi => .letE nm (goExpr ty) (goExpr v) (goExpr bd) bi
+      | .mdata    md b        => .mdata    md (goExpr b)
+      | .proj     s i b       => .proj     s i (goExpr b)
+      | other                => other
+    goMVar (mid : MVarId) : Option Expr :=
+      match mctx.getExprAssignmentCore? mid with
+      | some e => some (goExpr e)
+      | none   =>
+        match mctx.getDelayedMVarAssignmentCore? mid with
+        | some da => goMVar da.mvarIdPending
+        | none    => none
+
 /--
 Verifies that all goals from the old state are properly handled in the new state.
 Returns either "OK" or an error message describing the first failing goal.
@@ -284,17 +317,17 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
         continue
 
       let (res, _) ← proofState.runMetaM do
-        -- Check if goal is assigned in new state
-        -- TODO: maybe we need to check delayed assignment as well
-        match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
-        | none => return s!"Goal {oldGoal.name} was not solved"
-        | some pf => do
-          let pf ← instantiateMVars pf
+        IO.println s!"Verifying goal {oldGoal.name}"
+        -- Check if goal is assigned in new state (now handling delayed assigns too)
+        match getFullAssignment proofState.metaState.mctx oldGoal with
+        | none         => return s!"Goal {oldGoal.name} was not solved"
+        | some pfRaw   => do
+          let pf ← instantiateMVars pfRaw
           let pft ← Meta.inferType pf >>= instantiateMVars
 
           -- Check that all MVars in the proof are goals in new state
           let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
-          -- IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
+          IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
           -- for mvar in mvars.result do
           --   let assignment? ← getExprMVarAssignment? mvar
           --   let delayedAssignment? ← getDelayedMVarAssignment? mvar
@@ -393,8 +426,9 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     goalInfos
     mctxAfter := mctxAfterJson
     proofStatus := (← getProofStatus proofState)
-    -- stepVerification := (← verifyGoalAssignment ctx proofState old?) }
-    stepVerification := "N/A"}
+    stepVerification := (← verifyGoalAssignment ctx proofState old?)
+    -- stepVerification := "N/A"
+  }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
