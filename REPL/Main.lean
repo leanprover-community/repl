@@ -515,7 +515,8 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     traces
     goalInfos
     mctxAfter := mctxAfterJson
-    proofStatus := (← getProofStatus proofState)
+    -- proofStatus := (← getProofStatus proofState)
+    proofStatus := "N/A"
     stepVerification := (← verifyGoalAssignment ctx proofState old?)
     -- stepVerification := "N/A"
   }
