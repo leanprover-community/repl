@@ -1,4 +1,4 @@
-{"cmd": "set_option trace.Meta.Tactic.simp true\nexample {x : Int} (h0 : x > 0) : False := by sorry"}
+{"cmd": "set_option trace.Meta.Tactic.simp true\nexample {x : Int} (h0 : x > 0) : False := by sorry", "sorries": "individual"}
 
 {"tactic": "have h : x > 0 := by sorry", "proofState": 0}
 

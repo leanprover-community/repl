@@ -3,7 +3,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 36},
-   "goal": "x : ℕ\n⊢ x = x",
+   "parentDecl": "foo",
+   "goals": ["x : ℕ\n⊢ x = x"],
    "endPos": {"line": 1, "column": 41}}],
  "messages":
  [{"severity": "warning",

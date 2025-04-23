@@ -3,7 +3,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 4, "column": 14},
-   "goal": "x : ℕ\nh : 2 * (2 * (2 * (2 * x))) = 48\n⊢ x = 3",
+   "parentDecl": "mathd_algebra_455",
+   "goals": ["x : ℕ\nh : 2 * (2 * (2 * (2 * x))) = 48\n⊢ x = 3"],
    "endPos": {"line": 4, "column": 19}}],
  "messages":
  [{"severity": "warning",

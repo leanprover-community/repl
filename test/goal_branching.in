@@ -1,4 +1,4 @@
-{"cmd" : "theorem branching_test : 1 = 1 ∧ 2 = 2 ∧ 3 = 3 := by sorry"}
+{"cmd" : "theorem branching_test : 1 = 1 ∧ 2 = 2 ∧ 3 = 3 := by sorry", "sorries" : "individual"}
 
 {"tactic": "constructor", "proofState": 0}
 

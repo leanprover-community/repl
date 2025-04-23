@@ -1,6 +1,6 @@
 {"cmd": "import Mathlib"}
 
-{"env" : 0, "cmd": "theorem foo (x : Nat) : x = x := by sorry"}
+{"env" : 0, "cmd": "theorem foo (x : Nat) : x = x := by sorry", "sorries": "individual"}
 
 {"proofState" : 0, "tactic": "induction x"}
 
