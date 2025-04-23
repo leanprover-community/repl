@@ -267,6 +267,20 @@ def replaceWithPrint (f? : Expr → Option Expr) (e : Expr) : MetaM Expr := do
     | .proj _ _ b      => let b ← replaceWithPrint f? b; return e.updateProj! b
     | e                => return e
 
+partial def replaceMVarsWithSorry (e : Expr) : MetaM Expr := do
+  match e with
+  | .mvar _ => do
+    let mvarType ← Meta.inferType e
+    let sorryTerm ← Meta.mkSorry mvarType false
+    return sorryTerm
+  | .forallE _ d b _ => let d ← replaceMVarsWithSorry d; let b ← replaceMVarsWithSorry b; return e.updateForallE! d b
+  | .lam _ d b _     => let d ← replaceMVarsWithSorry d; let b ← replaceMVarsWithSorry b; return e.updateLambdaE! d b
+  | .mdata _ b       => let b ← replaceMVarsWithSorry b; return e.updateMData! b
+  | .letE _ t v b _  => let t ← replaceMVarsWithSorry t; let v ← replaceMVarsWithSorry v; let b ← replaceMVarsWithSorry b; return e.updateLet! t v b
+  | .app f a         => let f ← replaceMVarsWithSorry f; let a ← replaceMVarsWithSorry a; return e.updateApp! f a
+  | .proj _ _ b      => let b ← replaceMVarsWithSorry b; return e.updateProj! b
+  | e                => return e
+
 /--
   Given a metavar‐context `mctx` and a metavariable `mvarId`,
   first lookup its "core" assignment or delayed assignment,
@@ -299,7 +313,7 @@ partial def getFullAssignment (mctx : MetavarContext) (mvarId : MVarId) : Option
         | some da => goMVar da.mvarIdPending
         | none    => none
 
-partial def getFullAssignment2 (mctx : MetavarContext) (mvarId : MVarId) : IO (Option Expr) :=
+partial def getFullAssignmentIO (mctx : MetavarContext) (mvarId : MVarId) : IO (Option Expr) :=
   goMVar mvarId
 where
   /-- Traverse an Expr, inlining any mvars via goMVar, but first print it. -/
@@ -342,6 +356,54 @@ where
         -- not assigned at all
         pure none
 
+partial def getFullAssignmentLambda (mctx : MetavarContext) (mvarId : MVarId) : MetaM (Option Expr) :=
+  goMVar mvarId
+  where
+    goExpr (e : Expr) : MetaM Expr := do
+      match e with
+      | .mvar mid =>
+        match (← goMVar mid) with
+        | some e' => pure e'
+        | none    => pure e
+      | .forallE nm ty bd bi  =>
+        pure $ .forallE nm (← goExpr ty) (← goExpr bd) bi
+      | .lam      nm ty bd bi =>
+        pure $ .lam      nm (← goExpr ty) (← goExpr bd) bi
+      | .app      f a         =>
+        pure $ .app      (← goExpr f) (← goExpr a)
+      | .letE     nm ty v bd bi =>
+        pure $ .letE nm (← goExpr ty) (← goExpr v) (← goExpr bd) bi
+      | .mdata    md b        =>
+        pure $ .mdata    md (← goExpr b)
+      | .proj     s i b       =>
+        pure $ .proj     s i (← goExpr b)
+      | other                =>
+        pure other
+    goMVar (mid : MVarId) : MetaM (Option Expr) := do
+      match mctx.getExprAssignmentCore? mid with
+      | some e => pure $ some (← goExpr e)
+      | none   =>
+        match mctx.getDelayedMVarAssignmentCore? mid with
+        | some da => do
+          let e' ← goMVar da.mvarIdPending
+          match e' with
+          | some e' =>
+            let e'' ← Meta.mkLambdaFVars da.fvars e'
+            return some e''
+          | none => return none
+        | none    => pure none
+
+/-- Does the expression `e` contain the metavariable `t`? -/
+private def findInExpr (t : MVarId) : Expr → Bool
+  | Expr.mvar mid          => mid == t
+  | Expr.app f a           => findInExpr t f || findInExpr t a
+  | Expr.lam _ ty bd _     => findInExpr t ty || findInExpr t bd
+  | Expr.forallE _ ty bd _ => findInExpr t ty || findInExpr t bd
+  | Expr.letE _ ty val bd _=> findInExpr t ty || findInExpr t val || findInExpr t bd
+  | Expr.proj _ _ e        => findInExpr t e
+  | Expr.mdata _ e         => findInExpr t e
+  | _                      => false
+
 /--
 Verifies that all goals from the old state are properly handled in the new state.
 Returns either "OK" or an error message describing the first failing goal.
@@ -361,35 +423,22 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
 
       let (res, _) ← proofState.runMetaM do
         IO.println s!"Verifying goal {oldGoal.name}"
-        -- let x ← getFullAssignment proofState.metaState.mctx oldGoal
-        -- IO.println s!"DONE {x}\n"
-        -- Check if goal is assigned in new state (now handling delayed assigns too)
-        match getFullAssignment proofState.metaState.mctx oldGoal with
+
+        match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
         | none         => return s!"Goal {oldGoal.name} was not solved"
         | some pfRaw   => do
-          IO.println s!"pfRaw ▶ {pfRaw}\n"
           let pf ← instantiateMVars pfRaw
-          IO.println s!"pf ▶ {pf}\n"
-          -- let pft ← Meta.inferType pf >>= instantiateMVars
-          -- IO.println s!"[verifyGoalAssignment] ▶ {pft}"
-
           -- Check that all MVars in the proof are goals in new state
           let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
-          IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})\n"
-          -- for mvar in mvars.result do
-          --   let assignment? ← getExprMVarAssignment? mvar
-          --   let delayedAssignment? ← getDelayedMVarAssignment? mvar
-          --   match assignment?, delayedAssignment? with
-          --   | some a, _ => IO.println s!"Assignment for {mvar.name}: {a}"
-          --   | _, some d => IO.println s!"Delayed assignment for {mvar.name}: {d.mvarIdPending.name}"
-          --   | none, none => IO.println s!"No assignment for {mvar.name}"
-
-          let mut pfWithSorries := pf
           for mvar in mvars.result do
+            let assignment? := proofState.metaState.mctx.getExprAssignmentCore? mvar
+            if let some assignment := assignment? then
+              if findInExpr mvar assignment then
+                return s!"Goal {oldGoal.name} assignment is circular"
+
             let assigned ← mvar.isAssigned
             let delayedAssigned ← mvar.isDelayedAssigned
             -- We only care about the leaf metavariables.
-            -- TODO: verify this reasoning (especially for delayed assignments)
             if assigned || delayedAssigned then
               continue
 
@@ -397,21 +446,10 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
             unless proofState.tacticState.goals.contains mvar do
               return s!"Goal {oldGoal.name} assignment contains metavariables"
 
-            -- If the metavariable is a new goal, replace it with sorry so that we can check the proof.
-            let mvarType ← Meta.inferType (.mvar mvar)
-            let sorryTerm ← Meta.mkSorry mvarType false
-            pfWithSorries ← pure $ pfWithSorries.replace (
-              fun e => if e == mkMVar mvar then some sorryTerm else none
-            )
-            -- pfWithSorries ← replaceWithPrint (
-            --   fun e => if e == mkMVar mvar then some sorryTerm else none
-            -- ) pfWithSorries
-          let pf := pfWithSorries
+          let pf ← replaceMVarsWithSorry pf
           let pf ← instantiateMVars pf
-          IO.println s!"pf with sorries ▶ {pf}\n"
+          IO.println s!"pf with sorries ▶ {pf}"
           let pft ← Meta.inferType pf >>= instantiateMVars
-          IO.println s!"pft ▶ {pft}\n"
-          -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
 
           -- Check that proof has expected type
           let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
