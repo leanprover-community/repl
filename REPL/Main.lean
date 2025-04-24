@@ -417,13 +417,13 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
     let mut errorMsg := ""
 
     for oldGoal in oldState.tacticState.goals do
-      -- If the goal is still present in the new proofState, we don't need to verify it yet.
+      -- If the goal is still present in the new proofState, we don't need to verify it yet since it will be taken care of later.
       if proofState.tacticState.goals.contains oldGoal then
         continue
 
       let (res, _) ← proofState.runMetaM do
         match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
-        | none         => return s!"Goal {oldGoal.name} was not solved"
+        | none         => return s!"Error: Goal {oldGoal.name} was not solved"
         | some pfRaw   => do
           let pf ← instantiateMVars pfRaw
           -- Check that all MVars in the proof are goals in new state
@@ -432,7 +432,7 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
             let assignment? := proofState.metaState.mctx.getExprAssignmentCore? mvar
             if let some assignment := assignment? then
               if findInExpr mvar assignment then
-                return s!"Goal {oldGoal.name} assignment is circular"
+                return s!"Error: Goal {oldGoal.name} assignment is circular"
 
             let assigned ← mvar.isAssigned
             let delayedAssigned ← mvar.isDelayedAssigned
@@ -442,7 +442,7 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
 
             -- If the metavariable in the assignment is a new goal, it's fine.
             unless proofState.tacticState.goals.contains mvar do
-              return s!"Goal {oldGoal.name} assignment contains metavariables"
+              return s!"Error: Goal {oldGoal.name} assignment contains metavariables"
 
           let pf ← replaceMVarsWithSorry pf
           let pf ← instantiateMVars pf
