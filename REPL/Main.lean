@@ -422,8 +422,6 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
         continue
 
       let (res, _) ← proofState.runMetaM do
-        IO.println s!"Verifying goal {oldGoal.name}"
-
         match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
         | none         => return s!"Goal {oldGoal.name} was not solved"
         | some pfRaw   => do
@@ -448,13 +446,6 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
 
           let pf ← replaceMVarsWithSorry pf
           let pf ← instantiateMVars pf
-          IO.println s!"pf with sorries ▶ {pf}"
-          let pft ← Meta.inferType pf >>= instantiateMVars
-
-          -- Check that proof has expected type
-          let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
-          unless (← Meta.isDefEq pft expectedType) do
-            return s!"Error: proof has type {pft} but goal has type {expectedType}"
 
           let pf ← oldGoal.withContext $ abstractAllLambdaFVars pf
           let pft ← Meta.inferType pf >>= instantiateMVars
