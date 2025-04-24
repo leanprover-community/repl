@@ -404,6 +404,29 @@ private def findInExpr (t : MVarId) : Expr → Bool
   | Expr.mdata _ e         => findInExpr t e
   | _                      => false
 
+
+def checkAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldGoal : MVarId) (pfRaw : Expr) : MetaM String := do
+  let pf ← instantiateMVars pfRaw
+  -- Check that all MVars in the proof are goals in new state
+  let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
+  for mvar in mvars.result do
+    let assignment? := proofState.metaState.mctx.getExprAssignmentCore? mvar
+    if let some assignment := assignment? then
+      if findInExpr mvar assignment then
+        return s!"Error: Goal {oldGoal.name} assignment is circular"
+
+    let assigned ← mvar.isAssigned
+    let delayedAssigned ← mvar.isDelayedAssigned
+    -- We only care about the leaf metavariables.
+    if assigned || delayedAssigned then
+      continue
+
+    -- If the metavariable in the assignment is a new goal, it's fine.
+    unless proofState.tacticState.goals.contains mvar do
+      return s!"Error: Goal {oldGoal.name} assignment contains metavariables"
+
+  return "OK"
+
 /--
 Verifies that all goals from the old state are properly handled in the new state.
 Returns either "OK" or an error message describing the first failing goal.
@@ -425,29 +448,15 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
         match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
         | none         => return s!"Error: Goal {oldGoal.name} was not solved"
         | some pfRaw   => do
-          let pf ← instantiateMVars pfRaw
-          -- Check that all MVars in the proof are goals in new state
-          let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
-          for mvar in mvars.result do
-            let assignment? := proofState.metaState.mctx.getExprAssignmentCore? mvar
-            if let some assignment := assignment? then
-              if findInExpr mvar assignment then
-                return s!"Error: Goal {oldGoal.name} assignment is circular"
+          let res ← checkAssignment ctx proofState oldGoal pfRaw
+          if res != "OK" then
+            return res
 
-            let assigned ← mvar.isAssigned
-            let delayedAssigned ← mvar.isDelayedAssigned
-            -- We only care about the leaf metavariables.
-            if assigned || delayedAssigned then
-              continue
-
-            -- If the metavariable in the assignment is a new goal, it's fine.
-            unless proofState.tacticState.goals.contains mvar do
-              return s!"Error: Goal {oldGoal.name} assignment contains metavariables"
-
-          let pf ← replaceMVarsWithSorry pf
-          let pf ← instantiateMVars pf
-
-          let pf ← oldGoal.withContext $ abstractAllLambdaFVars pf
+          let pfInCtx ← oldGoal.withContext do
+            let pf ← instantiateMVars pfRaw
+            let pf ← replaceMVarsWithSorry pf
+            instantiateMVars pf
+          let pf ← abstractAllLambdaFVars pfInCtx
           let pft ← Meta.inferType pf >>= instantiateMVars
 
           -- Find level parameters
