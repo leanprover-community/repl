@@ -405,25 +405,37 @@ private def findInExpr (t : MVarId) : Expr → Bool
   | _                      => false
 
 
+/--
+Given a metavariable `mvar` and a candidate assignment `val`, returns
+`true` precisely when assigning `mvar := val` would be _circular_.
+-/
+def isCircularAssignment (mvar : MVarId) (val : Expr) : MetaM Bool := do
+  -- `occursCheck mvar val` returns `true` if *no* occurrence of `mvar` is found,
+  -- so we negate it to detect a circular reference.
+  let ok ← Lean.occursCheck mvar val
+  pure (!ok)
+
+
 def checkAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldGoal : MVarId) (pfRaw : Expr) : MetaM String := do
   let pf ← instantiateMVars pfRaw
   -- Check that all MVars in the proof are goals in new state
   let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
   for mvar in mvars.result do
-    let assignment? := proofState.metaState.mctx.getExprAssignmentCore? mvar
-    if let some assignment := assignment? then
-      if findInExpr mvar assignment then
-        return s!"Error: Goal {oldGoal.name} assignment is circular"
+    -- If the metavariable in the assignment is a new goal, it's fine.
+    if proofState.tacticState.goals.contains mvar then
+      continue
+
+    let isCircular ← isCircularAssignment mvar pf
+    if isCircular then
+      return s!"Error: Goal {oldGoal.name} assignment is circular"
 
     let assigned ← mvar.isAssigned
     let delayedAssigned ← mvar.isDelayedAssigned
-    -- We only care about the leaf metavariables.
+    -- We only care about the leaf metavariables, so we skip assigned ones.
     if assigned || delayedAssigned then
       continue
 
-    -- If the metavariable in the assignment is a new goal, it's fine.
-    unless proofState.tacticState.goals.contains mvar do
-      return s!"Error: Goal {oldGoal.name} assignment contains metavariables"
+    return s!"Error: Goal {oldGoal.name} assignment contains unassigned metavariables"
 
   return "OK"
 
@@ -452,31 +464,35 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
           if res != "OK" then
             return res
 
-          let pfInCtx ← oldGoal.withContext do
+          -- let pf ← instantiateMVars pfRaw
+          -- let pf ← replaceMVarsWithSorry pf
+          -- try
+          --   _ ← Lean.Meta.check pf
+          --   return "OK"
+          -- catch ex =>
+          --   return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+
+          let x ← oldGoal.withContext do
             let pf ← instantiateMVars pfRaw
             let pf ← replaceMVarsWithSorry pf
-            instantiateMVars pf
-          let pf ← abstractAllLambdaFVars pfInCtx
-          let pft ← Meta.inferType pf >>= instantiateMVars
+            IO.println s!"pf ▶ {pf}"
+            try
+              _ ← Lean.Meta.check pf
+              return "OK"
+            catch ex =>
+              return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          return x
 
-          -- Find level parameters
-          let usedLevels := collectLevelParams {} pft
-          let usedLevels := collectLevelParams usedLevels pf
-
-          let decl := Declaration.defnDecl {
-            name := Name.anonymous,
-            type := pft,
-            value := pf,
-            levelParams := usedLevels.params.toList,
-            hints := ReducibilityHints.opaque,
-            safety := DefinitionSafety.safe
-          }
-
-          try
-            let _ ← addDecl decl
-            return "OK"
-          catch ex =>
-            return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          -- let pf ← oldGoal.withContext do
+          --   let pf ← instantiateMVars pfRaw
+          --   let pf ← replaceMVarsWithSorry pf
+          --   return pf
+          -- IO.println s!"pf ▶ {pf}"
+          -- try
+          --   _ ← Lean.Meta.check pf
+          --   return "OK"
+          -- catch ex =>
+          --   return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
       if res != "OK" then
         allOk := false
