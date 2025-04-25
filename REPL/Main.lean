@@ -418,21 +418,22 @@ def isCircularAssignment (mvar : MVarId) (val : Expr) : MetaM Bool := do
 
 def checkAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldGoal : MVarId) (pfRaw : Expr) : MetaM String := do
   let pf ← instantiateMVars pfRaw
+
+  let occursCheck ← Lean.occursCheck oldGoal pf
+  if !occursCheck then
+    return s!"Error: Goal {oldGoal.name} assignment is syntactically circular"
+
   -- Check that all MVars in the proof are goals in new state
   let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
+  -- Loop through all unassigned metavariables (note that delayed assigned ones are included).
   for mvar in mvars.result do
-    -- If the metavariable in the assignment is a new goal, it's fine.
-    if proofState.tacticState.goals.contains mvar then
+    let delayedAssigned ← mvar.isDelayedAssigned
+    -- We only care about the leaf metavariables, so we skip delayed assigned ones.
+    if delayedAssigned then
       continue
 
-    let isCircular ← isCircularAssignment mvar pf
-    if isCircular then
-      return s!"Error: Goal {oldGoal.name} assignment is circular"
-
-    let assigned ← mvar.isAssigned
-    let delayedAssigned ← mvar.isDelayedAssigned
-    -- We only care about the leaf metavariables, so we skip assigned ones.
-    if assigned || delayedAssigned then
+    -- If the metavariable in the assignment is a new goal, it's fine.
+    if proofState.tacticState.goals.contains mvar then
       continue
 
     return s!"Error: Goal {oldGoal.name} assignment contains unassigned metavariables"
@@ -464,24 +465,44 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
           if res != "OK" then
             return res
 
-          -- let pf ← instantiateMVars pfRaw
-          -- let pf ← replaceMVarsWithSorry pf
-          -- try
-          --   _ ← Lean.Meta.check pf
-          --   return "OK"
-          -- catch ex =>
-          --   return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
           let x ← oldGoal.withContext do
             let pf ← instantiateMVars pfRaw
             let pf ← replaceMVarsWithSorry pf
-            IO.println s!"pf ▶ {pf}"
+            let pft ← Meta.inferType pf >>= instantiateMVars
+
+            let usedLevels := collectLevelParams {} pft
+            let usedLevels := collectLevelParams usedLevels pf
+
+            let freshName ← mkFreshId
+            let decl := Declaration.defnDecl {
+              name := freshName,
+              type := pft,
+              value := pf,
+              levelParams := usedLevels.params.toList,
+              hints := ReducibilityHints.opaque,
+              safety := DefinitionSafety.safe
+            }
+
             try
-              _ ← Lean.Meta.check pf
+              -- This check the declaration type, but also detects cycles.
+              let _ ← addDecl decl
               return "OK"
             catch ex =>
               return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+
           return x
+
+          -- let x ← oldGoal.withContext do
+          --   let pf ← instantiateMVars pfRaw
+          --   let pf ← replaceMVarsWithSorry pf
+          --   IO.println s!"pf ▶ {pf}"
+          --   try
+          --     _ ← Lean.Meta.check pf
+          --     return "OK"
+          --   catch ex =>
+          --     return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          -- return x
 
           -- let pf ← oldGoal.withContext do
           --   let pf ← instantiateMVars pfRaw
