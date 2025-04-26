@@ -254,10 +254,12 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
 
     | _ => return "Incomplete: open goals remain"
 
-def replaceWithPrint (f? : Expr → Option Expr) (e : Expr) : MetaM Expr := do
+def replaceWithPrint (f? : Expr → MetaM (Option Expr)) (e : Expr) : MetaM Expr := do
   IO.println s!"Processing expression: {e}"
-  match f? e with
-  | some eNew => return eNew
+  match ← f? e with
+  | some eNew => do
+    IO.println s!"Replaced with: {eNew}"
+    return eNew
   | none      => match e with
     | .forallE _ d b _ => let d ← replaceWithPrint f? d; let b ← replaceWithPrint f? b; return e.updateForallE! d b
     | .lam _ d b _     => let d ← replaceWithPrint f? d; let b ← replaceWithPrint f? b; return e.updateLambdaE! d b
@@ -267,7 +269,7 @@ def replaceWithPrint (f? : Expr → Option Expr) (e : Expr) : MetaM Expr := do
     | .proj _ _ b      => let b ← replaceWithPrint f? b; return e.updateProj! b
     | e                => return e
 
-partial def replaceMVarsWithSorry (e : Expr) : MetaM Expr := do
+def replaceMVarsWithSorry (e : Expr) : MetaM Expr := do
   match e with
   | .mvar _ => do
     let mvarType ← Meta.inferType e
@@ -280,6 +282,17 @@ partial def replaceMVarsWithSorry (e : Expr) : MetaM Expr := do
   | .app f a         => let f ← replaceMVarsWithSorry f; let a ← replaceMVarsWithSorry a; return e.updateApp! f a
   | .proj _ _ b      => let b ← replaceMVarsWithSorry b; return e.updateProj! b
   | e                => return e
+
+def replaceMVarsWithSorryPrint (e : Expr) : MetaM Expr := do
+  let mkSorryForMVar (e : Expr) : MetaM (Option Expr) := do
+    if e.isMVar then
+      let mvarType ← Meta.inferType e
+      let sorryTerm ← Meta.mkSorry mvarType false
+      return some sorryTerm
+    else
+      return none
+  replaceWithPrint mkSorryForMVar e
+
 
 /--
   Given a metavar‐context `mctx` and a metavariable `mvarId`,
@@ -447,80 +460,66 @@ Returns either "OK" or an error message describing the first failing goal.
 def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
     M m String := do
   match oldProofState? with
-  | none => return "OK"  -- Nothing to verify
-  | some oldState => do
-    let mut allOk := true
+  | none       => return "OK"  -- Nothing to verify
+  | some oldSt => do
     let mut errorMsg := ""
-
-    for oldGoal in oldState.tacticState.goals do
-      -- If the goal is still present in the new proofState, we don't need to verify it yet since it will be taken care of later.
+    for oldGoal in oldSt.tacticState.goals do
+      -- skip goals that are still open
       if proofState.tacticState.goals.contains oldGoal then
         continue
 
+      -- run checks and build closed declaration inside the goal's local context
       let (res, _) ← proofState.runMetaM do
         match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
-        | none         => return s!"Error: Goal {oldGoal.name} was not solved"
-        | some pfRaw   => do
-          let res ← checkAssignment ctx proofState oldGoal pfRaw
-          if res != "OK" then
-            return res
+        | none       => return s!"Error: Goal {oldGoal.name} was not solved"
+        | some pfRaw => do
+          -- preliminary user check
+          let chk ← checkAssignment ctx proofState oldGoal pfRaw
+          if chk != "OK" then return chk
 
+          -- switch to the local context of the goal
+          -- oldGoal.withContext do
 
-          let x ← oldGoal.withContext do
-            let pf ← instantiateMVars pfRaw
-            let pf ← replaceMVarsWithSorry pf
-            let pft ← Meta.inferType pf >>= instantiateMVars
+          let pfInst ← instantiateMVars pfRaw
+          let pfLam ← abstractAllLambdaFVars pfInst
+          let pfClosed ← replaceMVarsWithSorryPrint pfInst
 
-            let usedLevels := collectLevelParams {} pft
-            let usedLevels := collectLevelParams usedLevels pf
+          -- infer its type (it already includes the same Pi over locals)
+          let pftRaw ← Meta.inferType pfLam
+          let pftClosed ← instantiateMVars pftRaw
 
-            let freshName ← mkFreshId
-            let decl := Declaration.defnDecl {
-              name := freshName,
-              type := pft,
-              value := pf,
-              levelParams := usedLevels.params.toList,
-              hints := ReducibilityHints.opaque,
-              safety := DefinitionSafety.safe
-            }
+          -- collect universe levels
+          let usedLvls :=
+            let l1 := collectLevelParams {} pftClosed
+            collectLevelParams l1 pfClosed
 
-            try
-              -- This check the declaration type, but also detects cycles.
-              let _ ← addDecl decl
-              return "OK"
-            catch ex =>
-              return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          IO.println s!"pfClosed: {pfClosed}"
+          IO.println s!"pftClosed: {pftClosed}"
+          IO.println s!"usedLvls: {usedLvls.params.toList}"
 
-          return x
+          -- build the declaration
+          let freshName ← mkFreshId
+          let decl := Declaration.defnDecl {
+            name        := freshName,
+            type        := pftClosed,
+            value       := pfClosed,
+            levelParams := usedLvls.params.toList,
+            hints       := ReducibilityHints.opaque,
+            safety      := DefinitionSafety.safe
+          }
 
-          -- let x ← oldGoal.withContext do
-          --   let pf ← instantiateMVars pfRaw
-          --   let pf ← replaceMVarsWithSorry pf
-          --   IO.println s!"pf ▶ {pf}"
-          --   try
-          --     _ ← Lean.Meta.check pf
-          --     return "OK"
-          --   catch ex =>
-          --     return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
-          -- return x
-
-          -- let pf ← oldGoal.withContext do
-          --   let pf ← instantiateMVars pfRaw
-          --   let pf ← replaceMVarsWithSorry pf
-          --   return pf
-          -- IO.println s!"pf ▶ {pf}"
-          -- try
-          --   _ ← Lean.Meta.check pf
-          --   return "OK"
-          -- catch ex =>
-          --   return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          -- add and check
+          try
+            let _ ← addDecl decl
+            return "OK"
+          catch ex =>
+            return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
       if res != "OK" then
-        allOk := false
         errorMsg := res
         break
 
-    return if allOk then "OK" else errorMsg
+    return if errorMsg == "" then "OK" else errorMsg
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
