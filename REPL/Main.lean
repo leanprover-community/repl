@@ -429,17 +429,17 @@ def isCircularAssignment (mvar : MVarId) (val : Expr) : MetaM Bool := do
   pure (!ok)
 
 
-def checkAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldGoal : MVarId) (pfRaw : Expr) : MetaM String := do
+def checkAssignment (proofState : ProofSnapshot) (oldGoal : MVarId) (pfRaw : Expr) : MetaM String := do
   let pf ← instantiateMVars pfRaw
 
   let occursCheck ← Lean.occursCheck oldGoal pf
   if !occursCheck then
-    return s!"Error: Goal {oldGoal.name} assignment is syntactically circular"
+    return s!"Error: Goal {oldGoal.name} assignment is circular"
 
   -- Check that all MVars in the proof are goals in new state
-  let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
+  let mvars ← Meta.getMVars pf
   -- Loop through all unassigned metavariables (note that delayed assigned ones are included).
-  for mvar in mvars.result do
+  for mvar in mvars do
     let delayedAssigned ← mvar.isDelayedAssigned
     -- We only care about the leaf metavariables, so we skip delayed assigned ones.
     if delayedAssigned then
@@ -457,7 +457,7 @@ def checkAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldGoal : 
 Verifies that all goals from the old state are properly handled in the new state.
 Returns either "OK" or an error message describing the first failing goal.
 -/
-def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
+def verifyGoalAssignment (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
     M m String := do
   match oldProofState? with
   | none       => return "OK"  -- Nothing to verify
@@ -470,50 +470,58 @@ def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldPr
 
       -- run checks and build closed declaration inside the goal's local context
       let (res, _) ← proofState.runMetaM do
-        match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
+        match ← getExprMVarAssignment? oldGoal with
         | none       => return s!"Error: Goal {oldGoal.name} was not solved"
         | some pfRaw => do
-          -- preliminary user check
-          let chk ← checkAssignment ctx proofState oldGoal pfRaw
+          let chk ← checkAssignment proofState oldGoal pfRaw
           if chk != "OK" then return chk
 
           -- switch to the local context of the goal
           -- oldGoal.withContext do
+          oldGoal.withContext do
+            let pf ← instantiateMVars pfRaw
+            let pf ← replaceMVarsWithSorry pf
+            try
+              _ ← Lean.Meta.check pf
+              return "OK"
+            catch ex =>
+              return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
-          let pfInst ← instantiateMVars pfRaw
-          let pfLam ← abstractAllLambdaFVars pfInst
-          let pfClosed ← replaceMVarsWithSorryPrint pfInst
+          -- let pfInst ← instantiateMVars pfRaw
+          -- let pfLam ← abstractAllLambdaFVars pfInst
+          -- let pfClosed ← replaceMVarsWithSorryPrint pfInst
 
-          -- infer its type (it already includes the same Pi over locals)
-          let pftRaw ← Meta.inferType pfLam
-          let pftClosed ← instantiateMVars pftRaw
+          -- -- infer its type (it already includes the same Pi over locals)
+          -- let pftRaw ← Meta.inferType pfLam
+          -- let pftClosed ← instantiateMVars pftRaw
 
-          -- collect universe levels
-          let usedLvls :=
-            let l1 := collectLevelParams {} pftClosed
-            collectLevelParams l1 pfClosed
+          -- -- collect universe levels
+          -- let usedLvls :=
+          --   let l1 := collectLevelParams {} pftClosed
+          --   collectLevelParams l1 pfClosed
 
-          IO.println s!"pfClosed: {pfClosed}"
-          IO.println s!"pftClosed: {pftClosed}"
-          IO.println s!"usedLvls: {usedLvls.params.toList}"
+          -- IO.println s!"pfClosed: {pfClosed}"
+          -- IO.println s!"pftClosed: {pftClosed}"
+          -- IO.println s!"usedLvls: {usedLvls.params.toList}"
 
-          -- build the declaration
-          let freshName ← mkFreshId
-          let decl := Declaration.defnDecl {
-            name        := freshName,
-            type        := pftClosed,
-            value       := pfClosed,
-            levelParams := usedLvls.params.toList,
-            hints       := ReducibilityHints.opaque,
-            safety      := DefinitionSafety.safe
-          }
+          -- -- build the declaration
+          -- let freshName ← mkFreshId
+          -- let decl := Declaration.defnDecl {
+          --   name        := freshName,
+          --   type        := pftClosed,
+          --   value       := pfClosed,
+          --   levelParams := usedLvls.params.toList,
+          --   hints       := ReducibilityHints.opaque,
+          --   safety      := DefinitionSafety.safe
+          -- }
 
-          -- add and check
-          try
-            let _ ← addDecl decl
-            return "OK"
-          catch ex =>
-            return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          -- -- add and check
+          -- try
+          --   -- TODO: isn't this memory leak
+          --   let _ ← addDecl decl
+          --   return "OK"
+          -- catch ex =>
+          --   return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
       if res != "OK" then
         errorMsg := res
@@ -553,7 +561,7 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     mctxAfter := mctxAfterJson
     -- proofStatus := (← getProofStatus proofState)
     proofStatus := "N/A"
-    stepVerification := (← verifyGoalAssignment ctx proofState old?)
+    stepVerification := (← verifyGoalAssignment proofState old?)
     -- stepVerification := "N/A"
   }
 
