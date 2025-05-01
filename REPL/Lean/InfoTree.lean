@@ -115,11 +115,14 @@ def isSubstantive (t : TacticInfo) : Bool :=
   | some ``Lean.Parser.Tactic.paren => false
   | _ => true
 
-def getUsedConstantsAsSet (t : TacticInfo) : NameSet :=
-  t.goalsBefore
-    |>.filterMap t.mctxAfter.getExprAssignmentCore?
-    |>.map Expr.getUsedConstantsAsSet
-    |>.foldl .union .empty
+partial
+def getUsedConstantsAsSet (t : TacticInfo) : NameSet := go t.goalsBefore.toArray t.mctxAfter {}
+where go (mvars : Array MVarId) (mctx : MetavarContext) (acc : NameSet) : NameSet := Id.run do
+  let assignments := mvars.filterMap mctx.getExprAssignmentCore?
+  if assignments.isEmpty then return acc else
+  let usedCs : NameSet := assignments.map Expr.getUsedConstantsAsSet |>.foldl .union {}
+  let childMVars := assignments.map fun expr => (expr.collectMVars {}).result
+  return go childMVars.flatten mctx <| acc.union usedCs
 
 end Lean.Elab.TacticInfo
 
