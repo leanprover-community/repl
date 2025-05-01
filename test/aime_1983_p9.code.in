@@ -1,0 +1,34 @@
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+
+/-- Show that $
+               rac{9x^2\sin^2 x + 4}{x\sin x} \geq 12$ for $0 < x < \pi$.-/
+theorem aime_1983_p9 (x : ℝ) (h₀ : 0 < x ∧ x < Real.pi) :
+  12 ≤ (9 * (x ^ 2 * Real.sin x ^ 2) + 4) / (x * Real.sin x) := by
+  /-
+  To find the minimum value of $
+                                rac{9x^2\sin^2 x + 4}{x\sin x}$ for $0 < x < \pi$, we need to show that it is at least 12. We start by noting that the expression can be rewritten using the division property of inequalities. We then use the fact that \$sin x$ and $x$ are positive in the given range to establish the necessary inequalities. Finally, we apply these results to conclude that the minimum value is indeed 12.
+  -/
+  -- We start by ensuring that the product x * sin x is positive in the given range.
+  have h₁ : 0 < x * Real.sin x := by
+    apply mul_pos
+    -- x is positive in the range (0, π).
+    exact h₀.1
+    -- sin x is positive in the range (0, π).
+    exact Real.sin_pos_of_pos_of_lt_pi h₀.1 h₀.2
+  -- Using the division property of inequalities, we rewrite the expression.
+  rw [le_div_iff h₁]
+  /- tactic state:
+    x : ℝ
+    h₀ : 0 < x ∧ x < π
+    h₁ : 0 < x * x.sin
+    ⊢ 12 * (x * x.sin) ≤ 9 * (x ^ 2 * x.sin ^ 2) + 4
+  -/
+  -- This is equivalent to showing that 9x^2 sin^2 x - 12x sin x + 4 ≥ 0, and the left hand side can be rewritten as a perfect square (3x sin x - 2)^2.
+  -- We use the fact that (3x sin x - 2)^2 is non-negative to establish this.
+  nlinarith [sq_nonneg (3 * x * Real.sin x - 2)]
