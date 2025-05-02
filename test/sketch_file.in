@@ -1,0 +1,9 @@
+{"path": "test/sketch_file.lean", "sorries": "grouped"}
+
+{"tactic": "apply Nat.zero_add", "proofState": 0}
+
+{"tactic": "rw [h_base, h_symm]", "proofState": 2}
+
+{"tactic": "rw [Nat.succ_add, Nat.add_succ, ih]", "proofState": 3}
+
+{"tactic": "apply Nat.add_zero", "proofState": 4}

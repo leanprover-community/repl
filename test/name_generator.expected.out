@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 2, "column": 45},
-   "goal": "x : Int\nh0 : x > 0\n⊢ False",
+   "parentDecl": "_example",
+   "goals": ["x : Int\nh0 : x > 0\n⊢ False"],
    "endPos": {"line": 2, "column": 50}}],
  "messages":
  [{"severity": "warning",
@@ -10,54 +11,59 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"sorries": [{"proofState": 1, "goal": "x : Int\nh0 : x > 0\n⊢ x > 0"}],
- "proofStatus": "Incomplete: open goals remain",
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["x : Int\nh0 : x > 0\n⊢ x > 0", "x : Int\nh0 h : x > 0\n⊢ False"]}
+
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 2,
  "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
 
-{"proofStatus": "Incomplete: contains metavariable(s)",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 3,
- "goals": []}
-
-{"proofStatus": "Incomplete: contains metavariable(s)",
- "proofState": 4,
- "goals": []}
+ "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] of_eq_true (eq_true h0):1000:\n      x > 0\n    ==>\n      True"],
- "proofStatus": "Incomplete: contains metavariable(s)",
+ "proofStatus": "Incomplete: open goals remain",
+ "proofState": 4,
+ "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
+
+{"traces":
+ ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000:\n      x > 0\n    ==>\n      0 < x",
+  "[Meta.Tactic.simp.rewrite] h0:1000:\n      0 < x\n    ==>\n      True"],
+ "proofStatus": "Incomplete: open goals remain",
  "proofState": 5,
- "goals": []}
+ "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
 
 {"traces":
  ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000:\n      x > 0\n    ==>\n      0 < x",
   "[Meta.Tactic.simp.rewrite] h0:1000:\n      0 < x\n    ==>\n      True"],
- "proofStatus": "Incomplete: contains metavariable(s)",
+ "proofStatus": "Incomplete: open goals remain",
  "proofState": 6,
- "goals": []}
+ "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
 
-{"traces":
- ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000:\n      x > 0\n    ==>\n      0 < x",
-  "[Meta.Tactic.simp.rewrite] h0:1000:\n      0 < x\n    ==>\n      True"],
- "proofStatus": "Incomplete: contains metavariable(s)",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 7,
- "goals": []}
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
+ "goals":
+ ["x : Int\nh0 : x > 0\n⊢ x > 0",
+  "x : Int\nh0 : x > 0\n⊢ x > 0",
+  "x : Int\nh0 h : x > 0\n⊢ False"]}
 
-{"proofStatus": "Incomplete: contains metavariable(s)",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 8,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
- "goals": []}
-
-{"proofStatus": "Incomplete: contains metavariable(s)",
- "proofState": 9,
- "messages":
- [{"severity": "error",
-   "pos": {"line": 0, "column": 0},
-   "endPos": {"line": 0, "column": 0},
-   "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
- "goals": []}
+ "goals":
+ ["x : Int\nh0 : x > 0\n⊢ x > 0",
+  "x : Int\nh0 : x > 0\n⊢ x > 0",
+  "x : Int\nh0 h : x > 0\n⊢ False"]}
 

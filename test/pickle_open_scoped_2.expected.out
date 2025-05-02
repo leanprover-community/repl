@@ -3,7 +3,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 22},
-   "goal": "⊢ ◾",
+   "parentDecl": "_example",
+   "goals": ["⊢ ◾"],
    "endPos": {"line": 1, "column": 27}}],
  "messages":
  [{"severity": "warning",

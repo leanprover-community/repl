@@ -1,4 +1,4 @@
-{"cmd": "example (p q : Prop) : p ∧ q → q ∧ p := by sorry"}
+{"cmd": "example (p q : Prop) : p ∧ q → q ∧ p := by sorry", "sorries": "individual"}
 
 {"tactic": "intro h", "proofState": 0}
 

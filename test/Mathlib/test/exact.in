@@ -1,10 +1,10 @@
 {"cmd": "import Mathlib"}
 
-{"cmd": "theorem test : 0 < 1 := by sorry", "env": 0}
+{"cmd": "theorem test : 0 < 1 := by sorry", "env": 0, "sorries": "individual"}
 
 {"tactic": "exact?", "proofState": 0}
 
-{"cmd": "theorem test : 3 = 7 := by sorry", "env": 0}
+{"cmd": "theorem test : 3 = 7 := by sorry", "env": 0, "sorries": "individual"}
 
 {"tactic": "exact?", "proofState": 2}
 
