@@ -326,6 +326,36 @@ partial def getFullAssignment (mctx : MetavarContext) (mvarId : MVarId) : Option
         | some da => goMVar da.mvarIdPending
         | none    => none
 
+/--
+  Given a metavar‐context `mctx` and a metavariable `mvarId`,
+  follow its core or delayed assignments recursively,
+  and collect the names of all metavariables reachable.
+  Returns a `NameSet` of metavariable names.
+-/
+partial def getFullMvars (mctx : MetavarContext) (mvarId : MVarId) : NameSet :=
+  goMVar mvarId NameSet.empty
+where
+  /-- Handle a metavariable: inline its assignment if any, otherwise record it. -/
+  goMVar (mid : MVarId) (acc : NameSet) : NameSet :=
+    match mctx.getExprAssignmentCore? mid with
+    | some e  => goExpr e acc
+    | none    =>
+      match mctx.getDelayedMVarAssignmentCore? mid with
+      | some da => goMVar da.mvarIdPending acc
+      | none    => acc.insert mid.name
+
+  /-- Traverse an `Expr`, collecting any metavars it contains. -/
+  goExpr : Expr → NameSet → NameSet
+  | Expr.mvar mid,          acc => goMVar mid acc
+  | Expr.app f a,           acc => goExpr a (goExpr f acc)
+  | Expr.lam _ ty body _,   acc => goExpr body (goExpr ty acc)
+  | Expr.forallE _ ty bd _, acc => goExpr bd (goExpr ty acc)
+  | Expr.letE _ ty val bd _,acc => goExpr bd (goExpr val (goExpr ty acc))
+  | Expr.mdata _ b,         acc => goExpr b acc
+  | Expr.proj _ _ b,        acc => goExpr b acc
+  | _,                      acc => acc
+
+
 partial def getFullAssignmentIO (mctx : MetavarContext) (mvarId : MVarId) : IO (Option Expr) :=
   goMVar mvarId
 where
@@ -417,18 +447,6 @@ private def findInExpr (t : MVarId) : Expr → Bool
   | Expr.mdata _ e         => findInExpr t e
   | _                      => false
 
-
-/--
-Given a metavariable `mvar` and a candidate assignment `val`, returns
-`true` precisely when assigning `mvar := val` would be _circular_.
--/
-def isCircularAssignment (mvar : MVarId) (val : Expr) : MetaM Bool := do
-  -- `occursCheck mvar val` returns `true` if *no* occurrence of `mvar` is found,
-  -- so we negate it to detect a circular reference.
-  let ok ← Lean.occursCheck mvar val
-  pure (!ok)
-
-
 def checkAssignment (proofState : ProofSnapshot) (oldGoal : MVarId) (pfRaw : Expr) : MetaM String := do
   let pf ← instantiateMVars pfRaw
 
@@ -438,7 +456,8 @@ def checkAssignment (proofState : ProofSnapshot) (oldGoal : MVarId) (pfRaw : Exp
 
   -- Check that all MVars in the proof are goals in new state
   let mvars ← Meta.getMVars pf
-  -- Loop through all unassigned metavariables (note that delayed assigned ones are included).
+
+  -- Loop through all unassigned metavariables recursively (note that delayed assigned ones are included).
   for mvar in mvars do
     let delayedAssigned ← mvar.isDelayedAssigned
     -- We only care about the leaf metavariables, so we skip delayed assigned ones.
