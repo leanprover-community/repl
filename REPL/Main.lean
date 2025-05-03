@@ -368,17 +368,10 @@ open REPL
 /-- Get lines from stdin until a blank line is entered. -/
 partial def getLines : IO String := do
   let line ← (← IO.getStdin).getLine
-  -- 1. If empty line, end input
   if line.trim.isEmpty then
     return line
   else
-    let nextLine ← getLines
-    -- 2. If next line is empty, end input
-    if nextLine.trim.isEmpty then
-      return line
-    -- 3. If next line is not empty, append it to the current line
-    else
-      return line.trimRight ++ "\\n" ++ nextLine
+    return line.trimRight ++ (← getLines)
 
 instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with

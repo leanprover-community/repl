@@ -1,2 +1,5 @@
-{"cmd": "theorem bar : 1 = 1 := by rfl"
-}
+{"cmd": "theorem foo : 1 = 1 := by
+sorry"}
+
+{"cmd": "theorem bar : 1 = 1 := by
+rfl"}
