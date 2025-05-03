@@ -54,7 +54,7 @@ def kind : Info → String
   | .ofTacticInfo         _ => "TacticInfo"
   | .ofTermInfo           _ => "TermInfo"
   | ofPartialTermInfo     _ => "PartialTermInfo"
-  | .ofCommandInfo        _ => "CommmandInfo"
+  | .ofCommandInfo        _ => "CommandInfo"
   | .ofMacroExpansionInfo _ => "MacroExpansionInfo"
   | .ofOptionInfo         _ => "OptionInfo"
   | .ofFieldInfo          _ => "FieldInfo"
