@@ -1,0 +1,16 @@
+{"cmd": "import Mathlib"}
+
+{"cmd": "-- This theorem demonstrates function composition/transitivity of implication\n
+-- It shows that if P implies Q, and Q implies R, then P implies R\n
+theorem demo (P Q R : Prop) : (P → Q) → (Q → R) → (P → R) := by\n
+  -- Introduce the hypotheses and antecedent:\n
+  -- h1: P → Q    h2: Q → R    p: P\n
+  intro h1 h2 p\n
+  -- First prove Q using h1 and p\n
+  have q : Q := by\n
+    apply h1\n
+    aesop  -- aesop from Mathlib\n
+  -- Then use h2 and the proven Q to get R\n
+  apply h2\n
+  sorry  -- Need to prove Q here\n
+", "env": 0}

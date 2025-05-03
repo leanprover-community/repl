@@ -1,0 +1,6 @@
+{"cmd": "theorem foo : 1 = 1 := by\n
+sorry"}
+
+{"cmd": "theorem bar : 1 = 1 := by\n
+/- Some long comment here -/\n
+  rfl"}
