@@ -1,0 +1,2 @@
+{"cmd": "theorem bar : 1 = 1 := by rfl"
+}
