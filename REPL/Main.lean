@@ -497,50 +497,51 @@ def verifyGoalAssignment (proofState : ProofSnapshot) (oldProofState? : Option P
 
           -- switch to the local context of the goal
           -- oldGoal.withContext do
-          oldGoal.withContext do
-            let pf ← instantiateMVars pfRaw
-            let pf ← replaceMVarsWithSorry pf
-            try
-              _ ← Lean.Meta.check pf
-              return "OK"
-            catch ex =>
-              return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          -- oldGoal.withContext do
+            -- let pf ← instantiateMVars pfRaw
+            -- let pf ← replaceMVarsWithSorry pf
+            -- try
+            --   _ ← Lean.Meta.check pf
+            --   return "OK"
+            -- catch ex =>
+            --   return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
-          -- let pfInst ← instantiateMVars pfRaw
-          -- let pfLam ← abstractAllLambdaFVars pfInst
-          -- let pfClosed ← replaceMVarsWithSorryPrint pfInst
+          let pfInst ← instantiateMVars pfRaw
+          let pfLam ← abstractAllLambdaFVars pfInst
+          let pfClosed ← replaceMVarsWithSorry pfLam
+          let pfClosed ← abstractAllLambdaFVars pfClosed
 
-          -- -- infer its type (it already includes the same Pi over locals)
-          -- let pftRaw ← Meta.inferType pfLam
-          -- let pftClosed ← instantiateMVars pftRaw
+          -- infer its type (it already includes the same Pi over locals)
+          let pftRaw ← Meta.inferType pfClosed
+          let pftClosed ← instantiateMVars pftRaw
 
           -- -- collect universe levels
-          -- let usedLvls :=
-          --   let l1 := collectLevelParams {} pftClosed
-          --   collectLevelParams l1 pfClosed
+          let usedLvls :=
+            let l1 := collectLevelParams {} pftClosed
+            collectLevelParams l1 pfClosed
 
-          -- IO.println s!"pfClosed: {pfClosed}"
-          -- IO.println s!"pftClosed: {pftClosed}"
+          IO.println s!"pfClosed: {pfClosed}"
+          IO.println s!"pftClosed: {pftClosed}"
           -- IO.println s!"usedLvls: {usedLvls.params.toList}"
 
           -- -- build the declaration
-          -- let freshName ← mkFreshId
-          -- let decl := Declaration.defnDecl {
-          --   name        := freshName,
-          --   type        := pftClosed,
-          --   value       := pfClosed,
-          --   levelParams := usedLvls.params.toList,
-          --   hints       := ReducibilityHints.opaque,
-          --   safety      := DefinitionSafety.safe
-          -- }
+          let freshName ← mkFreshId
+          let decl := Declaration.defnDecl {
+            name        := freshName,
+            type        := pftClosed,
+            value       := pfClosed,
+            levelParams := usedLvls.params.toList,
+            hints       := ReducibilityHints.opaque,
+            safety      := DefinitionSafety.safe
+          }
 
-          -- -- add and check
-          -- try
-          --   -- TODO: isn't this memory leak
-          --   let _ ← addDecl decl
-          --   return "OK"
-          -- catch ex =>
-          --   return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+          -- add and check
+          try
+            -- TODO: isn't this memory leak
+            let _ ← addDecl decl
+            return "OK"
+          catch ex =>
+            return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
       if res != "OK" then
         errorMsg := res
