@@ -30,10 +30,8 @@ structure Syntax.Json where
   argKinds: Array String
 deriving ToJson
 
-
 def _root_.Lean.Syntax.argKinds (stx : Syntax) : Array String :=
   stx.getArgs.map fun s => s.getKind.toString
-
 
 def _root_.Lean.Syntax.toRange (stx : Syntax) (ctx : ContextInfo) : Syntax.Range :=
   let pos    := stx.getPos?.getD 0
