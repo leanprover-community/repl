@@ -355,6 +355,35 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
+def getDeclType (n: GetDeclType) : M IO (DeclTypeResponse ⊕ Error) := do
+  let (cmdSnapshot?, notFound) ← do match n.env with
+  | none => pure (none, false)
+  | some i => do match (← get).cmdStates[i]? with
+    | some env => pure (some env, false)
+    | none => pure (none, true)
+  if notFound then
+    return .inr ⟨"Unknown environment."⟩
+  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
+  let (initialCmdState, cmdState, messages, trees) ← try
+    IO.processInput n.decl initialCmdState?
+  catch ex =>
+    return .inr ⟨ex.toString⟩
+  trees.forM fun t => do IO.println (← t.format)
+  IO.println (trees.map (fun t => (t.findRootGoals.length)))
+
+  let optional_decls: List String ← trees.flatMap InfoTree.findRootGoals |>.mapM
+    fun ⟨t, ctx, goals⟩ => do
+      let mctx := ctx.mctx
+      let x := fun (m: MVarId) => do
+        let localContext : LocalContext := (← m.getDecl).lctx
+        match localContext.decls.get! 0 with
+        | none             => pure ""
+        | some firstDecl   => pure ((← Meta.ppExpr (← Lean.Meta.inferType firstDecl.toExpr)).pretty')
+      t.runMetaM ctx x
+  IO.println optional_decls
+  let decls := optional_decls.filter (fun s => !s.isEmpty)
+  return .inl (DeclTypeResponse.mk decls)
+
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -465,6 +494,7 @@ inductive Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
 | pickleProofSnapshot : REPL.PickleProofState → Input
 | unpickleProofSnapshot : REPL.UnpickleProofState → Input
+| getDeclType : REPL.GetDeclType → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -486,6 +516,8 @@ def parse (query : String) : IO Input := do
     | .ok (r : REPL.Command) => return .command r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.File) => return .file r
+    | .error _ => match fromJson? j with
+    | .ok (r: REPL.GetDeclType) => return .getDeclType r
     | .error e => throw <| IO.userError <| toString <| toJson <|
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : Error)
 
@@ -511,6 +543,7 @@ where loop : M IO Unit := do
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
   | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
   | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
+  | .getDeclType r => return toJson (← getDeclType r)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 

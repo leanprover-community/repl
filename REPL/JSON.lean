@@ -188,4 +188,13 @@ structure UnpickleProofState where
   env : Option Nat
 deriving ToJson, FromJson
 
+structure GetDeclType where
+  env: Option Nat
+  decl: String
+deriving ToJson, FromJson
+
+structure DeclTypeResponse where
+  types: List String
+deriving ToJson, FromJson
+
 end REPL
