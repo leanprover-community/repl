@@ -1,0 +1,9 @@
+{"cmd": "theorem onelethree : 1 ≤ 3 := by sorry"}
+
+{"tactic": "apply Nat.le_trans", "proofState" : 0}
+
+{"tactic": "apply Nat.succ_le_succ", "proofState" : 1}
+
+{"cmd": "theorem onelethreetwo : 1 ≤ 3 := by sorry"}
+
+{"tactic": "apply (Nat.le_trans (m := 2))", "proofState" : 3}

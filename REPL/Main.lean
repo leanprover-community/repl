@@ -364,10 +364,12 @@ def getDeclType (n: GetDeclType) : M IO (DeclTypeResponse ⊕ Error) := do
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (_, _, _, trees) ← try
+  let (initialCmdState, _, messages, trees) ← try
     IO.processInput n.decl initialCmdState?
   catch ex =>
     return .inr ⟨ex.toString⟩
+  let messages ← messages.mapM fun m => Message.of m
+  let sorries ← sorries trees initialCmdState.env none
   let terms := trees.map InfoTree.findTermNodes
   let innermost := (fun (t : TermInfo) => do pure (← Meta.ppExpr (← Lean.Meta.inferType t.expr)).pretty')
   let inner := (fun t : (TermInfo × ContextInfo) => t.snd.runMetaM t.fst.lctx (innermost t.fst))
@@ -375,8 +377,8 @@ def getDeclType (n: GetDeclType) : M IO (DeclTypeResponse ⊕ Error) := do
     match treeterms.getLast? with
     | none => pure ""
     | some a => inner a
-  let decls := optional_decls.filter (fun s => !s.isEmpty)
-  return .inl <| DeclTypeResponse.mk decls
+  let types := optional_decls.filter (fun s => !s.isEmpty)
+  return .inl { types, messages, sorries }
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.

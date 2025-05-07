@@ -1,6 +1,14 @@
-{"types": ["∀ (p : Prop), p → p"]}
+{"types": ["∀ (p : Prop), p → p"],
+ "sorries": [],
+ "messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 51},
+   "data": "Goals accomplished!"}]}
 
-{"types": ["∀ (p : Prop), p → p"]}
+{"types": ["∀ (p : Prop), p → p"], "sorries": [], "messages": []}
 
-{"types": ["∀ (p : Prop), p → p", "∀ (q : Prop), q → q"]}
+{"types": ["∀ (p : Prop), p → p", "∀ (q : Prop), q → q"],
+ "sorries": [],
+ "messages": []}
 
