@@ -1,0 +1,6 @@
+{"types": ["∀ (p : Prop), p → p"]}
+
+{"types": ["∀ (p : Prop), p → p"]}
+
+{"types": ["∀ (p : Prop), p → p", "∀ (q : Prop), q → q"]}
+

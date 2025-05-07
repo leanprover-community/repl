@@ -1,0 +1,5 @@
+{"decl": "theorem show_p (p : Prop) (h : p) : p := by exact h"}
+
+{"decl": "def show_q (p : Prop) (h : p) : p := h"}
+
+{"decl": "def show_q (p : Prop) (h : p) : p := h\n\ndef show_p (q : Prop) (h : q) : q := h"}

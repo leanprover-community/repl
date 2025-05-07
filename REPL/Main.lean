@@ -364,25 +364,19 @@ def getDeclType (n: GetDeclType) : M IO (DeclTypeResponse ⊕ Error) := do
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (initialCmdState, cmdState, messages, trees) ← try
+  let (_, _, _, trees) ← try
     IO.processInput n.decl initialCmdState?
   catch ex =>
     return .inr ⟨ex.toString⟩
-  trees.forM fun t => do IO.println (← t.format)
-  IO.println (trees.map (fun t => (t.findRootGoals.length)))
-
-  let optional_decls: List String ← trees.flatMap InfoTree.findRootGoals |>.mapM
-    fun ⟨t, ctx, goals⟩ => do
-      let mctx := ctx.mctx
-      let x := fun (m: MVarId) => do
-        let localContext : LocalContext := (← m.getDecl).lctx
-        match localContext.decls.get! 0 with
-        | none             => pure ""
-        | some firstDecl   => pure ((← Meta.ppExpr (← Lean.Meta.inferType firstDecl.toExpr)).pretty')
-      t.runMetaM ctx x
-  IO.println optional_decls
+  let terms := trees.map InfoTree.findTermNodes
+  let innermost := (fun (t : TermInfo) => do pure (← Meta.ppExpr (← Lean.Meta.inferType t.expr)).pretty')
+  let inner := (fun t : (TermInfo × ContextInfo) => t.snd.runMetaM t.fst.lctx (innermost t.fst))
+  let optional_decls: List String ← terms.mapM fun treeterms => do
+    match treeterms.getLast? with
+    | none => pure ""
+    | some a => inner a
   let decls := optional_decls.filter (fun s => !s.isEmpty)
-  return .inl (DeclTypeResponse.mk decls)
+  return .inl <| DeclTypeResponse.mk decls
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
