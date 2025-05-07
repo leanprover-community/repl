@@ -190,6 +190,20 @@ def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo × List MVa
   | (.ofTacticInfo i, some ctx, rootGoals) => (i, ctx, rootGoals)
   | _ => none
 
+/-- Returns all `TermInfo` nodes for a given `InfoTree`. -/
+partial def findTermNodes (t : InfoTree) (ctx? : Option ContextInfo := none) :
+  List (TermInfo × ContextInfo) :=
+  match t with
+  | .context ctx t => t.findTermNodes (ctx.mergeIntoOuter? ctx?)
+  | .node info ts =>
+    match info with
+    | .ofTermInfo i =>
+      match ctx? with
+      | some ctx => [(i, ctx)]
+      | _ => []
+    | _ => ts.toList.flatMap (fun t => t.findTermNodes ctx?)
+  | _ => []
+
 /-- Returns the root goals for a given `InfoTree`. -/
 partial def findRootGoals (t : InfoTree) (ctx? : Option ContextInfo := none) :
   List (TacticInfo × ContextInfo × List MVarId) :=
