@@ -3,3 +3,5 @@
 {"decl": "def show_q (p : Prop) (h : p) : p := h"}
 
 {"decl": "def show_q (p : Prop) (h : p) : p := h\n\ndef show_p (q : Prop) (h : q) : q := h"}
+
+{"decl": "variable (q : Prop)\ndef show_q (p : Type) (h : q) : q := h"}
