@@ -122,17 +122,15 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
-        -- let goalInfo : Option GoalInfo ← match proofState with
-        -- | some proofState => do
-        --    match proofState.tacticState.goals[0]? with
-        --    | some goalId => do
-        --      -- TODO: this does not work when it's just `sorry` instead of `by sorry` - allow printGoalInfo to return none
-        --      let info ← printGoalInfo ctx goalId
-        --      pure (some info)
-        --    | none => pure none
-        -- | none => pure none
-        -- TODO
-        let goalInfo : Option GoalInfo := none
+        let goalInfo : Option GoalInfo ← match proofState with
+        | some proofState => do
+           match proofState.tacticState.goals[0]? with
+           | some goalId => do
+             -- TODO: this does not work when it's just `sorry` instead of `by sorry` - allow printGoalInfo to return none
+             let info ← printGoalInfo ctx goalId
+             pure (some info)
+           | none => pure none
+        | none => pure none
         return Sorry.of goal goalInfo pos endPos proofStateId
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
