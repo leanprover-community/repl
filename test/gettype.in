@@ -2,6 +2,6 @@
 
 {"cmd": "def show_q (p : Prop) (h : p) : p := h", "declTypes": true}
 
-{"cmd": "def show_q (p : Prop) (h : p) : p := h\n\ndef show_p (q : Prop) (h : q) : q := h", "declTypes": true}
+{"cmd": "def show_p (p : Prop) (h : p) : p := h\n\ndef show_q (q : Prop) (h : q) : q := h", "declTypes": true}
 
 {"cmd": "variable (q : Prop)\ndef show_q (p : Type) (h : q) : q := h", "declTypes": true}
