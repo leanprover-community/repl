@@ -1,0 +1,3 @@
+{"cmd": "import Mathlib.NumberTheory.Divisors\nopen Nat"}
+
+{"cmd": "theorem with_namespace  : (∑ k ∈ Nat.properDivisors 198, k) = 270 := by rfl", "env": 0, "declTypes": true}

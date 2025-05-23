@@ -1,23 +1,21 @@
-{"types": ["∀ (p : Prop), p → p"],
- "sorries": [],
- "messages":
+{"messages":
  [{"severity": "info",
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 51},
-   "data": "Goals accomplished!"}]}
+   "data": "Goals accomplished!"}],
+ "env": 0,
+ "decls": ["∀ (p : Prop), p → p"]}
 
-{"types": ["∀ (p : Prop), p → p"], "sorries": [], "messages": []}
+{"env": 1, "decls": ["∀ (p : Prop), p → p"]}
 
-{"types": ["∀ (p : Prop), p → p", "∀ (q : Prop), q → q"],
- "sorries": [],
- "messages": []}
+{"env": 2, "decls": ["∀ (p : Prop), p → p", "∀ (q : Prop), q → q"]}
 
-{"types": ["Prop", "∀ (q : Prop), Type → q → q"],
- "sorries": [],
- "messages":
+{"messages":
  [{"severity": "warning",
    "pos": {"line": 2, "column": 12},
    "endPos": {"line": 2, "column": 13},
    "data":
-   "unused variable `p`\nnote: this linter can be disabled with `set_option linter.unusedVariables false`"}]}
+   "unused variable `p`\nnote: this linter can be disabled with `set_option linter.unusedVariables false`"}],
+ "env": 3,
+ "decls": ["Prop", "∀ (q : Prop), Type → q → q"]}
 
