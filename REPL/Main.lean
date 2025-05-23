@@ -187,15 +187,17 @@ def tacticsCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv 
     let restTactics ← tacticsCmd rest state.commandState.env
     return ts ++ restTactics
 
-def declTypes (trees: List InfoTree) : M m (List String) := do
-  let terms := trees.map InfoTree.findTermNodes
-  let innermost := (fun (t : TermInfo) => do pure (← Meta.ppExpr (← Lean.Meta.inferType t.expr)).pretty')
-  let inner := (fun t : (TermInfo × ContextInfo) => t.snd.runMetaM t.fst.lctx (innermost t.fst))
-  let optional_decls: List String ← terms.mapM fun treeterms => do
-    match treeterms.getLast? with
-    | none => pure ""
-    | some a => inner a
-  pure (optional_decls.filter (fun s => !s.isEmpty))
+def declTypes (trees: List InfoTree) : M m (List DeclType) := do
+  let exprType: Expr → MetaM String := fun (expr: Expr) => do pure (← Meta.ppExpr (← Lean.Meta.inferType expr)).pretty'
+  let treeDecl := (fun t => do
+    let dt := InfoTree.declType t
+    match dt with
+    | some ⟨ctx, expr, stx, lctx, pos, endPos⟩ =>
+      let type := (← ctx.runMetaM lctx (exprType expr))
+      let pp := Format.pretty stx.prettyPrint
+      pure [DeclType.of type pp pos endPos]
+    | _ => pure [])
+  trees.flatMapM treeDecl
 
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM

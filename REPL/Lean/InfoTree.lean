@@ -272,6 +272,14 @@ def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × List 
       range.snd,
       i.getUsedConstantsAsSet.toArray )
 
+def declType (t : InfoTree) : Option (ContextInfo × Expr × Syntax × LocalContext × Position × Position) :=
+  let terms: List (TermInfo × ContextInfo) := t.findTermNodes
+  match terms.getLast? with
+  | some ⟨i, ctx⟩ =>
+    let range := stxRange ctx.fileMap i.stx
+    (ctx, i.expr, i.stx, i.lctx, range.fst, range.snd)
+  | _ => none
+
 def rootGoals (t : InfoTree) : List (ContextInfo × List MVarId × Position) :=
   t.findRootGoals.map fun ⟨i, ctx, rootGoals⟩ =>
     let range := stxRange ctx.fileMap i.stx

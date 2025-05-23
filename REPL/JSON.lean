@@ -117,6 +117,20 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     proofState,
     usedConstants }
 
+structure DeclType where
+  pos: Pos
+  endPos : Pos
+  type: String
+  pp: String
+deriving ToJson, FromJson
+
+/-- Construct the JSON representation of a Declaration type. -/
+def DeclType.of (type pp : String) (pos endPos : Lean.Position) : DeclType :=
+  { pos := ⟨pos.line, pos.column⟩,
+    endPos := ⟨endPos.line, endPos.column⟩,
+    type,
+    pp }
+
 /--
 A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
@@ -126,7 +140,7 @@ structure CommandResponse where
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
-  decls: List String := []
+  decls: List DeclType := []
   infotree : Option Json := none
 deriving FromJson
 
