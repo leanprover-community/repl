@@ -1,0 +1,14 @@
+{"env": 0}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 75},
+   "data": "Goals accomplished!"}],
+ "env": 1,
+ "decls":
+ [{"type": "∑ k ∈ Nat.properDivisors 198, k = 270",
+   "pp": "with_namespace",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 22}}]}
+
