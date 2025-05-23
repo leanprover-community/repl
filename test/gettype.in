@@ -1,7 +1,7 @@
-{"decl": "theorem show_p (p : Prop) (h : p) : p := by exact h"}
+{"cmd": "theorem show_p (p : Prop) (h : p) : p := by exact h", "declTypes": true}
 
-{"decl": "def show_q (p : Prop) (h : p) : p := h"}
+{"cmd": "def show_q (p : Prop) (h : p) : p := h", "declTypes": true}
 
-{"decl": "def show_q (p : Prop) (h : p) : p := h\n\ndef show_p (q : Prop) (h : q) : q := h"}
+{"cmd": "def show_q (p : Prop) (h : p) : p := h\n\ndef show_p (q : Prop) (h : q) : q := h", "declTypes": true}
 
-{"decl": "variable (q : Prop)\ndef show_q (p : Type) (h : q) : q := h"}
+{"cmd": "variable (q : Prop)\ndef show_q (p : Type) (h : q) : q := h", "declTypes": true}

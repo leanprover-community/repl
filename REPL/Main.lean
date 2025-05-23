@@ -187,6 +187,16 @@ def tacticsCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv 
     let restTactics ← tacticsCmd rest state.commandState.env
     return ts ++ restTactics
 
+def declTypes (trees: List InfoTree) : M m (List String) := do
+  let terms := trees.map InfoTree.findTermNodes
+  let innermost := (fun (t : TermInfo) => do pure (← Meta.ppExpr (← Lean.Meta.inferType t.expr)).pretty')
+  let inner := (fun t : (TermInfo × ContextInfo) => t.snd.runMetaM t.fst.lctx (innermost t.fst))
+  let optional_decls: List String ← terms.mapM fun treeterms => do
+    match treeterms.getLast? with
+    | none => pure ""
+    | some a => inner a
+  pure (optional_decls.filter (fun s => !s.isEmpty))
+
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
@@ -355,31 +365,6 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
 
-def getDeclType (n: GetDeclType) : M IO (DeclTypeResponse ⊕ Error) := do
-  let (cmdSnapshot?, notFound) ← do match n.env with
-  | none => pure (none, false)
-  | some i => do match (← get).cmdStates[i]? with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
-  if notFound then
-    return .inr ⟨"Unknown environment."⟩
-  let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (initialCmdState, _, messages, trees) ← try
-    IO.processInput n.decl initialCmdState?
-  catch ex =>
-    return .inr ⟨ex.toString⟩
-  let messages ← messages.mapM fun m => Message.of m
-  let sorries ← sorries trees initialCmdState.env none
-  let terms := trees.map InfoTree.findTermNodes
-  let innermost := (fun (t : TermInfo) => do pure (← Meta.ppExpr (← Lean.Meta.inferType t.expr)).pretty')
-  let inner := (fun t : (TermInfo × ContextInfo) => t.snd.runMetaM t.fst.lctx (innermost t.fst))
-  let optional_decls: List String ← terms.mapM fun treeterms => do
-    match treeterms.getLast? with
-    | none => pure ""
-    | some a => inner a
-  let types := optional_decls.filter (fun s => !s.isEmpty)
-  return .inl { types, messages, sorries }
-
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
@@ -424,6 +409,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
         cancelTk? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
   let trees := cmdState.infoState.trees.toList
+  let decls ← match s.declTypes with
+  | some true => declTypes trees
+  | _ => pure []
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let jsonTrees := match s.infotree with
@@ -440,7 +428,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
+      tactics,
+      decls,
       infotree }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
@@ -490,7 +479,6 @@ inductive Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
 | pickleProofSnapshot : REPL.PickleProofState → Input
 | unpickleProofSnapshot : REPL.UnpickleProofState → Input
-| getDeclType : REPL.GetDeclType → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -512,8 +500,6 @@ def parse (query : String) : IO Input := do
     | .ok (r : REPL.Command) => return .command r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.File) => return .file r
-    | .error _ => match fromJson? j with
-    | .ok (r: REPL.GetDeclType) => return .getDeclType r
     | .error e => throw <| IO.userError <| toString <| toJson <|
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : Error)
 
@@ -539,7 +525,6 @@ where loop : M IO Unit := do
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
   | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
   | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
-  | .getDeclType r => return toJson (← getDeclType r)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 

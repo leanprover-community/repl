@@ -1,0 +1,10 @@
+{"env": 0}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 75},
+   "data": "Goals accomplished!"}],
+ "env": 1,
+ "decls": ["∑ k ∈ properDivisors 198, k = 270"]}
+

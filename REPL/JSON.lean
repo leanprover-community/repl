@@ -13,6 +13,7 @@ namespace REPL
 
 structure CommandOptions where
   allTactics : Option Bool := none
+  declTypes: Option Bool := none
   rootGoals : Option Bool := none
   /--
   Should be "full", "tactics", "original", or "substantive".
@@ -125,6 +126,7 @@ structure CommandResponse where
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
+  decls: List String := []
   infotree : Option Json := none
 deriving FromJson
 
@@ -138,6 +140,7 @@ instance : ToJson CommandResponse where
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
+    Json.nonemptyList "decls" r.decls,
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 
@@ -186,17 +189,6 @@ deriving ToJson, FromJson
 structure UnpickleProofState where
   unpickleProofStateFrom : System.FilePath
   env : Option Nat
-deriving ToJson, FromJson
-
-structure GetDeclType where
-  env: Option Nat
-  decl: String
-deriving ToJson, FromJson
-
-structure DeclTypeResponse where
-  types: List String
-  messages : List Message := []
-  sorries : List Sorry := []
 deriving ToJson, FromJson
 
 end REPL
