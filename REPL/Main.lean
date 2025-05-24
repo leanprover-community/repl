@@ -199,6 +199,14 @@ def declTypes (trees: List InfoTree) : M m (List DeclType) := do
     | _ => pure [])
   trees.flatMapM treeDecl
 
+def namespaces (trees: List InfoTree) : M m (List Namespace) :=
+  trees.flatMap InfoTree.namespaces |>.mapM
+    fun ⟨i, ctx, pos, endPos⟩ =>
+      let openDecls: List String := ctx.openDecls.map toString
+      let pp := (Format.pretty i.stx.prettyPrint)
+      let currNamespace := toString ctx.currNamespace
+      pure (Namespace.of currNamespace pp openDecls pos endPos)
+
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
@@ -402,6 +410,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tacticsCmd incStates initialCmdState.env
   | _ => pure []
+  let namespaces ← match s.namespaces with
+  | some true => namespaces trees
+  | _ => pure []
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
@@ -432,6 +443,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
       sorries,
       tactics,
       decls,
+      namespaces,
       infotree }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do

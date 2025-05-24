@@ -193,16 +193,31 @@ def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo × List MVa
 /-- Returns all `TermInfo` nodes for a given `InfoTree`. -/
 partial def findTermNodes (t : InfoTree) (ctx? : Option ContextInfo := none) :
   List (TermInfo × ContextInfo) :=
-  match t with
-  | .context ctx t => t.findTermNodes (ctx.mergeIntoOuter? ctx?)
-  | .node info ts =>
+  let infoCtx := t.findAllInfo ctx? fun (info: Info) =>
     match info with
-    | .ofTermInfo i =>
-      match ctx? with
-      | some ctx => [(i, ctx)]
-      | _ => []
-    | _ => ts.toList.flatMap (fun t => t.findTermNodes ctx?)
-  | _ => []
+    | .ofTermInfo _ => true
+    | _ => false
+  infoCtx.flatMap fun ⟨info, ctx?⟩ =>
+   match info with
+   | .ofTermInfo i => match ctx? with
+    | some ctx => [(i, ctx)]
+    | _ => []
+   | _ => []
+
+
+/-- Returns all `CommandInfo` nodes for a given `InfoTree`. -/
+partial def findCommandNodes (t : InfoTree) (ctx? : Option ContextInfo := none) :
+  List (CommandInfo × ContextInfo) :=
+  let infoCtx := t.findAllInfo ctx? fun (info: Info) =>
+    match info with
+    | .ofCommandInfo _ => true
+    | _ => false
+  infoCtx.flatMap fun ⟨info, ctx?⟩ =>
+   match info with
+   | .ofCommandInfo i => match ctx? with
+    | some ctx => [(i, ctx)]
+    | _ => []
+   | _ => []
 
 /-- Returns the root goals for a given `InfoTree`. -/
 partial def findRootGoals (t : InfoTree) (ctx? : Option ContextInfo := none) :
@@ -279,6 +294,18 @@ def declType (t : InfoTree) : Option (ContextInfo × Expr × Syntax × LocalCont
     let range := stxRange ctx.fileMap i.stx
     (ctx, i.expr, i.stx, i.lctx, range.fst, range.snd)
   | _ => none
+
+def namespaces (t : InfoTree) : List (CommandInfo × ContextInfo × Position × Position) :=
+  let nodes := t.findCommandNodes |>.filter fun ⟨i, _⟩ =>
+    match i.elaborator with
+    | ``Lean.Elab.Command.elabOpen => true
+    | ``Lean.Elab.Command.elabSection => true
+    | ``Lean.Elab.Command.elabEnd => true
+    | ``Lean.Elab.Command.elabNamespace => true
+    | _ => false
+  nodes.map fun ⟨i, ctx⟩ =>
+    let range := stxRange ctx.fileMap i.stx
+    (i, ctx, range.fst, range.snd)
 
 def rootGoals (t : InfoTree) : List (ContextInfo × List MVarId × Position) :=
   t.findRootGoals.map fun ⟨i, ctx, rootGoals⟩ =>

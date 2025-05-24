@@ -14,6 +14,7 @@ namespace REPL
 structure CommandOptions where
   allTactics : Option Bool := none
   declTypes: Option Bool := none
+  namespaces: Option Bool := none
   rootGoals : Option Bool := none
   /--
   Should be "full", "tactics", "original", or "substantive".
@@ -118,10 +119,10 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     usedConstants }
 
 structure DeclType where
-  pos: Pos
+  pos : Pos
   endPos : Pos
-  type: String
-  pp: String
+  type : String
+  pp : String
 deriving ToJson, FromJson
 
 /-- Construct the JSON representation of a Declaration type. -/
@@ -129,6 +130,21 @@ def DeclType.of (type pp : String) (pos endPos : Lean.Position) : DeclType :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
     type,
+    pp }
+
+structure Namespace where
+  pos : Pos
+  endPos : Pos
+  currentNamespace : String
+  openDecls: List String
+  pp : String
+deriving ToJson, FromJson
+
+def Namespace.of (currentNamespace pp : String) (openDecls : List String) (pos endPos : Lean.Position) : Namespace :=
+  { pos := ⟨pos.line, pos.column⟩,
+    endPos := ⟨endPos.line, endPos.column⟩,
+    currentNamespace,
+    openDecls,
     pp }
 
 /--
@@ -141,6 +157,7 @@ structure CommandResponse where
   sorries : List Sorry := []
   tactics : List Tactic := []
   decls: List DeclType := []
+  namespaces: List Namespace := []
   infotree : Option Json := none
 deriving FromJson
 
@@ -155,6 +172,7 @@ instance : ToJson CommandResponse where
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
     Json.nonemptyList "decls" r.decls,
+    Json.nonemptyList "namespaces" r.namespaces,
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 

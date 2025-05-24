@@ -1,0 +1,5 @@
+{"cmd": "section\nopen Nat\nend", "namespaces": true}
+
+{"cmd": "open Lean\nsection test\nopen Nat\nend test", "namespaces": true}
+
+{"cmd": "open Lean\nsection\nopen Nat\nsection test\nopen Elab\nend test\nend", "namespaces": true}
