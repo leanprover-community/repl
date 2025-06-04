@@ -4,10 +4,5 @@
 
 {"env": 1}
 
-{"messages":
- [{"severity": "info",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 26},
-   "data": "Goals accomplished!"}],
- "env": 2}
+{"env": 2}
 
