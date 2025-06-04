@@ -229,6 +229,82 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
 
     | _ => return "Incomplete: open goals remain"
 
+/--
+Verifies that all goals from the old state are properly handled in the new state.
+Returns either "OK" or an error message describing the first failing goal.
+-/
+def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
+    M m String := do
+  match oldProofState? with
+  | none => return "OK"  -- Nothing to verify
+  | some oldState => do
+    let mut allOk := true
+    let mut errorMsg := ""
+
+    for oldGoal in oldState.tacticState.goals do
+      -- If the goal is still present in the new proofState, we don't need to verify it yet.
+      if proofState.tacticState.goals.contains oldGoal then
+        continue
+
+      let (res, _) ← proofState.runMetaM do
+        -- Check if goal is assigned in new state
+        match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
+        | none => return s!"Goal {oldGoal.name} was not solved"
+        | some pf => do
+          let pf ← instantiateMVars pf
+          let pft ← Meta.inferType pf >>= instantiateMVars
+
+          -- Check that all MVars in the proof are goals in new state
+          let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
+          -- IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
+          let mut pfWithSorries := pf
+          for mvar in mvars.result do
+            -- If the metavariable in the assignment is a new goal, it's fine.
+            unless proofState.tacticState.goals.contains mvar do
+              return s!"Goal {oldGoal.name} assignment contains metavariables"
+
+            -- If the metavariable is a new goal, replace it with sorry so that we can check the proof.
+            let sorryTerm ← Meta.mkSorry pft false
+            pfWithSorries ← pure $ pfWithSorries.replace (
+              fun e => if e == mkMVar mvar then some sorryTerm else none
+            )
+          let pf := pfWithSorries
+          -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
+
+          -- Check that proof has expected type
+          let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
+          unless (← Meta.isDefEq pft expectedType) do
+            return s!"Error: proof has type {pft} but goal has type {expectedType}"
+
+          let pf ← oldGoal.withContext $ abstractAllLambdaFVars pf
+          let pft ← Meta.inferType pf >>= instantiateMVars
+
+          -- Find level parameters
+          let usedLevels := collectLevelParams {} pft
+          let usedLevels := collectLevelParams usedLevels pf
+
+          let decl := Declaration.defnDecl {
+            name := Name.anonymous,
+            type := pft,
+            value := pf,
+            levelParams := usedLevels.params.toList,
+            hints := ReducibilityHints.opaque,
+            safety := DefinitionSafety.safe
+          }
+
+          try
+            let _ ← addDecl decl
+            return "OK"
+          catch ex =>
+            return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+
+      if res != "OK" then
+        allOk := false
+        errorMsg := res
+        break
+
+    return if allOk then "OK" else errorMsg
+
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m ProofStepResponse := do
@@ -246,13 +322,15 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none (some proofState.rootGoals)
   let id ← recordProofSnapshot proofState
+  let (ctx, _) ← proofState.runMetaM do return { ← CommandContextInfo.save with }
   return {
     proofState := id
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
     messages
     sorries
     traces
-    proofStatus := (← getProofStatus proofState) }
+    proofStatus := (← getProofStatus proofState)
+    stepVerification := (← verifyGoalAssignment ctx proofState old?)  }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
