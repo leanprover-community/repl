@@ -234,6 +234,16 @@ structure CompactableMetaContext where
   synthPendingDepth : Nat                  := 0
   -- canUnfold?        : Option (Config → ConstantInfo → CoreM Bool) := none
 
+open Lean.Elab.Term in
+def _root_.Lean.Elab.Term.SyntheticMVarDecl.removeClosures
+    (decl : SyntheticMVarDecl) : SyntheticMVarDecl :=
+  { decl with kind := match decl.kind with
+      | .typeClass _extraErrorMsg? =>
+        .typeClass none
+      | .coe header? expectedType e f? _mkErrorMsg? =>
+        .coe header? expectedType e f? none
+      | kind => kind }
+
 /-- A copy of `Term.Context` with closures and a cache omitted. -/
 structure CompactableTermContext where
   declName? : Option Name := none
@@ -272,7 +282,9 @@ def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
      p'.coreContext,
      p'.metaState,
      ({ p'.metaContext with config := cfg } : CompactableMetaContext),
-     p'.termState,
+     { p'.termState with syntheticMVars :=
+        p'.termState.syntheticMVars.filterMap <|
+          fun _ (decl : Term.SyntheticMVarDecl) => some decl.removeClosures },
      ({ p'.termContext with } : CompactableTermContext),
      p'.tacticState,
      p'.tacticContext,
