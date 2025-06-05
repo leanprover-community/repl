@@ -130,6 +130,19 @@ def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tact
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
+
+def declTypes (trees: List InfoTree) : M m (List DeclType) := do
+  let exprType: Expr → MetaM String := fun (expr: Expr) => do pure (← Meta.ppExpr (← Lean.Meta.inferType expr)).pretty'
+  let treeDecl := (fun t => do
+    let dt := InfoTree.declType t
+    match dt with
+    | some ⟨ctx, expr, stx, lctx, pos, endPos⟩ =>
+      let type := (← ctx.runMetaM lctx (exprType expr))
+      let pp := Format.pretty stx.prettyPrint
+      pure [DeclType.of type pp pos endPos]
+    | _ => pure [])
+  trees.flatMapM treeDecl
+
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
@@ -315,6 +328,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tactics trees initialCmdState.env
   | _ => pure []
+  let decls ← match s.declTypes with
+  | some true => declTypes trees
+  | _ => pure []
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
@@ -337,7 +353,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
+      tactics,
+      decls,
       infotree }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
