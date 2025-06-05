@@ -200,9 +200,15 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Envi
     let s := match env? with
     | none => s
     | some env => { s with env }
+    let coreCtx ← readThe Core.Context
+    -- TODO: This should have been done in `ContextInfo.runCoreM` which is called by `ContextInfo.runMetaM`
+    -- (where a new `Core.Context` was created, but where the `maxHeartbeats` and `maxRecDepth` options were left to default)
+    let coreCtx := { coreCtx with
+      maxHeartbeats := Core.getMaxHeartbeats ctx.options
+      maxRecDepth := maxRecDepth.get ctx.options }
     pure <|
     { coreState := s
-      coreContext := ← readThe Core.Context
+      coreContext := coreCtx
       metaState := ← getThe Meta.State
       metaContext := ← readThe Meta.Context
       termState := {}
