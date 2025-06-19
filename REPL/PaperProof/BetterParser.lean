@@ -118,7 +118,9 @@ def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List Str
 
 open Parser.Tactic (optConfig rwRuleSeq location getConfigItems)
 
+namespace Mathlib.Tactic
 elab s:"simp_rw " cfg:optConfig rws:rwRuleSeq g:(location)? : tactic => pure ()
+end Mathlib.Tactic
 
 def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo) : IO (List ProofStepInfo) := do
   let range := stx.toRange ctx
@@ -155,6 +157,7 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
       let middle := steps.drop 1 |>.dropLast
       return first :: middle ++ [last]
 
+  -- dbg_trace s!"Tactic syntax: {stx}"
   match stx with
   | `(tactic| rw [$_,*] $(at_clause)?)
   | `(tactic| rewrite [$_,*] $(at_clause)?) =>
@@ -176,6 +179,7 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
       }
     return rwSteps ++ assumptionSteps
   | `(tactic| simp_rw [$_,*] $(at_clause)?) =>
+    -- dbg_trace s!"simp_rw!"
     extractRwStep steps "simp only" at_clause
   | _ => return steps
 -- Comparator for names, e.g. so that _uniq.34 and _uniq.102 go in the right order.
