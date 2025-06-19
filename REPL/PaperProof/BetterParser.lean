@@ -116,16 +116,21 @@ def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List Str
 
 -- TODO: solve rw_mod_cast
 
+open Parser.Tactic (optConfig rwRuleSeq location getConfigItems)
+
+elab s:"simp_rw " cfg:optConfig rws:rwRuleSeq g:(location)? : tactic => pure ()
+
 def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo) : IO (List ProofStepInfo) := do
   let range := stx.toRange ctx
   let prettify (tStr : String) :=
     let res := tStr.trim.dropRightWhile (· == ',')
     -- rw puts final rfl on the "]" token
     -- TODO: is this correct for `rewrite`?
-    if res == "]" then "rfl" else res
+    -- if res == "]" then "rfl" else res
+    res
   -- Each part of rw is a separate step none of them include the initial 'rw [' and final ']'.
   -- So we add these to the first and last steps.
-  let extractRwStep (steps : List ProofStepInfo) (atClause? : Option Syntax) : IO (List ProofStepInfo) := do
+  let extractRwStep (steps : List ProofStepInfo) (tactic : String) (atClause? : Option Syntax) : IO (List ProofStepInfo) := do
     -- If atClause is present, call toJson on it and retrieve the `pp` field.
     let atClauseStr? ← match atClause? with
       | some atClause => do
@@ -137,7 +142,7 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
     -- Turn the `Option String` into a (possibly-empty) string so we can insert it.
     let maybeAtClause := atClauseStr?.getD ""   -- getD "" returns `""` if `atClauseStr?` is `none`
     let rwSteps := steps.map fun a =>
-      { a with tacticString := s!"rw [{prettify a.tacticString}]{maybeAtClause}" }
+      { a with tacticString := s!"{tactic} [{prettify a.tacticString}]{maybeAtClause}" }
 
     match rwSteps with
     | [] =>
@@ -153,9 +158,9 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
   match stx with
   | `(tactic| rw [$_,*] $(at_clause)?)
   | `(tactic| rewrite [$_,*] $(at_clause)?) =>
-    extractRwStep steps at_clause
+    extractRwStep steps "rw" at_clause
   | `(tactic| rwa [$_,*] $(at_clause)?) =>
-    let rwSteps ← extractRwStep steps at_clause
+    let rwSteps ← extractRwStep steps "rw" at_clause
     let assumptionSteps := (if rwSteps.isEmpty then [] else rwSteps.getLast!.goalsAfter).map fun g =>
       {
         tacticString := "assumption",
@@ -170,6 +175,8 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
         finish := none
       }
     return rwSteps ++ assumptionSteps
+  | `(tactic| simp_rw [$_,*] $(at_clause)?) =>
+    extractRwStep steps "simp only" at_clause
   | _ => return steps
 -- Comparator for names, e.g. so that _uniq.34 and _uniq.102 go in the right order.
 -- That's not completely right because it doesn't compare prefixes but
