@@ -200,6 +200,8 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
 
       let infoTreeJson ← (InfoTree.node i PersistentArray.empty).toJson ctx
 
+      steps ← prettifySteps tInfo.stx ctx steps
+
       let proofTreeEdges ← getGoalsChange ctx tInfo
       let currentGoals := proofTreeEdges.map (fun ⟨ _, g₁, gs ⟩ => g₁ :: gs)  |>.join
       let allGoals := allSubGoals.insertMany $ currentGoals
