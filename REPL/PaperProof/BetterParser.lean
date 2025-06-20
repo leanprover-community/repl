@@ -118,9 +118,9 @@ def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List Str
 
 open Parser.Tactic (optConfig rwRuleSeq location getConfigItems)
 
-namespace Mathlib.Tactic
-elab s:"simp_rw " cfg:optConfig rws:rwRuleSeq g:(location)? : tactic => pure ()
-end Mathlib.Tactic
+-- namespace Mathlib.Tactic
+-- elab s:"simp_rw " cfg:optConfig rws:rwRuleSeq g:(location)? : tactic => pure ()
+-- end Mathlib.Tactic
 
 def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo) : IO (List ProofStepInfo) := do
   let range := stx.toRange ctx
@@ -167,6 +167,7 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
     let assumptionSteps := (if rwSteps.isEmpty then [] else rwSteps.getLast!.goalsAfter).map fun g =>
       {
         tacticString := "assumption",
+        syntaxString := "assumption",
         infoTree := none,
         goalBefore := g,
         goalsAfter := [],
@@ -178,9 +179,9 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
         finish := none
       }
     return rwSteps ++ assumptionSteps
-  | `(tactic| simp_rw [$_,*] $(at_clause)?) =>
+  -- | `(tactic| simp_rw [$_,*] $(at_clause)?) =>
     -- dbg_trace s!"simp_rw!"
-    extractRwStep steps "simp only" at_clause
+    -- extractRwStep steps "simp only" at_clause
   | _ => return steps
 -- Comparator for names, e.g. so that _uniq.34 and _uniq.102 go in the right order.
 -- That's not completely right because it doesn't compare prefixes but
@@ -206,7 +207,7 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
 
       let infoTreeJson ← (InfoTree.node i PersistentArray.empty).toJson ctx
 
-      let steps ← prettifySteps tInfo.stx ctx steps
+      -- let steps ← prettifySteps tInfo.stx ctx steps
 
       let proofTreeEdges ← getGoalsChange ctx tInfo
       let currentGoals := proofTreeEdges.map (fun ⟨ _, g₁, gs ⟩ => g₁ :: gs)  |>.join
@@ -227,6 +228,7 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
           let range := tInfo.stx.toRange ctx
           some {
             tacticString,
+            syntaxString := tInfo.stx.formatStx.pretty,
             goalBefore,
             goalsAfter,
             mctxBefore := mctxBeforeJson,
