@@ -123,9 +123,7 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
   let prettify (tStr : String) :=
     let res := tStr.trim.dropRightWhile (· == ',')
     -- rw puts final rfl on the "]" token
-    -- TODO: is this correct for `rewrite`?
-    -- if res == "]" then "rfl" else res
-    res
+    if res == "]" then "rfl" else res
   -- Each part of rw is a separate step none of them include the initial 'rw [' and final ']'.
   -- So we add these to the first and last steps.
   let extractRwStep (steps : List ProofStepInfo) (tactic : String) (atClause? : Option Syntax) : IO (List ProofStepInfo) := do
@@ -139,8 +137,12 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
 
     -- Turn the `Option String` into a (possibly-empty) string so we can insert it.
     let maybeAtClause := atClauseStr?.getD ""   -- getD "" returns `""` if `atClauseStr?` is `none`
-    let rwSteps := steps.map fun a =>
-      { a with tacticString := s!"{tactic} [{prettify a.tacticString}]{maybeAtClause}" }
+    -- rw puts final rfl on the "]" token
+    -- let rwSteps := (steps.filter (·.tacticString.trim.dropWhile (· == ' ') != "]")).map
+    --   fun a => { a with tacticString := s!"{tactic} [{prettify a.tacticString}]{maybeAtClause}" }
+    let rwSteps := steps.map
+      fun a => { a with tacticString := s!"{tactic} [{prettify a.tacticString}]{maybeAtClause}" }
+
 
     match rwSteps with
     | [] =>
