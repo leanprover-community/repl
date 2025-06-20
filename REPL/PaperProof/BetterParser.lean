@@ -118,10 +118,6 @@ def getGoalsChange (ctx : ContextInfo) (tInfo : TacticInfo) : IO (List (List Str
 
 open Parser.Tactic (optConfig rwRuleSeq location getConfigItems)
 
--- namespace Mathlib.Tactic
--- elab s:"simp_rw " cfg:optConfig rws:rwRuleSeq g:(location)? : tactic => pure ()
--- end Mathlib.Tactic
-
 def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo) : IO (List ProofStepInfo) := do
   let range := stx.toRange ctx
   let prettify (tStr : String) :=
@@ -157,17 +153,16 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
       let middle := steps.drop 1 |>.dropLast
       return first :: middle ++ [last]
 
-  -- dbg_trace s!"Tactic syntax: {stx}"
   match stx with
-  | `(tactic| rw [$_,*] $(at_clause)?)
-  | `(tactic| rewrite [$_,*] $(at_clause)?) =>
+  | `(tactic| rw [$_,*] $(at_clause)?) =>
     extractRwStep steps "rw" at_clause
+  | `(tactic| rewrite [$_,*] $(at_clause)?) =>
+    extractRwStep steps "rewrite" at_clause
   | `(tactic| rwa [$_,*] $(at_clause)?) =>
     let rwSteps ← extractRwStep steps "rw" at_clause
     let assumptionSteps := (if rwSteps.isEmpty then [] else rwSteps.getLast!.goalsAfter).map fun g =>
       {
         tacticString := "assumption",
-        syntaxString := "assumption",
         infoTree := none,
         goalBefore := g,
         goalsAfter := [],
@@ -179,10 +174,8 @@ def prettifySteps (stx : Syntax) (ctx : ContextInfo) (steps : List ProofStepInfo
         finish := none
       }
     return rwSteps ++ assumptionSteps
-  -- | `(tactic| simp_rw [$_,*] $(at_clause)?) =>
-    -- dbg_trace s!"simp_rw!"
-    -- extractRwStep steps "simp only" at_clause
   | _ => return steps
+
 -- Comparator for names, e.g. so that _uniq.34 and _uniq.102 go in the right order.
 -- That's not completely right because it doesn't compare prefixes but
 -- it's much shorter to write than correct version and serves the purpose.
@@ -196,7 +189,7 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
     let res := res.filterMap id
     let some ctx := i.updateContext? ctx
       | panic! "unexpected context node"
-    let steps := res.map (fun r => r.steps) |>.join
+    let mut steps := res.map (fun r => r.steps) |>.join
     let allSubGoals := Std.HashSet.empty.insertMany $ res.bind (·.allGoals.toList)
     if let .ofTacticInfo tInfo := i then
       -- shortcut if it's not a tactic user wrote
@@ -206,8 +199,6 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
         | return {steps, allGoals := allSubGoals}
 
       let infoTreeJson ← (InfoTree.node i PersistentArray.empty).toJson ctx
-
-      -- let steps ← prettifySteps tInfo.stx ctx steps
 
       let proofTreeEdges ← getGoalsChange ctx tInfo
       let currentGoals := proofTreeEdges.map (fun ⟨ _, g₁, gs ⟩ => g₁ :: gs)  |>.join
@@ -220,15 +211,17 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
       let mctxBeforeJson ← MetavarContext.toJson tInfo.mctxBefore ctx
       let mctxAfterJson ← MetavarContext.toJson tInfo.mctxAfter ctx
 
+      let isSimpRw := tInfo.stx.getKind.toString == "Mathlib.Tactic.tacticSimp_rw___"
+
       let newSteps := proofTreeEdges.filterMap fun ⟨ tacticDependsOn, goalBefore, goalsAfter ⟩ =>
-       -- Leave only steps which are not handled in the subtree.
-        if steps.map (·.goalBefore) |>.elem goalBefore then
+        -- Leave only steps which are not handled in the subtree.
+        -- Additionally, simp_rw is not broken down since we are not able to properly transform it's rw steps.
+        if (steps.map (·.goalBefore) |>.elem goalBefore) && !isSimpRw then
           none
         else
           let range := tInfo.stx.toRange ctx
           some {
             tacticString,
-            syntaxString := tInfo.stx.formatStx.pretty,
             goalBefore,
             goalsAfter,
             mctxBefore := mctxBeforeJson,
@@ -240,7 +233,10 @@ partial def postNode (ctx : ContextInfo) (i : Info) (_: PersistentArray InfoTree
             infoTree := some infoTreeJson
           }
 
-      return { steps := newSteps ++ steps, allGoals }
+      if isSimpRw then
+        return { steps := newSteps, allGoals }
+      else
+        return { steps := newSteps ++ steps, allGoals }
     else
       return { steps, allGoals := allSubGoals }
 

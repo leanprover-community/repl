@@ -213,7 +213,6 @@ def MetavarContext.toJson (mctx : MetavarContext) (ctx : ContextInfo) : IO Metav
 
 structure ProofStepInfo where
   tacticString : String
-  syntaxString: String
   infoTree : Option Json
   goalBefore : GoalInfo
   goalsAfter : List GoalInfo
