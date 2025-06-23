@@ -185,6 +185,7 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
       let res := proofState.runMetaM do
         match proofState.rootGoals with
         | [goalId] =>
+          goalId.withContext do
           match proofState.metaState.mctx.getExprAssignmentCore? goalId with
           | none => return "Error: Goal not assigned"
           | some pf => do
@@ -196,7 +197,7 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
             unless (← Meta.isDefEq pft expectedType) do
               return s!"Error: proof has type {pft} but root goal has type {expectedType}"
 
-            let pf ← goalId.withContext $ abstractAllLambdaFVars pf
+            let pf ← abstractAllLambdaFVars pf
             let pft ← Meta.inferType pf >>= instantiateMVars
 
             if pf.hasExprMVar then
