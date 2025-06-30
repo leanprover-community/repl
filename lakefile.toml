@@ -8,3 +8,7 @@ name = "REPL"
 name = "repl"
 root = "REPL.Main"
 supportInterpreter = true
+
+[[lean_exe]]
+name = "test"
+root = "Test"

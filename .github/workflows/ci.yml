@@ -21,4 +21,4 @@ jobs:
       run: lake build
 
     - name: Run tests
-      run: ./test.sh
+      run: lake exe test
