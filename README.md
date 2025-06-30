@@ -172,3 +172,13 @@ can find needed imports.
 * Replay tactic scripts from tactic mode back into the original `sorry`.
 * Currently if you create scoped environment extensions (e.g. scoped notations) in a session
   these are not correctly pickled and unpickled in later sessions.
+
+## Running Tests
+
+To run the test suite (which wraps `test.sh` and checks the REPL against expected outputs), use:
+
+```sh
+lake exe test
+```
+
+This will execute all tests in the `test/` directory and propagate the exit code, making it suitable for CI and scripting.
