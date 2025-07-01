@@ -410,9 +410,6 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tacticsCmd incStates initialCmdState.env
   | _ => pure []
-  let namespaces ← match s.namespaces with
-  | some true => namespaces trees
-  | _ => pure []
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
@@ -424,6 +421,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let trees := cmdState.infoState.trees.toList
   let decls ← match s.declTypes with
   | some true => declTypes trees
+  | _ => pure []
+  let namespaces ← match s.namespaces with
+  | some true => namespaces trees
   | _ => pure []
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
