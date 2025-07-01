@@ -210,7 +210,6 @@ def namespaces (trees: List InfoTree) : M m (List Namespace) :=
 def conclusions (trees: List InfoTree) : M m (List Conclusion) := do
   let treeDecl := (fun t => do
     let conc ← InfoTree.conclusion t
-    IO.println conc.length
     conc.flatMapM <| fun ⟨info, ctx⟩ => do
       let pp := Format.pretty info.stx.prettyPrint
       let range := stxRange ctx.fileMap info.stx

@@ -130,17 +130,17 @@ Keep `.node` nodes and `.hole` nodes satisfying predicates.
 
 Returns a `List InfoTree`, although in most situations this will be a singleton.
 -/
-partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) (stopfun: Info → Bool := fun _ => false) :
+partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) (stop: Info → Bool := fun _ => false) :
     InfoTree → List InfoTree
-  | .context ctx tree => tree.filter p m stopfun |>.map (.context ctx)
+  | .context ctx tree => tree.filter p m stop |>.map (.context ctx)
   | .node info children =>
     if p info then
-      if stopfun info then
+      if stop info then
         [.node info children]
       else
-        [.node info (children.toList.map (filter p m stopfun)).flatten.toPArray']
+        [.node info (children.toList.map (filter p m stop)).flatten.toPArray']
     else
-      if stopfun info then children.toList else (children.toList.map (filter p m stopfun)).flatten
+      if stop info then children.toList else (children.toList.map (filter p m stop)).flatten
   | .hole mvar => if m mvar then [.hole mvar] else []
 
 /-- Discard all nodes besides `.context` nodes and `TacticInfo` nodes. -/
@@ -331,30 +331,26 @@ partial def maxTermNode (terms: List (TermInfo × Option ContextInfo)) : Option 
       | none => none
   | none => none
 
-def child_len (t : InfoTree) : Nat :=
-  match t with
-    | .context ctx k => child_len k
-    | .node i ts => ts.toList.length
-    | _ => 0
-
 def conclusion (t : InfoTree) : IO (List (TermInfo × ContextInfo)) := do
   let only_declarations := fun i => match i with
-    | .ofCommandInfo m => m.elaborator == ``Lean.Elab.Command.elabDeclaration
+    | .ofCommandInfo m => if m.elaborator == ``Lean.Elab.Command.elabDeclaration then
+      match m.stx.getArgs.toList.getLast? with
+      | some stx => stx.getKind == ``Lean.Parser.Command.theorem
+      | none => false
+      else false
     | _ => false
   let only_term := fun i => match i with
     | .ofTermInfo _ => true
     | _ => false
 
-  let trees := t.filter (fun i => only_declarations i) (stopfun := only_declarations)
-  trees.forM fun k => do IO.println (← k.format)
-  --let kmasdf := trees.map child_len
-  --IO.println s!"Length: {kmasdf}"
-
+  let trees := t.filter (fun i => only_declarations i) (stop := only_declarations)
   let terms_info : List (List (Info × Option ContextInfo)) := trees.map <| fun t => t.findAllInfo none only_term (stop := fun i => Bool.not <| only_declarations i)
-  terms_info.forM fun t => t.forM (fun k => do IO.println k.fst.stx.prettyPrint)
+
   let terms: List (List (TermInfo × Option ContextInfo)) := terms_info.map <| fun t => t.flatMap (fun ⟨i, ctx?⟩ =>
     match i with
-    | .ofTermInfo ti => [⟨ti, ctx?⟩]
+    | .ofTermInfo ti => match ti.stx.getHeadInfo with
+      | .original .. => [⟨ti, ctx?⟩]
+      | _ => []
     | _ => [])
 
   let optional_conclusions := terms.map <| fun ts => maxTermNode ts
