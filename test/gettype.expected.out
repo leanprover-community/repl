@@ -1,9 +1,4 @@
-{"messages":
- [{"severity": "info",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 51},
-   "data": "Goals accomplished!"}],
- "env": 0,
+{"env": 0,
  "decls":
  [{"type": "∀ (p : Prop), p → p",
    "pp": "show_p",
@@ -40,7 +35,7 @@
    "pp": "q",
    "pos": {"line": 1, "column": 10},
    "endPos": {"line": 1, "column": 11}},
-  {"type": "∀ (q : Prop), Type → q → q",
+  {"type": "∀ (q : Prop) (p : Type), q → q",
    "pp": "show_q",
    "pos": {"line": 2, "column": 4},
    "endPos": {"line": 2, "column": 10}}]}

@@ -207,6 +207,17 @@ def namespaces (trees: List InfoTree) : M m (List Namespace) :=
       let currNamespace := toString ctx.currNamespace
       pure (Namespace.of currNamespace pp openDecls pos endPos)
 
+def conclusions (trees: List InfoTree) : M m (List Conclusion) := do
+  let treeDecl := (fun t => do
+    let conc ← InfoTree.conclusion t
+    IO.println conc.length
+    conc.flatMapM <| fun ⟨info, ctx⟩ => do
+      let pp := Format.pretty info.stx.prettyPrint
+      let range := stxRange ctx.fileMap info.stx
+      pure [Conclusion.of pp range.fst range.snd])
+  trees.flatMapM treeDecl
+
+
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
@@ -419,12 +430,18 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
         cancelTk? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
   let trees := cmdState.infoState.trees.toList
+
   let decls ← match s.declTypes with
   | some true => declTypes trees
   | _ => pure []
   let namespaces ← match s.namespaces with
   | some true => namespaces trees
   | _ => pure []
+  let conclusions ← match s.conclusions with
+  | true => conclusions trees
+  | _ => pure []
+  conclusions.forM fun t => do IO.println t.pp
+
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let jsonTrees := match s.infotree with
@@ -444,6 +461,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
       tactics,
       decls,
       namespaces,
+      conclusions,
       infotree }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do

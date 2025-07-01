@@ -16,6 +16,7 @@ structure CommandOptions where
   declTypes: Option Bool := none
   namespaces: Option Bool := none
   rootGoals : Option Bool := none
+  conclusions : Option Bool := none
   /--
   Should be "full", "tactics", "original", or "substantive".
   Anything else is ignored.
@@ -146,6 +147,14 @@ def Namespace.of (currentNamespace pp : String) (openDecls : List String) (pos e
     currentNamespace,
     openDecls,
     pp }
+structure Conclusion where
+  pos : Pos
+  endPos : Pos
+  pp: String
+deriving FromJson, ToJson
+
+def Conclusion.of (pp : String) (pos endPos : Lean.Position) : Conclusion :=
+  {pos := ⟨pos.line, pos.column⟩, endPos := ⟨endPos.line, endPos.column⟩, pp := pp}
 
 /--
 A response to a Lean command.
@@ -158,6 +167,7 @@ structure CommandResponse where
   tactics : List Tactic := []
   decls: List DeclType := []
   namespaces: List Namespace := []
+  conclusions : List Conclusion := []
   infotree : Option Json := none
 deriving FromJson
 
@@ -173,6 +183,7 @@ instance : ToJson CommandResponse where
     Json.nonemptyList "tactics" r.tactics,
     Json.nonemptyList "decls" r.decls,
     Json.nonemptyList "namespaces" r.namespaces,
+    Json.nonemptyList "conclusions" r.conclusions,
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 
