@@ -439,7 +439,7 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let conclusions ← match s.conclusions with
   | true => conclusions trees
   | _ => pure []
-  conclusions.forM fun t => do IO.println t.pp
+  -- conclusions.forM fun t => do IO.println t.pp
 
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
