@@ -65,6 +65,7 @@ def kind : Info → String
   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
   | .ofChoiceInfo         _ => "ChoiceInfo"
   | .ofDelabTermInfo      _ => "DelabTermInfo"
+  | .ofErrorNameInfo      _ => "ErrorNameInfo"
 
 /-- The `Syntax` for a `Lean.Elab.Info`, if there is one. -/
 def stx? : Info → Option Syntax
@@ -82,6 +83,7 @@ def stx? : Info → Option Syntax
   | .ofFieldRedeclInfo    info => info.stx
   | .ofChoiceInfo         info => info.stx
   | .ofDelabTermInfo      info => info.stx
+  | .ofErrorNameInfo      info => info.stx
 
 /-- Is the `Syntax` for this `Lean.Elab.Info` original, or synthetic? -/
 def isOriginal (i : Info) : Bool :=

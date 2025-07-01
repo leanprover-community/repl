@@ -3,7 +3,7 @@
    "pos": {"line": 1, "column": 0},
    "endPos": {"line": 1, "column": 7},
    "data":
-   "(kernel) application type mismatch\n  have this := of_decide_eq_true (id (Eq.refl true));\n  of_decide_eq_true (id (Eq.refl true))\nargument has type\n  true = true → true = true\nbut function has type\n  (∀ (x : true = true), (fun this => n✝ + 1 = 0) x) → (fun this => n✝ + 1 = 0) ⋯"}],
+   "(kernel) application type mismatch\n  @Eq.ndrec Nat (n✝ + 1) (fun x => x = 0)\n    (have this := of_decide_eq_true (id (Eq.refl true));\n    of_decide_eq_true (id (Eq.refl true)))\nargument has type\n  true = true\nbut function has type\n  (fun x => x = 0) (n✝ + 1) → ∀ {b : Nat}, n✝ + 1 = b → (fun x => x = 0) b"}],
  "env": 0}
 
 {"sorries":
@@ -27,7 +27,7 @@
  "goals": ["case succ\nn✝ : Nat\n⊢ n✝ + 1 = 0"]}
 
 {"proofStatus":
- "Error: kernel type check failed: (kernel) application type mismatch\n  have this := of_decide_eq_true (id (Eq.refl true));\n  of_decide_eq_true (id (Eq.refl true))\nargument has type\n  true = true → true = true\nbut function has type\n  (∀ (x : true = true), (fun this => n✝ + 1 = 0) x) → (fun this => n✝ + 1 = 0) ⋯",
+ "Error: kernel type check failed: (kernel) application type mismatch\n  @Eq.ndrec Nat (n✝ + 1) (fun x => x = 0)\n    (have this := of_decide_eq_true (id (Eq.refl true));\n    of_decide_eq_true (id (Eq.refl true)))\nargument has type\n  true = true\nbut function has type\n  (fun x => x = 0) (n✝ + 1) → ∀ {b : Nat}, n✝ + 1 = b → (fun x => x = 0) b",
  "proofState": 3,
  "goals": []}
 
