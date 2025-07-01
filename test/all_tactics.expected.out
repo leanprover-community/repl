@@ -1,5 +1,5 @@
 {"tactics":
- [{"usedConstants": ["instOfNatNat", "Nat", "OfNat.ofNat", "letFun"],
+ [{"usedConstants": ["instOfNatNat", "Nat", "OfNat.ofNat"],
    "tactic": "have t := 37",
    "proofState": 0,
    "pos": {"line": 1, "column": 18},
