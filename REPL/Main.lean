@@ -11,6 +11,8 @@ import REPL.Lean.Environment
 import REPL.Lean.InfoTree
 import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
+import Lean.Data.Trie
+import Std.Data.HashMap
 
 /-!
 # A REPL for Lean.
@@ -72,6 +74,16 @@ structure State where
   and report the numerical index for the recorded state at each sorry.
   -/
   proofStates : Array ProofSnapshot := #[]
+  /--
+  Trie-based storage for fast prefix matching, organized by environment ID.
+  Map from environment ID (None for fresh env) to trie of command prefixes with incremental states.
+  -/
+  envTries : Std.HashMap (Option Nat) (Lean.Data.Trie IncrementalState) := Std.HashMap.emptyWithCapacity 8
+  /--
+  Cache for processed headers (import statements) to avoid reprocessing the same imports repeatedly.
+  Maps import raw string to the processed command state.
+  -/
+  headerCache : Std.HashMap String Command.State := Std.HashMap.emptyWithCapacity 8
 
 /--
 The Lean REPL monad.
@@ -88,11 +100,42 @@ def recordCommandSnapshot (state : CommandSnapshot) : M m Nat := do
   modify fun s => { s with cmdStates := s.cmdStates.push state }
   return id
 
+/-- Add all incremental states of a command to the trie at their corresponding prefix positions -/
+def addCommandToTrie (cmdText : String)
+    (incStates : List (IncrementalState × Option InfoTree)) (envId? : Option Nat) : M m Unit := do
+  let state ← get
+  let currentTrie := state.envTries.get? envId? |>.getD Lean.Data.Trie.empty
+
+  let mut newTrie := currentTrie
+  for (incState, _) in incStates do
+    let prefixPos := incState.cmdPos.byteIdx
+    let cmdPrefix : String := (cmdText.take prefixPos).trim
+    newTrie := newTrie.insert cmdPrefix incState
+
+  modify fun s => { s with envTries := s.envTries.insert envId? newTrie }
+
+/-- Record command text and incremental states for prefix matching reuse. -/
+def recordCommandIncrementals (cmdText : String)
+    (incStates : List (IncrementalState × Option InfoTree)) (envId? : Option Nat) : M m Unit := do
+  addCommandToTrie cmdText incStates envId?
+
 /-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
 def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   let id := (← get).proofStates.size
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
+
+/-- Find the best incremental state using trie-based prefix matching -/
+def findBestIncrementalState (newCmd : String) (envId? : Option Nat) : M m (Option IncrementalState) := do
+  let state ← get
+  let trimmedCmd := newCmd.trim
+  let trie? := state.envTries.get? envId?
+  match trie? with
+  | none => return none
+  | some trie =>
+    match trie.matchPrefix trimmedCmd 0 with
+    | some incState => return some incState
+    | none => return none
 
 def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Option (List MVarId))
 : M m (List Sorry) :=
@@ -102,11 +145,7 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
       fun ⟨ctx, g, pos, endPos⟩ => do
         let (goal, proofState) ← match g with
         | .tactic g => do
-          let lctx ← ctx.runMetaM {} do
-              match ctx.mctx.findDecl? g with
-              | some decl => return decl.lctx
-              | none => throwError "unknown metavariable '{g}'"
-          let s ← ProofSnapshot.create ctx lctx env? [g] rootGoals?
+          let s ← ProofSnapshot.create ctx none env? [g] rootGoals?
           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term lctx (some t) => do
           let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
@@ -114,6 +153,16 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
         return Sorry.of goal pos endPos proofStateId
+
+def sorriesCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv : Environment)
+(rootGoals? : Option (List MVarId))
+: M m (List Sorry) :=
+  match treeList with
+  | [] => pure []
+  | (state, infoTree?) :: rest => do
+    let s ← sorries infoTree?.toList prevEnv rootGoals?
+    let restSorries ← sorriesCmd rest state.commandState.env rootGoals?
+    return s ++ restSorries
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
@@ -130,6 +179,44 @@ def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tact
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
+def tacticsCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv : Environment) : M m (List Tactic) := do
+  match treeList with
+  | [] => pure []
+  | (state, infoTree?) :: rest => do
+    let ts ← tactics infoTree?.toList prevEnv
+    let restTactics ← tacticsCmd rest state.commandState.env
+    return ts ++ restTactics
+
+def declTypes (trees: List InfoTree) : M m (List DeclType) := do
+  let exprType: Expr → MetaM String := fun (expr: Expr) => do pure (← Meta.ppExpr (← Lean.Meta.inferType expr)).pretty'
+  let treeDecl := (fun t => do
+    let dt := InfoTree.declType t
+    match dt with
+    | some ⟨ctx, expr, stx, lctx, pos, endPos⟩ =>
+      let type := (← ctx.runMetaM lctx (exprType expr))
+      let pp := Format.pretty stx.prettyPrint
+      pure [DeclType.of type pp pos endPos]
+    | _ => pure [])
+  trees.flatMapM treeDecl
+
+def namespaces (trees: List InfoTree) : M m (List Namespace) :=
+  trees.flatMap InfoTree.namespaces |>.mapM
+    fun ⟨i, ctx, pos, endPos⟩ =>
+      let openDecls: List String := ctx.openDecls.map toString
+      let pp := (Format.pretty i.stx.prettyPrint)
+      let currNamespace := toString ctx.currNamespace
+      pure (Namespace.of currNamespace pp openDecls pos endPos)
+
+def conclusions (trees: List InfoTree) : M m (List Conclusion) := do
+  let treeDecl := (fun t => do
+    let conc ← InfoTree.conclusion t
+    conc.flatMapM <| fun ⟨info, ctx⟩ => do
+      let pp := Format.pretty info.stx.prettyPrint
+      let range := stxRange ctx.fileMap info.stx
+      pure [Conclusion.of pp range.fst range.snd])
+  trees.flatMapM treeDecl
+
+
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
@@ -138,6 +225,14 @@ def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goals pos pos proofStateId
 
+def collectRootGoalsAsSorriesCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv : Environment) :
+    M m (List Sorry) := do
+  match treeList with
+  | [] => pure []
+  | (state, infoTree?) :: rest => do
+    let sorries ← collectRootGoalsAsSorries infoTree?.toList prevEnv
+    let restSorries ← collectRootGoalsAsSorriesCmd rest state.commandState.env
+    return sorries ++ restSorries
 
 private def collectFVarsAux : Expr → NameSet
   | .fvar fvarId => NameSet.empty.insert fvarId.name
@@ -185,6 +280,7 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
       let res := proofState.runMetaM do
         match proofState.rootGoals with
         | [goalId] =>
+          goalId.withContext do
           match proofState.metaState.mctx.getExprAssignmentCore? goalId with
           | none => return "Error: Goal not assigned"
           | some pf => do
@@ -196,7 +292,7 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
             unless (← Meta.isDefEq pft expectedType) do
               return s!"Error: proof has type {pft} but root goal has type {expectedType}"
 
-            let pf ← goalId.withContext $ abstractAllLambdaFVars pf
+            let pf ← abstractAllLambdaFVars pf >>= instantiateMVars
             let pft ← Meta.inferType pf >>= instantiateMVars
 
             if pf.hasExprMVar then
@@ -301,19 +397,28 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (initialCmdState, cmdState, messages, trees) ← try
-    IO.processInput s.cmd initialCmdState?
+
+  -- Find the best incremental state to reuse based on prefix matching
+  let bestIncrementalState? ← findBestIncrementalState s.cmd s.env
+
+  let (initialCmdState, incStates, messages, headerCache) ← try
+    IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
   catch ex =>
     return .inr ⟨ex.toString⟩
+
+  modify fun st => { st with headerCache := headerCache }
+
+  -- Store the command text and incremental states for future reuse
+  recordCommandIncrementals s.cmd incStates s.env
+
+  let cmdState := (incStates.getLast?.map (fun c => c.1.commandState)).getD initialCmdState
   let messages ← messages.mapM fun m => Message.of m
-  -- For debugging purposes, sometimes we print out the trees here:
-  -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees initialCmdState.env none
+  let sorries ← sorriesCmd incStates initialCmdState.env none
   let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees initialCmdState.env))
+  | some true => pure (sorries ++ (← collectRootGoalsAsSorriesCmd incStates initialCmdState.env))
   | _ => pure sorries
   let tactics ← match s.allTactics with
-  | some true => tactics trees initialCmdState.env
+  | some true => tacticsCmd incStates initialCmdState.env
   | _ => pure []
   let cmdSnapshot :=
   { cmdState
@@ -323,6 +428,21 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
         snap? := none,
         cancelTk? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
+  let trees := cmdState.infoState.trees.toList
+
+  let decls ← match s.declTypes with
+  | some true => declTypes trees
+  | _ => pure []
+  let namespaces ← match s.namespaces with
+  | some true => namespaces trees
+  | _ => pure []
+  let conclusions ← match s.conclusions with
+  | true => conclusions trees
+  | _ => pure []
+  -- conclusions.forM fun t => do IO.println t.pp
+
+  -- For debugging purposes, sometimes we print out the trees here:
+  -- trees.forM fun t => do IO.println (← t.format)
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
@@ -337,7 +457,10 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
+      tactics,
+      decls,
+      namespaces,
+      conclusions,
       infotree }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do

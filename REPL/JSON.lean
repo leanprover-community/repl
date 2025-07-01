@@ -13,7 +13,10 @@ namespace REPL
 
 structure CommandOptions where
   allTactics : Option Bool := none
+  declTypes: Option Bool := none
+  namespaces: Option Bool := none
   rootGoals : Option Bool := none
+  conclusions : Option Bool := none
   /--
   Should be "full", "tactics", "original", or "substantive".
   Anything else is ignored.
@@ -46,7 +49,7 @@ deriving ToJson, FromJson
 structure Pos where
   line : Nat
   column : Nat
-deriving ToJson, FromJson
+deriving ToJson, FromJson, BEq, Hashable
 
 /-- Severity of a message. -/
 inductive Severity
@@ -116,6 +119,43 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     proofState,
     usedConstants }
 
+structure DeclType where
+  pos : Pos
+  endPos : Pos
+  type : String
+  pp : String
+deriving ToJson, FromJson
+
+/-- Construct the JSON representation of a Declaration type. -/
+def DeclType.of (type pp : String) (pos endPos : Lean.Position) : DeclType :=
+  { pos := ⟨pos.line, pos.column⟩,
+    endPos := ⟨endPos.line, endPos.column⟩,
+    type,
+    pp }
+
+structure Namespace where
+  pos : Pos
+  endPos : Pos
+  currentNamespace : String
+  openDecls: List String
+  pp : String
+deriving ToJson, FromJson
+
+def Namespace.of (currentNamespace pp : String) (openDecls : List String) (pos endPos : Lean.Position) : Namespace :=
+  { pos := ⟨pos.line, pos.column⟩,
+    endPos := ⟨endPos.line, endPos.column⟩,
+    currentNamespace,
+    openDecls,
+    pp }
+structure Conclusion where
+  pos : Pos
+  endPos : Pos
+  pp: String
+deriving FromJson, ToJson
+
+def Conclusion.of (pp : String) (pos endPos : Lean.Position) : Conclusion :=
+  {pos := ⟨pos.line, pos.column⟩, endPos := ⟨endPos.line, endPos.column⟩, pp := pp}
+
 /--
 A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
@@ -125,6 +165,9 @@ structure CommandResponse where
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
+  decls: List DeclType := []
+  namespaces: List Namespace := []
+  conclusions : List Conclusion := []
   infotree : Option Json := none
 deriving FromJson
 
@@ -138,6 +181,9 @@ instance : ToJson CommandResponse where
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
+    Json.nonemptyList "decls" r.decls,
+    Json.nonemptyList "namespaces" r.namespaces,
+    Json.nonemptyList "conclusions" r.conclusions,
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 

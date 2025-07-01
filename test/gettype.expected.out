@@ -1,0 +1,42 @@
+{"env": 0,
+ "decls":
+ [{"type": "∀ (p : Prop), p → p",
+   "pp": "show_p",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 14}}]}
+
+{"env": 1,
+ "decls":
+ [{"type": "∀ (p : Prop), p → p",
+   "pp": "show_q",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 10}}]}
+
+{"env": 2,
+ "decls":
+ [{"type": "∀ (p : Prop), p → p",
+   "pp": "show_p",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 10}},
+  {"type": "∀ (q : Prop), q → q",
+   "pp": "show_q",
+   "pos": {"line": 3, "column": 4},
+   "endPos": {"line": 3, "column": 10}}]}
+
+{"messages":
+ [{"severity": "warning",
+   "pos": {"line": 2, "column": 12},
+   "endPos": {"line": 2, "column": 13},
+   "data":
+   "unused variable `p`\nnote: this linter can be disabled with `set_option linter.unusedVariables false`"}],
+ "env": 3,
+ "decls":
+ [{"type": "Prop",
+   "pp": "q",
+   "pos": {"line": 1, "column": 10},
+   "endPos": {"line": 1, "column": 11}},
+  {"type": "∀ (q : Prop) (p : Type), q → q",
+   "pp": "show_q",
+   "pos": {"line": 2, "column": 4},
+   "endPos": {"line": 2, "column": 10}}]}
+

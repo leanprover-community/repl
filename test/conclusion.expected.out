@@ -1,0 +1,33 @@
+{"env": 0,
+ "conclusions":
+ [{"pp": "1 + 1 = 2",
+   "pos": {"line": 1, "column": 12},
+   "endPos": {"line": 1, "column": 21}}]}
+
+{"env": 1}
+
+{"env": 2,
+ "conclusions":
+ [{"pp": "Or a b",
+   "pos": {"line": 2, "column": 32},
+   "endPos": {"line": 2, "column": 38}}]}
+
+{"env": 3}
+
+{"messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 30},
+   "endPos": {"line": 1, "column": 32},
+   "data":
+   "unused variable `ha`\nnote: this linter can be disabled with `set_option linter.unusedVariables false`"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 39},
+   "endPos": {"line": 1, "column": 41},
+   "data":
+   "unused variable `hb`\nnote: this linter can be disabled with `set_option linter.unusedVariables false`"}],
+ "env": 4,
+ "conclusions":
+ [{"pp": "∃ (c : Nat), c = 2",
+   "pos": {"line": 1, "column": 49},
+   "endPos": {"line": 1, "column": 67}}]}
+

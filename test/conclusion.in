@@ -1,0 +1,9 @@
+{"cmd": "theorem f : 1 + 1 = 2 := rfl", "conclusions": true}
+
+{"cmd": "example (P : Prop) (hp : P) : P := by\n  exact hp\n", "conclusions": true}
+
+{"cmd": "variable (a : Prop)\ntheorem f (b : Prop) (hb : b) : Or a b := by\nright\nexact hb", "conclusions": true}
+
+{"cmd": "def f := 37", "conclusions": true}
+
+{"cmd": "theorem a_and_b (a b : Prop) (ha : a) (hb : b) : ∃ (c : Nat), c = 2 := by simp", "conclusions": true}

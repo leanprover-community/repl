@@ -132,14 +132,17 @@ Keep `.node` nodes and `.hole` nodes satisfying predicates.
 
 Returns a `List InfoTree`, although in most situations this will be a singleton.
 -/
-partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) :
+partial def filter (p : Info → Bool) (m : MVarId → Bool := fun _ => false) (stop: Info → Bool := fun _ => false) :
     InfoTree → List InfoTree
-  | .context ctx tree => tree.filter p m |>.map (.context ctx)
+  | .context ctx tree => tree.filter p m stop |>.map (.context ctx)
   | .node info children =>
     if p info then
-      [.node info (children.toList.map (filter p m)).flatten.toPArray']
+      if stop info then
+        [.node info children]
+      else
+        [.node info (children.toList.map (filter p m stop)).flatten.toPArray']
     else
-      (children.toList.map (filter p m)).flatten
+      if stop info then children.toList else (children.toList.map (filter p m stop)).flatten
   | .hole mvar => if m mvar then [.hole mvar] else []
 
 /-- Discard all nodes besides `.context` nodes and `TacticInfo` nodes. -/
@@ -191,6 +194,35 @@ def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo × List MVa
   infos.filterMap fun p => match p with
   | (.ofTacticInfo i, some ctx, rootGoals) => (i, ctx, rootGoals)
   | _ => none
+
+/-- Returns all `TermInfo` nodes for a given `InfoTree`. -/
+partial def findTermNodes (t : InfoTree) (ctx? : Option ContextInfo := none) :
+  List (TermInfo × ContextInfo) :=
+  let infoCtx := t.findAllInfo ctx? fun (info: Info) =>
+    match info with
+    | .ofTermInfo _ => true
+    | _ => false
+  infoCtx.flatMap fun ⟨info, ctx?⟩ =>
+   match info with
+   | .ofTermInfo i => match ctx? with
+    | some ctx => [(i, ctx)]
+    | _ => []
+   | _ => []
+
+
+/-- Returns all `CommandInfo` nodes for a given `InfoTree`. -/
+partial def findCommandNodes (t : InfoTree) (ctx? : Option ContextInfo := none) :
+  List (CommandInfo × ContextInfo) :=
+  let infoCtx := t.findAllInfo ctx? fun (info: Info) =>
+    match info with
+    | .ofCommandInfo _ => true
+    | _ => false
+  infoCtx.flatMap fun ⟨info, ctx?⟩ =>
+   match info with
+   | .ofCommandInfo i => match ctx? with
+    | some ctx => [(i, ctx)]
+    | _ => []
+   | _ => []
 
 /-- Returns the root goals for a given `InfoTree`. -/
 partial def findRootGoals (t : InfoTree) (ctx? : Option ContextInfo := none) :
@@ -259,6 +291,75 @@ def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × List 
       range.fst,
       range.snd,
       i.getUsedConstantsAsSet.toArray )
+
+def declType (t : InfoTree) : Option (ContextInfo × Expr × Syntax × LocalContext × Position × Position) :=
+  let terms: List (TermInfo × ContextInfo) := t.findTermNodes
+  match terms.getLast? with
+  | some ⟨i, ctx⟩ =>
+    let range := stxRange ctx.fileMap i.stx
+    (ctx, i.expr, i.stx, i.lctx, range.fst, range.snd)
+  | _ => none
+
+def namespaces (t : InfoTree) : List (CommandInfo × ContextInfo × Position × Position) :=
+  let nodes := t.findCommandNodes |>.filter fun ⟨i, _⟩ =>
+    match i.elaborator with
+    | ``Lean.Elab.Command.elabOpen => true
+    | ``Lean.Elab.Command.elabSection => true
+    | ``Lean.Elab.Command.elabEnd => true
+    | ``Lean.Elab.Command.elabNamespace => true
+    | _ => false
+  nodes.map fun ⟨i, ctx⟩ =>
+    let range := stxRange ctx.fileMap i.stx
+    (i, ctx, range.fst, range.snd)
+
+-- Get the TermInfo with the largest position in the file
+partial def maxTermNode (terms: List (TermInfo × Option ContextInfo)) : Option (TermInfo × ContextInfo) :=
+  match terms.head? with
+  | some ⟨ti, ctx?⟩ =>
+    let largestTail := maxTermNode terms.tail
+    match largestTail with
+    | some ⟨tailinfo, tailctx⟩ =>
+      match ctx? with
+      | some ctx =>
+        let range := stxRange ctx.fileMap ti.stx
+        let tailRange := stxRange tailctx.fileMap tailinfo.stx
+        if tailRange.snd.line > range.snd.line then some ⟨tailinfo, tailctx⟩
+        else
+          if tailRange.snd.column > range.snd.column then some ⟨tailinfo, tailctx⟩
+          else some ⟨ti, ctx⟩
+      | none => some ⟨tailinfo, tailctx⟩
+    | none => match ctx? with
+      | some ctx => some ⟨ti, ctx⟩
+      | none => none
+  | none => none
+
+def conclusion (t : InfoTree) : IO (List (TermInfo × ContextInfo)) := do
+  let only_declarations := fun i => match i with
+    | .ofCommandInfo m => if m.elaborator == ``Lean.Elab.Command.elabDeclaration then
+      match m.stx.getArgs.toList.getLast? with
+      | some stx => stx.getKind == ``Lean.Parser.Command.theorem
+      | none => false
+      else false
+    | _ => false
+  let only_term := fun i => match i with
+    | .ofTermInfo _ => true
+    | _ => false
+
+  let trees := t.filter (fun i => only_declarations i) (stop := only_declarations)
+  let terms_info : List (List (Info × Option ContextInfo)) := trees.map <| fun t => t.findAllInfo none only_term (stop := fun i => Bool.not <| only_declarations i)
+
+  let terms: List (List (TermInfo × Option ContextInfo)) := terms_info.map <| fun t => t.flatMap (fun ⟨i, ctx?⟩ =>
+    match i with
+    | .ofTermInfo ti => match ti.stx.getHeadInfo with
+      | .original .. => [⟨ti, ctx?⟩]
+      | _ => []
+    | _ => [])
+
+  let optional_conclusions := terms.map <| fun ts => maxTermNode ts
+  pure (optional_conclusions.flatMap <| fun c =>
+    match c with
+    | some s => [s]
+    | _ => [])
 
 def rootGoals (t : InfoTree) : List (ContextInfo × List MVarId × Position) :=
   t.findRootGoals.map fun ⟨i, ctx, rootGoals⟩ =>
