@@ -10,12 +10,12 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"proofStatus": "Incomplete: contains sorry",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 1,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "unsolved goals\n⊢ False"}],
- "goals": []}
+ "goals": ["⊢ False"]}
 

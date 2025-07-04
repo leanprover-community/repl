@@ -10,54 +10,53 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"sorries": [{"proofState": 1, "goal": "x : Int\nh0 : x > 0\n⊢ x > 0"}],
- "proofStatus": "Incomplete: open goals remain",
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["x : Int\nh0 h : x > 0\n⊢ False", "x : Int\nh0 : x > 0\n⊢ x > 0"]}
+
+{"message":
+ "Lean error:\ntype mismatch\n  h0\nhas type\n  x > 0 : Prop\nbut is expected to have type\n  False : Prop"}
+
+{"message":
+ "Lean error:\ntactic 'assumption' failed\nx : Int\nh0 h : x > 0\n⊢ False"}
+
+{"message": "Lean error:\nsimp made no progress"}
+
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 2,
- "goals": ["x : Int\nh0 h : x > 0\n⊢ False"]}
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "simp made no progress"}],
+ "goals": ["x : Int\nh0 : x > 0\n⊢ x > 0", "x : Int\nh0 h : x > 0\n⊢ False"]}
 
-{"proofStatus": "Incomplete: contains metavariable(s)",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 3,
- "goals": []}
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "simp made no progress"}],
+ "goals": ["x : Int\nh0 : x > 0\n⊢ x > 0", "x : Int\nh0 h : x > 0\n⊢ False"]}
 
-{"proofStatus": "Incomplete: contains metavariable(s)",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 4,
- "goals": []}
+ "messages":
+ [{"severity": "error",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data":
+   "tactic 'rewrite' failed, did not find instance of the pattern in the target expression\n  x\nx : Int\nh0 h : x > 0\n⊢ False"}],
+ "goals": ["x : Int\nh0 : x > 0\n⊢ x > 0", "x : Int\nh0 h : x > 0\n⊢ False"]}
 
-{"traces":
- ["[Meta.Tactic.simp.rewrite] of_eq_true (eq_true h0):1000:\n      x > 0\n    ==>\n      True"],
- "proofStatus": "Incomplete: contains metavariable(s)",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 5,
- "goals": []}
-
-{"traces":
- ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000:\n      x > 0\n    ==>\n      0 < x",
-  "[Meta.Tactic.simp.rewrite] h0:1000:\n      0 < x\n    ==>\n      True"],
- "proofStatus": "Incomplete: contains metavariable(s)",
- "proofState": 6,
- "goals": []}
-
-{"traces":
- ["[Meta.Tactic.simp.rewrite] gt_iff_lt:1000:\n      x > 0\n    ==>\n      0 < x",
-  "[Meta.Tactic.simp.rewrite] h0:1000:\n      0 < x\n    ==>\n      True"],
- "proofStatus": "Incomplete: contains metavariable(s)",
- "proofState": 7,
- "goals": []}
-
-{"proofStatus": "Incomplete: contains metavariable(s)",
- "proofState": 8,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
-   "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
- "goals": []}
-
-{"proofStatus": "Incomplete: contains metavariable(s)",
- "proofState": 9,
- "messages":
- [{"severity": "error",
-   "pos": {"line": 0, "column": 0},
-   "endPos": {"line": 0, "column": 0},
-   "data": "unsolved goals\nx : Int\nh0 : x > 0\n⊢ x > 0"}],
- "goals": []}
+   "data":
+   "tactic 'rewrite' failed, did not find instance of the pattern in the target expression\n  x\nx : Int\nh0 h : x > 0\n⊢ False"}],
+ "goals": ["x : Int\nh0 : x > 0\n⊢ x > 0", "x : Int\nh0 h : x > 0\n⊢ False"]}
 
