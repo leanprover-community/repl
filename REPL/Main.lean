@@ -100,20 +100,33 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
     | .term _ none => false
     | _ => true ) |>.mapM
       fun ⟨ctx, g, pos, endPos⟩ => do
-        let (goal, proofState) ← match g with
+        let (goals, proofState) ← match g with
         | .tactic g => do
           let lctx ← ctx.runMetaM {} do
               match ctx.mctx.findDecl? g with
               | some decl => return decl.lctx
               | none => throwError "unknown metavariable '{g}'"
           let s ← ProofSnapshot.create ctx lctx env? [g] rootGoals?
-          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+          pure ((← s.ppGoals).map (s!"{·}"), some s)
         | .term lctx (some t) => do
           let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
-          pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
+          pure ((← s.ppGoals).map (s!"{·}"), some s)
         | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
-        return Sorry.of goal pos endPos proofStateId
+        return Sorry.of goals pos endPos proofStateId ctx.parentDecl?
+
+def groupedSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
+  let a ← trees.flatMap InfoTree.rootAndLastGoals |>.mapM
+    fun ⟨ctx, rootGoals, lastGoals, startPos, endPos⟩ => do
+      let proofState ← ProofSnapshot.create ctx none env? lastGoals rootGoals
+      let proofState' ← proofState.runString "skip" -- Trick to get the sorries
+      let goals := (← proofState'.ppGoals).map (s!"{·}")
+      if goals.isEmpty then
+        return []
+      else
+        let proofStateId ← recordProofSnapshot proofState'
+        return [Sorry.of goals startPos endPos proofStateId ctx.parentDecl?]
+  return a.flatten
 
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
@@ -128,15 +141,15 @@ def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tact
       let goals := s!"{(← ctx.ppGoals goals)}".trim
       let tactic := Format.pretty (← ppTactic ctx stx)
       let proofStateId ← proofState.mapM recordProofSnapshot
-      return Tactic.of goals tactic pos endPos proofStateId ns
+      return Tactic.of goals tactic pos endPos proofStateId ns ctx.parentDecl?
 
 def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
-      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let goals ← goals.mapM (fun g => do pure s!"{(← ctx.ppGoals [g])}".trim)
       let proofStateId ← proofState.mapM recordProofSnapshot
-      return Sorry.of goals pos pos proofStateId
+      return Sorry.of goals pos ⟨0,0⟩ proofStateId ctx.parentDecl?
 
 
 private def collectFVarsAux : Expr → NameSet
@@ -200,6 +213,8 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
             let pf ← abstractAllLambdaFVars pf
             let pft ← Meta.inferType pf >>= instantiateMVars
 
+            if pf.hasSorry then
+              return "Incomplete: contains sorry"
             if pf.hasExprMVar then
               return "Incomplete: contains metavariable(s)"
 
@@ -220,9 +235,6 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
               let _ ← addDecl decl
             catch ex =>
               return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
-
-            if pf.hasSorry then
-              return "Incomplete: contains sorry"
             return "Completed"
 
         | _ => return "Not verified: more than one initial goal"
@@ -236,22 +248,11 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
-  let trees := proofState.newInfoTrees old?
-  let trees ← match old? with
-  | some old => do
-    let (ctx, _) ← old.runMetaM do return { ← CommandContextInfo.save with }
-    let ctx := PartialContextInfo.commandCtx ctx
-    pure <| trees.map fun t => InfoTree.context ctx t
-  | none => pure trees
-  -- For debugging purposes, sometimes we print out the trees here:
-  -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees none (some proofState.rootGoals)
   let id ← recordProofSnapshot proofState
   return {
     proofState := id
-    goals := (← proofState.ppGoals).map fun s => s!"{s}"
+    goals := (← proofState.ppGoals).map (s!"{·}")
     messages
-    sorries
     traces
     proofStatus := (← getProofStatus proofState) }
 
@@ -309,10 +310,11 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees initialCmdState.env none
-  let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees initialCmdState.env))
-  | _ => pure sorries
+  let sorries ← match s.sorries with
+  | some "individual" => sorries trees initialCmdState.env none
+  | some "grouped" => groupedSorries trees initialCmdState.env
+  | some "rootGoals" => collectRootGoalsAsSorries trees initialCmdState.env
+  | _ => pure []
   let tactics ← match s.allTactics with
   | some true => tactics trees initialCmdState.env
   | _ => pure []
@@ -350,8 +352,10 @@ def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
+This implementation supports branching in tactic proofs.
+When a tactic generates new goals, each goal is properly tracked to allow subsequent tactics to be
+applied.
 -/
--- TODO detect sorries?
 def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
   match (← get).proofStates[s.proofState]? with
   | none => return .inr ⟨"Unknown proof state."⟩

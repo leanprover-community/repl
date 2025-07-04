@@ -1,6 +1,6 @@
 {"cmd": "example : 1 = 0 := by\n  cases 1\n  rfl\n  have: true := by\n    apply ?succ\n    trivial"}
 
-{"cmd": "example : 1 = 0 := sorry"}
+{"cmd": "example : 1 = 0 := sorry", "sorries": "individual"}
 
 {"tactic": "cases 1", "proofState": 0}
 
@@ -11,4 +11,6 @@
 {"tactic": "have: true := sorry", "proofState": 2}
 
 {"tactic": "apply ?succ", "proofState": 4}
+
+{"tactic": "trivial", "proofState": 5}
 

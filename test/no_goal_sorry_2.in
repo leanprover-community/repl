@@ -1,1 +1,1 @@
-{"cmd" : "example : True := by\n  sorry\n  sorry"}
+{"cmd" : "example : True := by\n  sorry\n  sorry", "sorries": "individual"}

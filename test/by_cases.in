@@ -1,4 +1,4 @@
-{"cmd": "theorem foo (x : Int) : x = x := by sorry"}
+{"cmd": "theorem foo (x : Int) : x = x := by sorry", "sorries": "individual"}
 
 {"proofState" : 0, "tactic": "by_cases h : x < 0"}
 

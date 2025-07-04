@@ -114,6 +114,20 @@ namespace ProofSnapshot
 
 open Lean Elab Tactic
 
+/-- Transform `sorry` expressions into fresh opaque metavariables, collecting their IDs. -/
+def sorryToHole (src : Expr) : StateRefT (List MVarId) MetaM Expr :=
+  Meta.transform src λ expr =>
+    if expr.isSorry then do
+      -- extract the proof type from `sorry` (the first binder argument)
+      let type ← instantiateMVars (expr.getArg! 0 |>.bindingBody!)
+      if type.hasSorry then
+        throwError s!"Nested sorry in type not supported: {← Meta.ppExpr type}"
+      let mvar ← Meta.mkFreshExprSyntheticOpaqueMVar type
+      modify (mvar.mvarId! :: ·)
+      pure $ .done mvar
+    else
+      pure .continue
+
 /-- New messages in a `ProofSnapshot`, relative to an optional previous `ProofSnapshot`. -/
 def newMessages (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : List Lean.Message :=
   match old? with
@@ -180,7 +194,27 @@ and run it in the current `ProofSnapshot`.
 def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
   match Parser.runParserCategory p.coreState.env `tactic t with
   | .error e => throw (IO.userError e)
-  | .ok stx => p.runSyntax stx
+  | .ok stx => do
+    let result ← p.runSyntax stx
+
+    -- Process all goals after tactic execution to find and transform any sorries
+    let (newGoals, result') ← result.runMetaM do
+      let processExpr (acc : List MVarId) (mvarId : MVarId) (expr : Expr) : MetaM (List MVarId) := do
+        if expr.hasSorry then
+          mvarId.withContext do
+            let (newExpr, exprHoles) ← sorryToHole expr |>.run []
+            mvarId.assign newExpr
+            pure (acc ++ exprHoles)
+        else
+          pure acc
+
+      -- Process all expressions in the metavariable context
+      let mctx := result.metaState.mctx
+      let exprHoles ← mctx.eAssignment.foldlM processExpr []
+      pure exprHoles
+
+    let combinedGoals := newGoals ++ result'.tacticState.goals
+    return { result' with tacticState := { goals := combinedGoals } }
 
 /-- Pretty print the current goals in the `ProofSnapshot`. -/
 def ppGoals (p : ProofSnapshot) : IO (List Format) :=

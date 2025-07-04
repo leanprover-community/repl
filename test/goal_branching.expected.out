@@ -1,0 +1,31 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 53},
+   "parentDecl": "branching_test",
+   "goals": ["⊢ 1 = 1 ∧ 2 = 2 ∧ 3 = 3"],
+   "endPos": {"line": 1, "column": 58}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 22},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["case left\n⊢ 1 = 1", "case right\n⊢ 2 = 2 ∧ 3 = 3"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["case right\n⊢ 2 = 2 ∧ 3 = 3"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 3,
+ "goals": ["case right.left\n⊢ 2 = 2", "case right.right\n⊢ 3 = 3"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 4,
+ "goals": ["case right.right\n⊢ 3 = 3"]}
+
+{"proofStatus": "Completed", "proofState": 5, "goals": []}
+

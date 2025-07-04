@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 2, "column": 23},
-   "goal": "x : Int\n⊢ x = 1",
+   "parentDecl": "foo",
+   "goals": ["x : Int\n⊢ x = 1"],
    "endPos": {"line": 2, "column": 28}}],
  "messages":
  [{"severity": "error",
@@ -13,7 +14,8 @@
 {"sorries":
  [{"proofState": 1,
    "pos": {"line": 1, "column": 36},
-   "goal": "x : Int\n⊢ x = x",
+   "parentDecl": "foo",
+   "goals": ["x : Int\n⊢ x = x"],
    "endPos": {"line": 1, "column": 41}}],
  "messages":
  [{"severity": "warning",
@@ -22,8 +24,7 @@
    "data": "declaration uses 'sorry'"}],
  "env": 1}
 
-{"sorries": [{"proofState": 2, "goal": "x : Int\n⊢ x = 1"}],
- "proofStatus": "Incomplete: open goals remain",
- "proofState": 3,
- "goals": ["x : Int\nh : x = 1\n⊢ x = 1"]}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["x : Int\n⊢ x = 1", "x : Int\nh : x = 1\n⊢ x = 1"]}
 

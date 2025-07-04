@@ -3,7 +3,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 2, "column": 20},
-   "goal": "⊢ 9! % 10 = 0",
+   "parentDecl": "mathd_numbertheory_739",
+   "goals": ["⊢ 9! % 10 = 0"],
    "endPos": {"line": 2, "column": 25}}],
  "messages":
  [{"severity": "warning",
