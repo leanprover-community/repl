@@ -372,12 +372,16 @@ def runWithTimeout (timeout? : Option Nat) (task : M IO α) : M IO α :=
     let jobTask ← IO.asTask (prio := .dedicated) (StateT.run task (← get))
     let timeoutTask : IO (α × State) := do
       IO.sleep timeout.toUInt32
-      throw <| IO.userError s!"Operation timed out after {timeout}ms"
-    match ← IO.waitAny [jobTask, ← IO.asTask timeoutTask] with
+      throw <| IO.userError s!"Operation timed out"
+    let timeoutTask ← IO.asTask timeoutTask
+    match ← IO.waitAny [jobTask, timeoutTask] with
     | .ok (a, state) => do
+      IO.cancel timeoutTask
       modify fun _ => state
       return a
-    | .error e => throw e
+    | .error e =>
+      IO.cancel jobTask
+      throw e
 
 end REPL
 

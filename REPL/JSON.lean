@@ -14,7 +14,8 @@ namespace REPL
 /-- Base structure with timeout that all command types can inherit from -/
 structure BaseOptions where
   /--
-  Optional timeout in milliseconds. If none, no timeout will be applied.
+  Optional soft timeout in milliseconds. If none, no timeout will be applied.
+  If the timeout is reached, an attempt will be made to interrupt the process.
   -/
   timeout : Option Nat := none
 
