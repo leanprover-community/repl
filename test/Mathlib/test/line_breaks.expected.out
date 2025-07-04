@@ -1,0 +1,14 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 13, "column": 2},
+   "goal": "P Q R : Prop\nh1 : P → Q\nh2 : Q → R\np : P\nq : Q\n⊢ Q",
+   "endPos": {"line": 13, "column": 7}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 3, "column": 8},
+   "endPos": {"line": 3, "column": 12},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+

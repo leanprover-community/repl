@@ -371,7 +371,7 @@ partial def getLines : IO String := do
   if line.trim.isEmpty then
     return line
   else
-    return line ++ (← getLines)
+    return line.trimRight ++ (← getLines)
 
 instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with
