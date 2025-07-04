@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 70},
-   "goal": "⊢ ∀ (n m : Nat), n + m = m + n",
+   "parentDecl": "add_comm_proved_formal_sketch",
+   "goals": ["⊢ ∀ (n m : Nat), n + m = m + n"],
    "endPos": {"line": 1, "column": 75}}],
  "messages":
  [{"severity": "warning",

@@ -1,4 +1,4 @@
-{"cmd" : "def f : Nat := by sorry"}
+{"cmd" : "def f : Nat := by sorry", "sorries" : "individual"}
 
 {"tactic": "apply Int.natAbs", "proofState": 0}
 

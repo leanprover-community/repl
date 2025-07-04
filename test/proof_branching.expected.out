@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 75},
-   "goal": "p q r : Prop\nh1 : p ∧ q\nh2 : q → r\n⊢ p ∧ r",
+   "parentDecl": "complex_and",
+   "goals": ["p q r : Prop\nh1 : p ∧ q\nh2 : q → r\n⊢ p ∧ r"],
    "endPos": {"line": 1, "column": 80}}],
  "messages":
  [{"severity": "warning",

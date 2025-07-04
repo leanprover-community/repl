@@ -1,4 +1,4 @@
-{"cmd": "theorem add_comm_proved_formal_sketch : ∀ n m : Nat, n + m = m + n := sorry"}
+{"cmd": "theorem add_comm_proved_formal_sketch : ∀ n m : Nat, n + m = m + n := sorry", "sorries": "individual"}
 
 {"tactic": "(\n   intros n m\n   induction n with\n   | zero =>\n     have h_base: 0 + m = m := sorry\n     have h_symm: m + 0 = m := sorry\n     sorry\n   | succ n ih => sorry)", "proofState": 0}
 

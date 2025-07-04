@@ -3,11 +3,13 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 3, "column": 12},
-   "goal": "case zero\n⊢ 0 + 1 > 0",
+   "parentDecl": "_example",
+   "goals": ["case zero\n⊢ 0 + 1 > 0"],
    "endPos": {"line": 3, "column": 17}},
   {"proofState": 1,
    "pos": {"line": 3, "column": 12},
-   "goal": "case succ\nx : Nat\nhx : x + 1 > x\n⊢ x + 1 + 1 > x + 1",
+   "parentDecl": "_example",
+   "goals": ["case succ\nx : Nat\nhx : x + 1 > x\n⊢ x + 1 + 1 > x + 1"],
    "endPos": {"line": 3, "column": 17}}],
  "messages":
  [{"severity": "warning",

@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 53},
-   "goal": "⊢ 1 = 1 ∧ 2 = 2 ∧ 3 = 3",
+   "parentDecl": "branching_test",
+   "goals": ["⊢ 1 = 1 ∧ 2 = 2 ∧ 3 = 3"],
    "endPos": {"line": 1, "column": 58}}],
  "messages":
  [{"severity": "warning",

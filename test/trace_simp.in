@@ -6,7 +6,7 @@
 
 {"cmd": "example : f = 37 := by simp", "env": 2}
 
-{"cmd": "example : f = 37 := by sorry", "env": 2}
+{"cmd": "example : f = 37 := by sorry", "env": 2, "sorries": "individual"}
 
 {"tactic": "trace \"37\"", "proofState": 0}
 

@@ -3,7 +3,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 27},
-   "goal": "⊢ 0 < 1",
+   "parentDecl": "test",
+   "goals": ["⊢ 0 < 1"],
    "endPos": {"line": 1, "column": 32}}],
  "messages":
  [{"severity": "warning",
@@ -24,7 +25,8 @@
 {"sorries":
  [{"proofState": 2,
    "pos": {"line": 1, "column": 27},
-   "goal": "⊢ 3 = 7",
+   "parentDecl": "test",
+   "goals": ["⊢ 3 = 7"],
    "endPos": {"line": 1, "column": 32}}],
  "messages":
  [{"severity": "warning",

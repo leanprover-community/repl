@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 36},
-   "goal": "x : Int\n⊢ x = x",
+   "parentDecl": "foo",
+   "goals": ["x : Int\n⊢ x = x"],
    "endPos": {"line": 1, "column": 41}}],
  "messages":
  [{"severity": "warning",

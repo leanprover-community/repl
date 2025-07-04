@@ -1,12 +1,12 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 17},
-   "goal": "⊢ 1 = 1",
-   "endPos": {"line": 1, "column": 17}},
+   "parentDecl": "_example",
+   "goals": ["⊢ 1 = 1"]},
   {"proofState": 1,
    "pos": {"line": 5, "column": 22},
-   "goal": "⊢ 1 + 1 = 2",
-   "endPos": {"line": 5, "column": 22}}],
+   "parentDecl": "bb",
+   "goals": ["⊢ 1 + 1 = 2"]}],
  "messages":
  [{"severity": "info",
    "pos": {"line": 3, "column": 2},

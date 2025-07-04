@@ -13,7 +13,8 @@ namespace REPL
 
 structure CommandOptions where
   allTactics : Option Bool := none
-  rootGoals : Option Bool := none
+  -- Should be "individual", "grouped", or "rootGoals".
+  sorries : Option String := none
   /--
   Should be "full", "tactics", "original", or "substantive".
   Anything else is ignored.
@@ -76,28 +77,32 @@ def Message.of (m : Lean.Message) : IO Message := do pure <|
 structure Sorry where
   pos : Pos
   endPos : Pos
-  goal : String
+  goals : List String
   /--
   The index of the proof state at the sorry.
   You can use the `ProofStep` instruction to run a tactic at this state.
   -/
   proofState : Option Nat
+  parentDecl: Option Name := none
 deriving FromJson
 
 instance : ToJson Sorry where
   toJson r := Json.mkObj <| .flatten [
-    [("goal", r.goal)],
+    [("goals", toJson r.goals)],
     [("proofState", toJson r.proofState)],
     if r.pos.line ≠ 0 then [("pos", toJson r.pos)] else [],
     if r.endPos.line ≠ 0 then [("endPos", toJson r.endPos)] else [],
+    if r.parentDecl.isSome then [("parentDecl", toJson r.parentDecl)] else []
   ]
 
 /-- Construct the JSON representation of a Lean sorry. -/
-def Sorry.of (goal : String) (pos endPos : Lean.Position) (proofState : Option Nat) : Sorry :=
+def Sorry.of (goals : List String) (pos endPos : Lean.Position) (proofState : Option Nat)
+(parentDecl : Option Name): Sorry :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
-    goal,
-    proofState }
+    goals,
+    proofState,
+    parentDecl }
 
 structure Tactic where
   pos : Pos
@@ -106,16 +111,19 @@ structure Tactic where
   tactic : String
   proofState : Option Nat
   usedConstants : Array Name
+  parentDecl : Option Name := none
 deriving ToJson, FromJson
 
 /-- Construct the JSON representation of a Lean tactic. -/
-def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat) (usedConstants : Array Name) : Tactic :=
+def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState : Option Nat)
+(usedConstants : Array Name) (parentDecl : Option Name) : Tactic :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
     goals,
     tactic,
     proofState,
-    usedConstants }
+    usedConstants,
+    parentDecl }
 
 /--
 A response to a Lean command.

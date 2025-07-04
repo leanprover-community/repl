@@ -2,7 +2,7 @@
 
 {"cmd": "open Lean.Compiler", "env": 0}
 
-{"cmd": "unsafe example : ◾ := sorry", "env": 1}
+{"cmd": "unsafe example : ◾ := sorry", "env": 1, "sorries": "individual"}
 
 {"pickleTo": "test/f.olean", "env": 1}
 

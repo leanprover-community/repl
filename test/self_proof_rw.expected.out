@@ -9,7 +9,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 39},
-   "goal": "⊢ 1 = 0",
+   "parentDecl": "self_application",
+   "goals": ["⊢ 1 = 0"],
    "endPos": {"line": 1, "column": 44}}],
  "messages":
  [{"severity": "warning",

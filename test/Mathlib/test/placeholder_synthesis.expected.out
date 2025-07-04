@@ -11,7 +11,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 19},
-   "goal": "⊢ 1 = 0",
+   "parentDecl": "_example",
+   "goals": ["⊢ 1 = 0"],
    "endPos": {"line": 1, "column": 24}}],
  "messages":
  [{"severity": "warning",

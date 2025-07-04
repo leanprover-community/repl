@@ -1,18 +1,18 @@
 {"cmd": "theorem ex : False := by exact?"}
 
-{"cmd": "theorem ex : False := sorry"}
+{"cmd": "theorem ex : False := sorry", "sorries": "individual"}
 
 {"proofState": 0, "tactic": "exact?"}
 
-{"cmd": "theorem ex : False := by sorry"}
+{"cmd": "theorem ex : False := by sorry", "sorries": "individual"}
 
 {"proofState": 1, "tactic": "exact?"}
 
-{"cmd": "theorem ex : False := by sorry", "allTactics": true}
+{"cmd": "theorem ex : False := by sorry", "allTactics": true, "sorries": "individual"}
 
 {"proofState": 3, "tactic": "exact?"}
 
-{"cmd": "theorem ex : False := by sorry", "rootGoals": true}
+{"cmd": "theorem ex : False := by sorry", "sorries": "rootGoals"}
 
-{"proofState": 5, "tactic": "exact?"}
+{"proofState": 4, "tactic": "exact?"}
 

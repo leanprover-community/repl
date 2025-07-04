@@ -1,4 +1,4 @@
-{"cmd": "example : 1=1 := by\n  skip\n  exact?\n\ntheorem bb : 1+1=2 := by rfl", "rootGoals": true}
+{"cmd": "example : 1=1 := by\n  skip\n  exact?\n\ntheorem bb : 1+1=2 := by rfl", "sorries": "rootGoals"}
 
 {"proofState" : 0, "tactic": "rfl"}
 

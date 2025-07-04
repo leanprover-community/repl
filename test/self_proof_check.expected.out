@@ -9,7 +9,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 22},
-   "goal": "⊢ False",
+   "parentDecl": "ex",
+   "goals": ["⊢ False"],
    "endPos": {"line": 1, "column": 27}}],
  "messages":
  [{"severity": "warning",
@@ -24,7 +25,8 @@
 {"sorries":
  [{"proofState": 1,
    "pos": {"line": 1, "column": 25},
-   "goal": "⊢ False",
+   "parentDecl": "ex",
+   "goals": ["⊢ False"],
    "endPos": {"line": 1, "column": 30}}],
  "messages":
  [{"severity": "warning",
@@ -51,12 +53,14 @@
    "tactic": "sorry",
    "proofState": 3,
    "pos": {"line": 1, "column": 25},
+   "parentDecl": "ex",
    "goals": "⊢ False",
    "endPos": {"line": 1, "column": 30}}],
  "sorries":
  [{"proofState": 2,
    "pos": {"line": 1, "column": 25},
-   "goal": "⊢ False",
+   "parentDecl": "ex",
+   "goals": ["⊢ False"],
    "endPos": {"line": 1, "column": 30}}],
  "messages":
  [{"severity": "warning",
@@ -70,13 +74,9 @@
 
 {"sorries":
  [{"proofState": 4,
-   "pos": {"line": 1, "column": 25},
-   "goal": "⊢ False",
-   "endPos": {"line": 1, "column": 30}},
-  {"proofState": 5,
    "pos": {"line": 1, "column": 22},
-   "goal": "⊢ False",
-   "endPos": {"line": 1, "column": 22}}],
+   "parentDecl": "ex",
+   "goals": ["⊢ False"]}],
  "messages":
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
