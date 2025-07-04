@@ -189,13 +189,15 @@ def tacticsCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv 
 
 def declTypes (trees: List InfoTree) : M m (List DeclType) := do
   let exprType: Expr → MetaM String := fun (expr: Expr) => do pure (← Meta.ppExpr (← Lean.Meta.inferType expr)).pretty'
+  let conclusion: Expr → MetaM String := fun (expr: Expr) => do pure (← Meta.ppExpr (← Lean.Meta.forallMetaTelescope (← Meta.inferType expr)).snd.snd).pretty'
   let treeDecl := (fun t => do
     let dt := InfoTree.declType t
     match dt with
     | some ⟨ctx, expr, stx, lctx, pos, endPos⟩ =>
       let type := (← ctx.runMetaM lctx (exprType expr))
       let pp := Format.pretty stx.prettyPrint
-      pure [DeclType.of type pp pos endPos]
+      let conclusionStr ← ctx.runMetaM lctx <| conclusion expr
+      pure [DeclType.of type pp conclusionStr pos endPos]
     | _ => pure [])
   trees.flatMapM treeDecl
 

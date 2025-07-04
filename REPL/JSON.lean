@@ -124,14 +124,16 @@ structure DeclType where
   endPos : Pos
   type : String
   pp : String
+  conclusion : String
 deriving ToJson, FromJson
 
 /-- Construct the JSON representation of a Declaration type. -/
-def DeclType.of (type pp : String) (pos endPos : Lean.Position) : DeclType :=
+def DeclType.of (type pp conclusion : String) (pos endPos : Lean.Position) : DeclType :=
   { pos := ⟨pos.line, pos.column⟩,
     endPos := ⟨endPos.line, endPos.column⟩,
     type,
-    pp }
+    pp
+    conclusion }
 
 structure Namespace where
   pos : Pos
