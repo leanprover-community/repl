@@ -236,22 +236,11 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
-  let trees := proofState.newInfoTrees old?
-  let trees ← match old? with
-  | some old => do
-    let (ctx, _) ← old.runMetaM do return { ← CommandContextInfo.save with }
-    let ctx := PartialContextInfo.commandCtx ctx
-    pure <| trees.map fun t => InfoTree.context ctx t
-  | none => pure trees
-  -- For debugging purposes, sometimes we print out the trees here:
-  -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees none (some proofState.rootGoals)
   let id ← recordProofSnapshot proofState
   return {
     proofState := id
-    goals := (← proofState.ppGoals).map fun s => s!"{s}"
+    goals := (← proofState.ppGoals).map (s!"{·}")
     messages
-    sorries
     traces
     proofStatus := (← getProofStatus proofState) }
 
@@ -350,8 +339,10 @@ def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
+This implementation supports branching in tactic proofs.
+When a tactic generates new goals, each goal is properly tracked to allow subsequent tactics to be
+applied.
 -/
--- TODO detect sorries?
 def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
   match (← get).proofStates[s.proofState]? with
   | none => return .inr ⟨"Unknown proof state."⟩
