@@ -1,5 +1,67 @@
 # A read-eval-print-loop for Lean 4
 
+## About this Fork
+
+This is a fork of the original Lean REPL that supports multiple Lean versions. The versioning system is designed to ensure compatibility across different Lean releases:
+
+- Each release of this REPL fork, starting from v1.0.9, is tagged with both the REPL version and the corresponding Lean version it supports.
+- Tags follow the format `vX.Y.Z_lean-toolchain-vA.B.C`, where:
+  - `vX.Y.Z` is the REPL version
+  - `vA.B.C` is the Lean version (including intermediate Lean versions with suffixes like `-rc1`)
+- All recent REPL features and bug fixes are backported to previous Lean versions.
+- All Lean versions are tested in the CI pipeline. Some Lean versions do not have a corresponding Mathlib release, in which case, Mathlib-related tests are skipped.
+
+**Note:** Some output differences specific to each Lean version may occur.
+
+## Changelog
+
+### v1.1.1-dev
+
+- Add support for Lean v4.22.0-rc1 and v4.22.0-rc2.
+
+### v1.0.11
+
+- Add support for Lean v4.22.0-rc1 and v4.22.0-rc2.
+
+### v1.1.0-dev
+
+- Incorporate the experimental prefix state optimization from the `auto-prefix-optimization` branch, along with a few fixes for the tactic mode. [#110](https://github.com/leanprover-community/repl/pull/110), [#109](https://github.com/leanprover-community/repl/pull/109), [#108](https://github.com/leanprover-community/repl/pull/108), [#106](https://github.com/leanprover-community/repl/pull/106)
+
+### v1.0.10
+
+- Add support for Lean v4.21.0.
+
+### v1.0.9
+
+- First version using the new tagging system: one tag per Lean version.
+- Add support for all Lean versions between 4.19.0 and v4.21.0-rc3 (+ v4.19.0-rc3).
+
+### v1.0.8
+
+- Add support for Lean v4.19.0. **Note:** v4.19.0-rc3 has been forgotten and is added in v1.0.9.
+
+### v1.0.7
+
+- Fix `auxiliary declaration cannot be created when declaration name is not available` issue for Lean v4.18.0. See <https://github.com/leanprover-community/repl/issues/44#issuecomment-2814069261>
+
+### v1.0.6
+
+- Add kernel check for proofs in tactic mode.
+
+### v1.0.5
+
+- Add support for Lean v4.19.0-rc1 and v4.19.0-rc2
+
+### v1.0.4
+
+- Add support for Lean v4.18.0
+
+### v1.0.3
+
+- First version using the new branching and versioning system. Branch name = REPL version, commit names = Lean versions.
+
+## Usage
+
 Run using `lake exe repl`.
 Communicates via JSON on stdin and stdout.
 Commands should be separated by blank lines.
@@ -31,12 +93,13 @@ You can only use `import` commands when you do not specify the `env` field.
 You can backtrack simply by using earlier values for `env`.
 
 The response includes:
-* A numeric label for the `Environment` after your command,
+
+- A numeric label for the `Environment` after your command,
   which you can use as the starting point for subsequent commands.
-* Any messages generated while processing your command.
-* A list of the `sorry`s in your command, including
-  * their expected type, and
-  * a numeric label for the proof state at the `sorry`, which you can then use in tactic mode.
+- Any messages generated while processing your command.
+- A list of the `sorry`s in your command, including
+  - their expected type, and
+  - a numeric label for the proof state at the `sorry`, which you can then use in tactic mode.
 
 Example output:
 
@@ -62,6 +125,7 @@ showing any messages generated, and sorries with their goal states.
 There is a simple wrapper around command mode that allows reading in an entire file.
 
 If `test/file.lean` contains
+
 ```lean
 def f : Nat := 37
 
@@ -71,10 +135,13 @@ theorem h : f + g = 39 := by exact rfl
 ```
 
 then
+
 ```
 echo '{"path": "test/file.lean", "allTactics": true}' | lake exe repl
 ```
+
 results in output
+
 ```json
 {"tactics":
  [{"tactic": "exact rfl",
@@ -91,6 +158,7 @@ To enter tactic mode issue a command containing a `sorry`,
 and then use the `proofState` index returned for each `sorry`.
 
 Example usage:
+
 ```json
 {"cmd" : "def f (x : Unit) : Nat := by sorry"}
 
@@ -144,9 +212,10 @@ The unpickling commands will report the new "env" or "proofState" identifier tha
 you can use in subsequent commands.
 
 Pickling is quite efficient:
-* we don't record full `Environment`s, only the changes relative to imports
-* unpickling uses memory mapping
-* file sizes are generally small, but see https://github.com/digama0/leangz if compression is
+
+- we don't record full `Environment`s, only the changes relative to imports
+- unpickling uses memory mapping
+- file sizes are generally small, but see <https://github.com/digama0/leangz> if compression is
   desirable
 
 ## Using the REPL from another project
@@ -158,9 +227,11 @@ In that project, add `require` statements in the `lakefile.lean` for any depende
 (e.g. Mathlib). (You probably should verify that `lake build` works as expected in that project.)
 
 Now you can run the REPL as:
+
 ```shell
 lake env ../path/to/repl/.lake/build/bin/repl < commands.in
 ```
+
 (Here `../path/to/repl/` represents the path to your checkout of this repository,
 in which you've already run `lake build`.)
 
@@ -169,8 +240,8 @@ can find needed imports.
 
 ## Future work
 
-* Replay tactic scripts from tactic mode back into the original `sorry`.
-* Currently if you create scoped environment extensions (e.g. scoped notations) in a session
+- Replay tactic scripts from tactic mode back into the original `sorry`.
+- Currently if you create scoped environment extensions (e.g. scoped notations) in a session
   these are not correctly pickled and unpickled in later sessions.
 
 ## Running Tests
