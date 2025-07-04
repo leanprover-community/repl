@@ -11,7 +11,14 @@ open Lean Elab InfoTree
 
 namespace REPL
 
-structure CommandOptions where
+/-- Base structure with timeout that all command types can inherit from -/
+structure BaseOptions where
+  /--
+  Optional timeout in milliseconds. If none, no timeout will be applied.
+  -/
+  timeout : Option Nat := none
+
+structure CommandOptions extends BaseOptions where
   allTactics : Option Bool := none
   rootGoals : Option Bool := none
   /--
@@ -38,7 +45,7 @@ deriving ToJson, FromJson
 /--
 Run a tactic in a proof state.
 -/
-structure ProofStep where
+structure ProofStep extends BaseOptions where
   proofState : Nat
   tactic : String
 deriving ToJson, FromJson
@@ -170,21 +177,21 @@ structure Error where
   message : String
 deriving ToJson, FromJson
 
-structure PickleEnvironment where
+structure PickleEnvironment extends BaseOptions where
   env : Nat
   pickleTo : System.FilePath
 deriving ToJson, FromJson
 
-structure UnpickleEnvironment where
+structure UnpickleEnvironment extends BaseOptions where
   unpickleEnvFrom : System.FilePath
 deriving ToJson, FromJson
 
-structure PickleProofState where
+structure PickleProofState extends BaseOptions where
   proofState : Nat
   pickleTo : System.FilePath
 deriving ToJson, FromJson
 
-structure UnpickleProofState where
+structure UnpickleProofState extends BaseOptions where
   unpickleProofStateFrom : System.FilePath
   env : Option Nat
 deriving ToJson, FromJson
