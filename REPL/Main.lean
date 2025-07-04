@@ -127,25 +127,39 @@ def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   catch _ =>
     pure "<failed to pretty print>"
 
-def tactics (treeList : List (IncrementalState × Option InfoTree)) : M m (List Tactic) :=
-  treeList.flatMapM fun (state, infoTree?) => do
-    infoTree?.toList.flatMap InfoTree.tactics |>.mapM
-      fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
-        let proofState := some (← ProofSnapshot.create ctx none state.commandState.env goals rootGoals)
-        let goals := s!"{(← ctx.ppGoals goals)}".trim
-        let tactic := Format.pretty (← ppTactic ctx stx)
-        let proofStateId ← proofState.mapM recordProofSnapshot
-        return Tactic.of goals tactic pos endPos proofStateId ns
+def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tactic) :=
+  trees.flatMap InfoTree.tactics |>.mapM
+    fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
+      let proofState := some (← ProofSnapshot.create ctx none env? goals rootGoals)
+      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let tactic := Format.pretty (← ppTactic ctx stx)
+      let proofStateId ← proofState.mapM recordProofSnapshot
+      return Tactic.of goals tactic pos endPos proofStateId ns
 
-def collectRootGoalsAsSorries (treeList : List (IncrementalState × Option InfoTree))
-: M m (List Sorry) := do
-  treeList.flatMapM fun (state, infoTree?) => do
-    infoTree?.toList.flatMap InfoTree.rootGoals |>.mapM
-      fun ⟨ctx, goals, pos⟩ => do
-        let proofState := some (← ProofSnapshot.create ctx none state.commandState.env goals goals)
-        let goals := s!"{(← ctx.ppGoals goals)}".trim
-        let proofStateId ← proofState.mapM recordProofSnapshot
-        return Sorry.of goals pos pos proofStateId
+def tacticsCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv : Environment) : M m (List Tactic) := do
+  match treeList with
+  | [] => pure []
+  | (state, infoTree?) :: rest => do
+    let ts ← tactics infoTree?.toList prevEnv
+    let restTactics ← tacticsCmd rest state.commandState.env
+    return ts ++ restTactics
+
+def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
+  trees.flatMap InfoTree.rootGoals |>.mapM
+    fun ⟨ctx, goals, pos⟩ => do
+      let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
+      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let proofStateId ← proofState.mapM recordProofSnapshot
+      return Sorry.of goals pos pos proofStateId
+
+def collectRootGoalsAsSorriesCmd (treeList : List (IncrementalState × Option InfoTree)) (prevEnv : Environment) :
+    M m (List Sorry) := do
+  match treeList with
+  | [] => pure []
+  | (state, infoTree?) :: rest => do
+    let sorries ← collectRootGoalsAsSorries infoTree?.toList prevEnv
+    let restSorries ← collectRootGoalsAsSorriesCmd rest state.commandState.env
+    return sorries ++ restSorries
 
 private def collectFVarsAux : Expr → NameSet
   | .fvar fvarId => NameSet.empty.insert fvarId.name
@@ -315,21 +329,14 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   catch ex =>
     return .inr ⟨ex.toString⟩
 
-  let mut prevPos := 0
-  for (incState, _) in incStates do
-    let endPos := incState.cmdPos
-    let processedText := incState.inputCtx.input.extract prevPos endPos
-    IO.println s!"Processing incremental state [pos: {prevPos}..{endPos}]:\n{processedText}"
-    prevPos := endPos
-
   let cmdState := (incStates.getLast?.map (fun c => c.1.commandState)).getD initialCmdState
   let messages ← messages.mapM fun m => Message.of m
   let sorries ← sorriesCmd incStates initialCmdState.env none
   let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← collectRootGoalsAsSorries incStates))
+  | some true => pure (sorries ++ (← collectRootGoalsAsSorriesCmd incStates initialCmdState.env))
   | _ => pure sorries
   let tactics ← match s.allTactics with
-  | some true => tactics incStates
+  | some true => tacticsCmd incStates initialCmdState.env
   | _ => pure []
   let cmdSnapshot :=
   { cmdState

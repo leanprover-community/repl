@@ -191,7 +191,7 @@ Construct a `ProofSnapshot` from a `ContextInfo` and optional `LocalContext`, an
 For convenience, we also allow a list of `Expr`s, and these are appended to the goals
 as fresh metavariables with the given types.
 -/
-def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Environment)
+def create (ctx : ContextInfo) (lctx? : Option LocalContext) (prevEnv? : Option Environment)
     (goals : List MVarId) (rootGoals? : Option (List MVarId)) (types : List Expr := [])
     : IO ProofSnapshot := do
   -- Get the local context from the goals if not provided.
@@ -207,12 +207,33 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Envi
     -- update local instances, which is necessary when `types` is non-empty
     Meta.withLocalInstances (lctx.decls.toList.filterMap id) do
       let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
-      let s ← getThe Core.State
-      let s := match env? with
-      | none => s
-      | some env => { s with env }
+
+      -- Create a filtered environment that excludes the new (non-auxiliary) declarations
+      -- Necessary to avoid self-references in proofs in tactic mode, while still allowing
+      -- auxiliary declarations to be used in the proof.
+      let coreState ← match prevEnv? with
+      | none => getThe Core.State
+      | some prevEnv => do
+        let declsToFilter := ((← getLCtx).decls.toList.filterMap id).map (·.userName)
+        let declsToFilterSet : Std.HashSet Name := declsToFilter.foldl (init := {}) fun s n => s.insert n
+
+        let currentConsts := ctx.env.constants.map₂.toList
+        let prevConsts := prevEnv.constants.map₂.toList
+        let diff := currentConsts.filter (fun (name, _) =>
+          !prevConsts.any (fun (name', _) => name == name'))
+        let filteredConstants := diff.filter fun (name, _) => !declsToFilterSet.contains name
+
+        -- Print for debugging purposes
+        IO.println s!"Constants to filter: {declsToFilter}"
+        IO.println s!"Replayed constants: {filteredConstants.map (·.1)}"
+
+        let filteredEnv ← prevEnv.replay (Std.HashMap.ofList filteredConstants)
+        -- let filteredEnv := prevEnv
+        let s ← getThe Core.State
+        pure { s with env := filteredEnv }
+
       pure <|
-      { coreState := s
+      { coreState := coreState
         coreContext := ← readThe Core.Context
         metaState := ← getThe Meta.State
         metaContext := ← readThe Meta.Context
