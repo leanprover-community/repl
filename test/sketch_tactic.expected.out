@@ -14,25 +14,27 @@
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 1,
  "goals":
- ["m : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0",
-  "m n : Nat\nih : n + m = m + n\n⊢ n + 1 + m = m + (n + 1)",
+ ["m n : Nat\nih : n + m = m + n\n⊢ n + 1 + m = m + (n + 1)",
+  "m : Nat\n⊢ 0 + m = m",
   "m : Nat\nh_base : 0 + m = m\n⊢ m + 0 = m",
-  "m : Nat\n⊢ 0 + m = m"]}
+  "m : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 2,
  "goals":
- ["m n : Nat\nih : n + m = m + n\n⊢ n + 1 + m = m + (n + 1)",
+ ["m : Nat\n⊢ 0 + m = m",
   "m : Nat\nh_base : 0 + m = m\n⊢ m + 0 = m",
-  "m : Nat\n⊢ 0 + m = m"]}
+  "m : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 3,
- "goals": ["m : Nat\nh_base : 0 + m = m\n⊢ m + 0 = m", "m : Nat\n⊢ 0 + m = m"]}
+ "goals":
+ ["m : Nat\nh_base : 0 + m = m\n⊢ m + 0 = m",
+  "m : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 4,
- "goals": ["m : Nat\n⊢ 0 + m = m"]}
+ "goals": ["m : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0"]}
 
 {"proofStatus": "Completed", "proofState": 5, "goals": []}
 

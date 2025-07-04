@@ -2,11 +2,10 @@
 
 {"tactic": "(\n   intros n m\n   induction n with\n   | zero =>\n     have h_base: 0 + m = m := sorry\n     have h_symm: m + 0 = m := sorry\n     sorry\n   | succ n ih => sorry)", "proofState": 0}
 
-{"tactic": "rw [h_base, h_symm]", "proofState": 1}
+{"tactic": "rw [Nat.succ_add, Nat.add_succ, ih]", "proofState": 1}
 
-{"tactic": "rw [Nat.succ_add, Nat.add_succ, ih]", "proofState": 2}
+{"tactic": "apply Nat.zero_add", "proofState": 2}
 
 {"tactic": "apply Nat.add_zero", "proofState": 3}
 
-{"tactic": "apply Nat.zero_add", "proofState": 4}
-
+{"tactic": "rw [h_base, h_symm]", "proofState": 4}

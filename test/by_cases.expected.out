@@ -23,5 +23,5 @@
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 3,
- "goals": ["x : Int\nh : ¬x < 0\n⊢ x = x", "x : Int\nh : x < 0\n⊢ x = x"]}
+ "goals": ["x : Int\nh : x < 0\n⊢ x = x", "x : Int\nh : ¬x < 0\n⊢ x = x"]}
 
