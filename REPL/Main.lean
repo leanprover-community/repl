@@ -102,11 +102,7 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
       fun ⟨ctx, g, pos, endPos⟩ => do
         let (goal, proofState) ← match g with
         | .tactic g => do
-          let lctx ← ctx.runMetaM {} do
-              match ctx.mctx.findDecl? g with
-              | some decl => return decl.lctx
-              | none => throwError "unknown metavariable '{g}'"
-          let s ← ProofSnapshot.create ctx lctx env? [g] rootGoals?
+          let s ← ProofSnapshot.create ctx none env? [g] rootGoals?
           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
         | .term lctx (some t) => do
           let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
@@ -197,7 +193,7 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
             unless (← Meta.isDefEq pft expectedType) do
               return s!"Error: proof has type {pft} but root goal has type {expectedType}"
 
-            let pf ← abstractAllLambdaFVars pf
+            let pf ← abstractAllLambdaFVars pf >>= instantiateMVars
             let pft ← Meta.inferType pf >>= instantiateMVars
 
             if pf.hasExprMVar then
