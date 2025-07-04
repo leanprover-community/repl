@@ -1,0 +1,8 @@
+{"cmd": "example : true := by sorry"}
+
+{"tactic": "let p : ∃ x : Nat, x > 0 := ⟨1, Nat.one_pos⟩", "proofState": 0}
+
+{"tactic": "let ⟨n, hn⟩ := p", "proofState": 1}
+
+{"tactic": "rfl", "proofState": 2}
+
