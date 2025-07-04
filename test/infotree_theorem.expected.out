@@ -1,9 +1,4 @@
-{"messages":
- [{"severity": "info",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 1, "column": 50},
-   "data": "Goals accomplished!"}],
- "infotree":
+{"infotree":
  [{"node":
    {"stx":
     {"range":
