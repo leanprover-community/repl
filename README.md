@@ -44,7 +44,8 @@ Example output:
 {"sorries":
  [{"pos": {"line": 1, "column": 18},
    "endPos": {"line": 1, "column": 23},
-   "goal": "⊢ Nat",
+   "parentDecl": "h",
+   "goals": ["⊢ Nat"],
    "proofState": 0}],
  "messages":
  [{"severity": "error",
@@ -92,12 +93,13 @@ and then use the `proofState` index returned for each `sorry`.
 
 Example usage:
 ```json
-{"cmd" : "def f (x : Unit) : Nat := by sorry"}
+{"cmd" : "def f (x : Unit) : Nat := by sorry", "sorries": "individual"}
 
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 29},
-   "goal": "x : Unit\n⊢ Nat",
+   "parentDecl": "f",
+   "goals": ["x : Unit\n⊢ Nat"],
    "endPos": {"line": 1, "column": 34}}],
  "messages":
  [{"severity": "warning",
