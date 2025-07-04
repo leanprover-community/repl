@@ -1,0 +1,5 @@
+{"cmd": "import Mathlib\nopen Real"}
+
+{"path": "test/file_env.lean", "env": 0}
+
+{"cmd": "#check demo", "env": 1}
