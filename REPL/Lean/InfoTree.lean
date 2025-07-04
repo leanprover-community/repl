@@ -195,18 +195,18 @@ def findTacticNodes (t : InfoTree) : List (TacticInfo × ContextInfo × List MVa
   | (.ofTacticInfo i, some ctx, rootGoals) => (i, ctx, rootGoals)
   | _ => none
 
-/-- Returns the root goals for a given `InfoTree`. -/
-partial def findRootGoals (t : InfoTree) (ctx? : Option ContextInfo := none) :
-  List (TacticInfo × ContextInfo × List MVarId) :=
+/-- Returns the root and last goals for a given `InfoTree`. -/
+partial def findRootAndLastGoals (t : InfoTree) (ctx? : Option ContextInfo := none) :
+    List (TacticInfo × ContextInfo × List MVarId × List MVarId) :=
   match t with
-  | .context ctx t => t.findRootGoals (ctx.mergeIntoOuter? ctx?)
+  | .context ctx t => t.findRootAndLastGoals (ctx.mergeIntoOuter? ctx?)
   | .node info ts =>
     match info with
     | .ofTacticInfo i =>
       match ctx? with
-      | some ctx => [(i, ctx, i.goalsBefore)]
+      | some ctx => [(i, ctx, i.goalsBefore, i.goalsAfter)]
       | _ => []
-    | _ => ts.toList.flatMap (fun t => t.findRootGoals ctx?)
+    | _ => ts.toList.flatMap (fun t => t.findRootAndLastGoals ctx?)
   | _ => []
 
 /-- Return all `TacticInfo` nodes in an `InfoTree`
@@ -264,11 +264,20 @@ def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × List 
       i.getUsedConstantsAsSet.toArray )
 
 def rootGoals (t : InfoTree) : List (ContextInfo × List MVarId × Position) :=
-  t.findRootGoals.map fun ⟨i, ctx, rootGoals⟩ =>
+  t.findRootAndLastGoals.map fun ⟨i, ctx, rootGoals, _⟩ =>
     let range := stxRange ctx.fileMap i.stx
     ( { ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 },
       rootGoals,
       range.fst )
+
+def rootAndLastGoals (t : InfoTree) : List (ContextInfo × List MVarId × List MVarId × Position × Position) :=
+  t.findRootAndLastGoals.map fun ⟨i, ctx, rootGoals, lastGoals⟩ =>
+    let range := stxRange ctx.fileMap i.stx
+    ( { ctx with mctx := i.mctxAfter, ngen := ctx.ngen.mkChild.1 },
+      rootGoals,
+      lastGoals,
+      range.fst,
+      range.snd )
 
 end Lean.Elab.InfoTree
 

@@ -3,7 +3,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 60},
-   "goal": "x : ℝ\nh0 : |x| > 1\n⊢ x < 0 ∨ 2 * x > 2",
+   "parentDecl": "_example",
+   "goals": ["x : ℝ\nh0 : |x| > 1\n⊢ x < 0 ∨ 2 * x > 2"],
    "endPos": {"line": 1, "column": 65}}],
  "messages":
  [{"severity": "warning",

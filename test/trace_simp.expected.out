@@ -15,7 +15,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 23},
-   "goal": "⊢ f = 37",
+   "parentDecl": "_example",
+   "goals": ["⊢ f = 37"],
    "endPos": {"line": 1, "column": 28}}],
  "messages":
  [{"severity": "warning",

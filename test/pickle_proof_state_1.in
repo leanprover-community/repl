@@ -1,6 +1,6 @@
 {"cmd" : "import Lean"}
 
-{"cmd" : "def f : Nat := by sorry", "env": 0}
+{"cmd" : "def f : Nat := by sorry", "env": 0, "sorries": "individual"}
 
 {"pickleTo": "test/c.olean", "proofState": 0}
 

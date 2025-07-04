@@ -1,5 +1,5 @@
 {"cmd": "theorem ex : False := by exact ex"}
 
-{"cmd": "theorem ex : False := sorry"}
+{"cmd": "theorem ex : False := sorry", "sorries": "individual"}
 
 {"proofState": 0, "tactic": "exact ex"}
