@@ -19,14 +19,5 @@
    "pos": {"line": 7, "column": 2},
    "goals": "x y z : Nat\n⊢ x + y + (z + a) = x + (z + b + y)",
    "endPos": {"line": 7, "column": 40}}],
- "messages":
- [{"severity": "info",
-   "pos": {"line": 4, "column": 0},
-   "endPos": {"line": 4, "column": 25},
-   "data": "Goals accomplished!"},
-  {"severity": "info",
-   "pos": {"line": 6, "column": 0},
-   "endPos": {"line": 7, "column": 40},
-   "data": "Goals accomplished!"}],
  "env": 0}
 
