@@ -20,10 +20,7 @@
  "proofState": 2,
  "goals": ["case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"]}
 
-{"sorries":
- [{"proofState": 3, "goal": "case pos\nx : Int\nh : x < 0\n⊢ x = x"},
-  {"proofState": 4, "goal": "case neg\nx : Int\nh : ¬x < 0\n⊢ x = x"}],
- "proofStatus": "Incomplete: contains sorry",
- "proofState": 5,
- "goals": []}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 3,
+ "goals": ["x : Int\nh : ¬x < 0\n⊢ x = x", "x : Int\nh : x < 0\n⊢ x = x"]}
 

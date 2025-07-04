@@ -1,0 +1,23 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 21},
+   "goal": "⊢ true = true",
+   "endPos": {"line": 1, "column": 26}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["p : ∃ x, x > 0 := Exists.intro 1 Nat.one_pos\n⊢ true = true"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals":
+ ["p : ∃ x, x > 0 := Exists.intro 1 Nat.one_pos\nn : Nat\nhn : n > 0\n⊢ true = true"]}
+
+{"proofStatus": "Completed", "proofState": 3, "goals": []}
+

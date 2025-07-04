@@ -31,10 +31,15 @@
  "proofState": 3,
  "goals": []}
 
-{"sorries": [{"proofState": 4, "goal": "n✝ : Nat\n⊢ true = true"}],
- "proofStatus": "Incomplete: open goals remain",
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 4,
+ "goals":
+ ["case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0",
+  "n✝ : Nat\n⊢ true = true"]}
+
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 5,
- "goals": ["case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0"]}
+ "goals": ["n✝ : Nat\n⊢ true = true"]}
 
 {"message":
  "Lean error:\ntactic 'apply' failed, could not unify the type of `?succ`\n  n✝ + 1 = 0\nwith the goal\n  true = true\nn✝ : Nat\n⊢ true = true"}

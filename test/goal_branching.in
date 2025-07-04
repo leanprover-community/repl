@@ -1,0 +1,11 @@
+{"cmd" : "theorem branching_test : 1 = 1 ∧ 2 = 2 ∧ 3 = 3 := by sorry"}
+
+{"tactic": "constructor", "proofState": 0}
+
+{"tactic": "exact rfl", "proofState": 1}
+
+{"tactic": "constructor", "proofState": 2}
+
+{"tactic": "exact rfl", "proofState": 3}
+
+{"tactic": "exact rfl", "proofState": 4}
