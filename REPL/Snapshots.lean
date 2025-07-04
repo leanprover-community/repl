@@ -213,7 +213,7 @@ def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
       let exprHoles ← mctx.eAssignment.foldlM processExpr []
       pure exprHoles
 
-    let combinedGoals := result'.tacticState.goals ++ newGoals
+    let combinedGoals := newGoals ++ result'.tacticState.goals
     return { result' with tacticState := { goals := combinedGoals } }
 
 /-- Pretty print the current goals in the `ProofSnapshot`. -/

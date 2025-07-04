@@ -14,7 +14,7 @@
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 2,
- "goals": ["this : 2 = 2\n⊢ 1 = 1", "⊢ 2 = 2"]}
+ "goals": ["⊢ True", "this : True\n⊢ 1 = 1"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 3,
@@ -23,11 +23,11 @@
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "unknown identifier 'h1'"}],
- "goals": ["⊢ 2 = 2", "this : 2 = 2\n⊢ 1 = 1"]}
+ "goals": ["⊢ True", "this : True\n⊢ 1 = 1"]}
 
 {"proofStatus": "Incomplete: open goals remain",
  "proofState": 4,
- "goals": ["⊢ 2 = 2"]}
+ "goals": ["this : True\n⊢ 1 = 1"]}
 
 {"proofStatus": "Completed", "proofState": 5, "goals": []}
 
