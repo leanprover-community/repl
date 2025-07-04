@@ -1,6 +1,28 @@
-{"cmd": "#eval 1 + 1"}
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 77},
+   "goal":
+   "⊢ (fun x =>\n      match x with\n      | (x, fst, snd) => x = x) =\n    fun x => True",
+   "endPos": {"line": 1, "column": 82}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
 
-{"cmd": "def foo : (fun ((x, y, z) : Nat × Nat × Nat) => x = x) = fun x => True := by sorry", "env": 0}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals":
+ ["case h\nx y z : Nat\n⊢ (foo.match_1 (fun x => Prop) (x, y, z) fun x fst snd => x = x) = True"]}
 
-{"tactic": "simp", "proofState": 0}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["case h\nx y z : Nat\n⊢ (x = x) = True"]}
+
+{"proofStatus": "Completed", "proofState": 3, "goals": []}
+
+{"proofStatus": "Completed", "proofState": 4, "goals": []}
+
+{"env": 1}
 
