@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 18},
-   "goal": "⊢ Nat",
+   "parentDecl": "f",
+   "goals": ["⊢ Nat"],
    "endPos": {"line": 1, "column": 23}}],
  "messages":
  [{"severity": "warning",
@@ -10,8 +11,7 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"sorries": [{"proofState": 1, "goal": "⊢ Nat"}],
- "proofStatus": "Incomplete: contains sorry",
- "proofState": 2,
- "goals": []}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["⊢ Nat"]}
 

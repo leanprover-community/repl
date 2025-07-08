@@ -1,4 +1,4 @@
-{"cmd": "theorem complex_and (p q r : Prop) (h1 : p ∧ q) (h2 : q → r) : p ∧ r := by sorry"}
+{"cmd": "theorem complex_and (p q r : Prop) (h1 : p ∧ q) (h2 : q → r) : p ∧ r := by sorry", "sorries": "individual"}
 
 {"tactic": "apply And.intro", "proofState": 0}
 

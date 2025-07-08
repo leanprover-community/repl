@@ -3,7 +3,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 36},
-   "goal": "x : ℕ\n⊢ x = x",
+   "parentDecl": "foo",
+   "goals": ["x : ℕ\n⊢ x = x"],
    "endPos": {"line": 1, "column": 41}}],
  "messages":
  [{"severity": "warning",
@@ -21,10 +22,7 @@
  "proofState": 2,
  "goals": ["case succ\nn✝ : ℕ\na✝ : n✝ = n✝\n⊢ n✝ + 1 = n✝ + 1"]}
 
-{"sorries":
- [{"proofState": 3, "goal": "case zero\n⊢ 0 = 0"},
-  {"proofState": 4, "goal": "case succ\nx : ℕ\na✝ : x = x\n⊢ x + 1 = x + 1"}],
- "proofStatus": "Incomplete: contains sorry",
- "proofState": 5,
- "goals": []}
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 3,
+ "goals": ["⊢ 0 = 0", "x : ℕ\na✝ : x = x\n⊢ x + 1 = x + 1"]}
 

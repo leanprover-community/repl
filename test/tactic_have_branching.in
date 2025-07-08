@@ -1,0 +1,12 @@
+{"cmd": "example : 1 = 1 := by sorry", "sorries": "individual"}
+
+{"tactic": "rfl", "proofState": 0}
+
+{"tactic": "have : True := by sorry", "proofState": 0}
+
+{"tactic": "exact h1", "proofState": 2}
+
+{"tactic": "exact True.intro", "proofState": 2}
+
+{"tactic": "rfl", "proofState": 4}
+

@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 62},
-   "goal": "x y z : Nat\nh1 : x = y\nh2 : y = z\n⊢ x = z",
+   "parentDecl": "_example",
+   "goals": ["x y z : Nat\nh1 : x = y\nh2 : y = z\n⊢ x = z"],
    "endPos": {"line": 1, "column": 67}}],
  "messages":
  [{"severity": "warning",
@@ -15,7 +16,8 @@
 {"sorries":
  [{"proofState": 2,
    "pos": {"line": 1, "column": 64},
-   "goal": "f : Nat → Nat\nn : Nat\nh : n = 3\n⊢ f n = f 3",
+   "parentDecl": "_example",
+   "goals": ["f : Nat → Nat\nn : Nat\nh : n = 3\n⊢ f n = f 3"],
    "endPos": {"line": 1, "column": 69}}],
  "messages":
  [{"severity": "warning",

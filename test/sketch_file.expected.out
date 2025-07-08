@@ -1,0 +1,47 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 70},
+   "parentDecl": "add_comm_proved_formal_sketch",
+   "goals":
+   ["m : Nat\nh_base : 0 + m = m\n⊢ m + 0 = m",
+    "m : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0",
+    "m n : Nat\nih : n + m = m + n\n⊢ n + 1 + m = m + (n + 1)",
+    "m : Nat\n⊢ 0 + m = m"],
+   "endPos": {"line": 8, "column": 24}},
+  {"proofState": 1,
+   "pos": {"line": 11, "column": 49},
+   "parentDecl": "add_rfl2",
+   "goals": ["⊢ ∀ (n m : Nat), n + m = n + m"],
+   "endPos": {"line": 11, "column": 57}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 37},
+   "data": "declaration uses 'sorry'"},
+  {"severity": "warning",
+   "pos": {"line": 11, "column": 8},
+   "endPos": {"line": 11, "column": 16},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals":
+ ["m : Nat\nh_base : 0 + m = m\nh_symm : m + 0 = m\n⊢ 0 + m = m + 0",
+  "m n : Nat\nih : n + m = m + n\n⊢ n + 1 + m = m + (n + 1)",
+  "m : Nat\n⊢ 0 + m = m"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 3,
+ "goals":
+ ["m n : Nat\nih : n + m = m + n\n⊢ n + 1 + m = m + (n + 1)",
+  "m : Nat\n⊢ 0 + m = m"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 4,
+ "goals": ["m : Nat\n⊢ 0 + m = m"]}
+
+{"proofStatus": "Completed", "proofState": 5, "goals": []}
+
+{"proofStatus": "Completed", "proofState": 6, "goals": []}
+

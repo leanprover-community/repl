@@ -3,6 +3,7 @@
    "tactic": "exact hp",
    "proofState": 0,
    "pos": {"line": 2, "column": 2},
+   "parentDecl": "_example",
    "goals": "P : Prop\nhp : P\n⊢ P",
    "endPos": {"line": 2, "column": 10}}],
  "env": 0}

@@ -1,7 +1,8 @@
 {"sorries":
  [{"proofState": 0,
    "pos": {"line": 1, "column": 43},
-   "goal": "x : Nat\n⊢ x = x",
+   "parentDecl": "my_theorem",
+   "goals": ["x : Nat\n⊢ x = x"],
    "endPos": {"line": 1, "column": 48}}],
  "messages":
  [{"severity": "warning",
@@ -10,12 +11,12 @@
    "data": "declaration uses 'sorry'"}],
  "env": 0}
 
-{"proofStatus": "Incomplete: contains sorry",
+{"proofStatus": "Incomplete: open goals remain",
  "proofState": 1,
  "messages":
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
    "data": "unknown identifier 'my_fake_premise'"}],
- "goals": []}
+ "goals": ["x : Nat\n⊢ x = x"]}
 
