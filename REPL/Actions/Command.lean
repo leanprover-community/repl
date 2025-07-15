@@ -55,18 +55,17 @@ structure UnpickleEnvironment where
   unpickleEnvFrom : System.FilePath
 deriving ToJson, FromJson
 
-variable [Monad m] [MonadLiftT IO m]
+variable [Monad m] [MonadREPL m] [MonadLiftT IO m]
 
 /-- Record an `CommandSnapshot` into the REPL state, returning its index for future use. -/
-def recordCommandSnapshot (state : CommandSnapshot) : M m Nat := do
-  let id := (← get).cmdStates.size
-  modify fun s => { s with cmdStates := s.cmdStates.push state }
-  return id
+@[specialize]
+def recordCommandSnapshot (state : CommandSnapshot) : m Nat := do
+  modifyGetCmdSnaps fun s => (s.size, s.push state)
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
-def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
+def runCommand (s : Command) : M (CommandResponse ⊕ Error) := do
   let (cmdSnapshot?, notFound) ← do match s.env with
   | none => pure (none, false)
   | some i => do match (← get).cmdStates[i]? with
@@ -115,15 +114,16 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
       infotree }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
-def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
-  match (← get).cmdStates[n.env]? with
+@[specialize]
+def pickleCommandSnapshot (n : PickleEnvironment) : m (CommandResponse ⊕ Error) := do
+  match (← getCmdSnaps)[n.env]? with
   | none => return .inr ⟨"Unknown environment."⟩
   | some env =>
     discard <| env.pickle n.pickleTo
     return .inl { env := n.env }
 
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
-def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := do
+def unpickleCommandSnapshot (n : UnpickleEnvironment) : M CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
   let env ← recordCommandSnapshot env
   return { env }

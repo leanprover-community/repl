@@ -64,16 +64,16 @@ structure UnpickleProofState where
   env : Option Nat
 deriving ToJson, FromJson
 
-variable [Monad m] [MonadLiftT IO m]
+variable [Monad m] [MonadREPL m] [MonadLiftT IO m]
 
 /-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
-def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
-  let id := (← get).proofStates.size
-  modify fun s => { s with proofStates := s.proofStates.push proofState }
-  return id
+@[specialize]
+def recordProofSnapshot (proofState : ProofSnapshot) : m Nat := do
+  modifyGetProofSnaps fun s => (s.size, s.push proofState)
 
+@[specialize]
 def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Option (List MVarId))
-: M m (List Sorry) :=
+: m (List Sorry) :=
   trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
     | .term _ none => false
     | _ => true ) |>.mapM
@@ -93,13 +93,15 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
         let proofStateId ← proofState.mapM recordProofSnapshot
         return Sorry.of goal pos endPos proofStateId
 
+@[specialize]
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
     Lean.PrettyPrinter.ppTactic ⟨stx⟩
   catch _ =>
     pure "<failed to pretty print>"
 
-def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tactic) :=
+@[specialize]
+def tactics (trees : List InfoTree) (env? : Option Environment) : m (List Tactic) :=
   trees.flatMap InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none env? goals rootGoals)
@@ -108,7 +110,8 @@ def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tact
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
 
-def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
+@[specialize]
+def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : m (List Sorry) := do
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
@@ -125,7 +128,8 @@ Main states include:
 
 Inspired by LeanDojo REPL's status tracking.
 -/
-def getProofStatus (proofState : ProofSnapshot) : M m String := do
+@[specialize]
+def getProofStatus (proofState : ProofSnapshot) : m String := do
   match proofState.tacticState.goals with
     | [] =>
       let res := proofState.runMetaM do
@@ -178,8 +182,9 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
 
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
+@[specialize]
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
-    M m ProofStepResponse := do
+    m ProofStepResponse := do
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
@@ -204,15 +209,17 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
-def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
-  match (← get).proofStates[n.proofState]? with
+@[specialize]
+def pickleProofSnapshot (n : PickleProofState) : m (ProofStepResponse ⊕ Error) := do
+  match (← getProofSnaps)[n.proofState]? with
   | none => return .inr ⟨"Unknown proof State."⟩
   | some proofState =>
     discard <| proofState.pickle n.pickleTo
     return .inl (← createProofStepReponse proofState)
 
 /-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
-def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕ Error) := do
+@[specialize]
+def unpickleProofSnapshot (n : UnpickleProofState) : M (ProofStepResponse ⊕ Error) := do
   let (cmdSnapshot?, notFound) ← do match n.env with
   | none => pure (none, false)
   | some i => do match (← get).cmdStates[i]? with
@@ -227,7 +234,8 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
 Run a single tactic, returning the id of the new proof statement, and the new goals.
 -/
 -- TODO detect sorries?
-def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
+@[specialize]
+def runProofStep (s : ProofStep) : M (ProofStepResponse ⊕ Error) := do
   match (← get).proofStates[s.proofState]? with
   | none => return .inr ⟨"Unknown proof state."⟩
   | some proofState =>

@@ -12,7 +12,7 @@ structure File extends CommandOptions where
   path : System.FilePath
 deriving ToJson, FromJson
 
-def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
+def processFile (s : File) : M (CommandResponse ⊕ Error) := do
   try
     let cmd ← IO.FS.readFile s.path
     runCommand { s with env := s.env, cmd }

@@ -76,8 +76,6 @@ structure Error where
   message : String
 deriving ToJson, FromJson
 
-variable [Monad m] [MonadLiftT IO m]
-
 def collectFVarsAux : Expr → NameSet
   | .fvar fvarId => NameSet.empty.insert fvarId.name
   | .app fm arg => (collectFVarsAux fm).union $ collectFVarsAux arg

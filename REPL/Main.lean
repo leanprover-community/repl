@@ -114,8 +114,8 @@ def printFlush [ToString α] (s : α) : IO Unit := do
 
 /-- Read-eval-print loop for Lean. -/
 unsafe def repl : IO Unit :=
-  StateT.run' loop {}
-where loop : M IO Unit := do
+  loop.run' {}
+where loop : M Unit := do
   let query ← getLines
   if query = "" then
     return ()

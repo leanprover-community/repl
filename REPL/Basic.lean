@@ -5,6 +5,23 @@ open Lean Elab
 
 namespace REPL
 
+class MonadCommandSnapshots (m : Type → Type) where
+  getCmdSnaps : m (Array CommandSnapshot)
+  setCmdSnaps : Array CommandSnapshot → m Unit
+  modifyGetCmdSnaps {α} : (Array CommandSnapshot → (α × Array CommandSnapshot)) → m α
+
+class MonadProofSnapshots (m : Type → Type) where
+  getProofSnaps : m (Array ProofSnapshot)
+  setProofSnaps : Array ProofSnapshot → m Unit
+  modifyGetProofSnaps {α} : (Array ProofSnapshot → (α × Array ProofSnapshot)) → m α
+
+attribute [specialize] MonadCommandSnapshots.modifyGetCmdSnaps MonadProofSnapshots.modifyGetProofSnaps
+
+class MonadREPL (m : Type → Type) extends MonadCommandSnapshots m, MonadProofSnapshots m where
+
+export MonadCommandSnapshots (getCmdSnaps setCmdSnaps modifyGetCmdSnaps)
+export MonadProofSnapshots (getProofSnaps setProofSnaps modifyGetProofSnaps)
+
 /-- The monadic state for the Lean REPL. -/
 structure State where
   /--
@@ -20,11 +37,22 @@ structure State where
   -/
   proofStates : Array ProofSnapshot := #[]
 
-/--
-The Lean REPL monad.
+-- /--
+-- The Lean REPL monad.
+-- -/
+abbrev M : Type → Type := StateRefT State IO
 
-We only use this with `m := IO`, but it is set up as a monad transformer for flexibility.
--/
-abbrev M (m : Type → Type) := StateT State m
+@[inline]
+instance : MonadREPL M where
+  getCmdSnaps := State.cmdStates <$> get
+  setCmdSnaps snaps := modify ({· with cmdStates := snaps})
+  modifyGetCmdSnaps f := modifyGet fun x => let (a, v) := f x.cmdStates; (a, {x with cmdStates := v})
+  getProofSnaps := State.proofStates <$> get
+  setProofSnaps snaps := modify ({· with proofStates := snaps})
+  modifyGetProofSnaps f := modifyGet fun x => let (a, v) := f x.proofStates; (a, {x with proofStates := v})
 
-variable [Monad m] [MonadLiftT IO m]
+@[always_inline, specialize]
+def modifyCmdSnaps [MonadCommandSnapshots m] : (Array CommandSnapshot → Array CommandSnapshot) → m Unit := fun f => modifyGetCmdSnaps fun x => ((), f x)
+
+@[always_inline, specialize]
+def modifyProofSnaps [MonadProofSnapshots m] : (Array ProofSnapshot → Array ProofSnapshot) → m Unit := fun f => modifyGetProofSnaps fun x => ((), f x)
