@@ -76,6 +76,8 @@ structure Error where
   message : String
 deriving ToJson, FromJson
 
+abbrev ResultT (m : Type → Type) (α : Type) := ExceptT Error m α
+
 def collectFVarsAux : Expr → NameSet
   | .fvar fvarId => NameSet.empty.insert fvarId.name
   | .app fm arg => (collectFVarsAux fm).union $ collectFVarsAux arg

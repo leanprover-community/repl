@@ -68,20 +68,20 @@ partial def getLines : IO String := do
   else
     return line.trimRight ++ (← getLines)
 
-instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
-  toJson x := match x with
-  | .inl a => toJson a
-  | .inr b => toJson b
+local instance [ToJson ε] [ToJson α] : ToJson (Except ε α) where
+  toJson
+  | .error e => toJson e
+  | .ok a => toJson a
 
 /-- Commands accepted by the REPL. -/
 inductive Input
-| command : Actions.Command → Input
-| file : Actions.File → Input
-| proofStep : Actions.ProofStep → Input
-| pickleEnvironment : Actions.PickleEnvironment → Input
-| unpickleEnvironment : Actions.UnpickleEnvironment → Input
-| pickleProofSnapshot : Actions.PickleProofState → Input
-| unpickleProofSnapshot : Actions.UnpickleProofState → Input
+  | command : Actions.Command → Input
+  | file : Actions.File → Input
+  | proofStep : Actions.ProofStep → Input
+  | pickleEnvironment : Actions.PickleEnvironment → Input
+  | unpickleEnvironment : Actions.UnpickleEnvironment → Input
+  | pickleProofSnapshot : Actions.PickleProofState → Input
+  | unpickleProofSnapshot : Actions.UnpickleProofState → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -121,13 +121,13 @@ where loop : M Unit := do
     return ()
   if query.startsWith "#" || query.startsWith "--" then loop else
   IO.println <| toString <| ← match ← parse query with
-  | .command r => return toJson (← runCommand r)
-  | .file r => return toJson (← processFile r)
-  | .proofStep r => return toJson (← runProofStep r)
-  | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
-  | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
-  | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
-  | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
+    | .command r => return toJson (← runCommand r)
+    | .file r => return toJson (← processFile r)
+    | .proofStep r => return toJson (← runProofStep r)
+    | .pickleEnvironment r => return toJson (← pickleCommandSnapshot (m := M) r)
+    | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
+    | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot (m := M) r)
+    | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 

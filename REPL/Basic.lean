@@ -56,3 +56,12 @@ def modifyCmdSnaps [MonadCommandSnapshots m] : (Array CommandSnapshot → Array 
 
 @[always_inline, specialize]
 def modifyProofSnaps [MonadProofSnapshots m] : (Array ProofSnapshot → Array ProofSnapshot) → m Unit := fun f => modifyGetProofSnaps fun x => ((), f x)
+
+@[inline]
+instance {m n} [MonadLift m n] [MonadREPL m] : MonadREPL n where
+  getCmdSnaps := MonadLift.monadLift (m := m) (n := n) getCmdSnaps
+  setCmdSnaps snaps := MonadLift.monadLift (m := m) (n := n) <| setCmdSnaps snaps
+  modifyGetCmdSnaps f := MonadLift.monadLift (m := m) (n := n) <| modifyGetCmdSnaps f
+  getProofSnaps := MonadLift.monadLift (m := m) (n := n) getProofSnaps
+  setProofSnaps snaps := MonadLift.monadLift (m := m) (n := n) <| setProofSnaps snaps
+  modifyGetProofSnaps f := MonadLift.monadLift (m := m) (n := n) <| modifyGetProofSnaps f

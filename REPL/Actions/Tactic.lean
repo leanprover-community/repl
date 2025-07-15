@@ -210,37 +210,28 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
 @[specialize]
-def pickleProofSnapshot (n : PickleProofState) : m (ProofStepResponse ⊕ Error) := do
-  match (← getProofSnaps)[n.proofState]? with
-  | none => return .inr ⟨"Unknown proof State."⟩
-  | some proofState =>
-    discard <| proofState.pickle n.pickleTo
-    return .inl (← createProofStepReponse proofState)
+def pickleProofSnapshot (n : PickleProofState) : ResultT m ProofStepResponse := do
+  let some proofState := (← getProofSnaps)[n.proofState]? | throw ⟨"Unknown proof State."⟩
+  discard <| proofState.pickle n.pickleTo
+  createProofStepReponse proofState
 
 /-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
-@[specialize]
-def unpickleProofSnapshot (n : UnpickleProofState) : M (ProofStepResponse ⊕ Error) := do
-  let (cmdSnapshot?, notFound) ← do match n.env with
-  | none => pure (none, false)
-  | some i => do match (← get).cmdStates[i]? with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
-  if notFound then
-    return .inr ⟨"Unknown environment."⟩
+def unpickleProofSnapshot (n : UnpickleProofState) : ResultT M ProofStepResponse := do
+  let cmdSnapshot? ← n.env.mapM fun i => do
+    let some env := (← get).cmdStates[i]? | throw ⟨"Unknown environment."⟩
+    return env
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
-  Sum.inl <$> createProofStepReponse proofState
+  createProofStepReponse proofState
 
 /--
 Run a single tactic, returning the id of the new proof statement, and the new goals.
 -/
 -- TODO detect sorries?
 @[specialize]
-def runProofStep (s : ProofStep) : M (ProofStepResponse ⊕ Error) := do
-  match (← get).proofStates[s.proofState]? with
-  | none => return .inr ⟨"Unknown proof state."⟩
-  | some proofState =>
-    try
-      let proofState' ← proofState.runString s.tactic
-      return .inl (← createProofStepReponse proofState' proofState)
-    catch ex =>
-      return .inr ⟨"Lean error:\n" ++ ex.toString⟩
+def runProofStep (s : ProofStep) : ResultT M ProofStepResponse := do
+  let some proofState := (← get).proofStates[s.proofState]? | throw ⟨"Unknown proof state."⟩
+  try
+    let proofState' ← proofState.runString s.tactic
+    createProofStepReponse proofState' proofState
+  catch ex : IO.Error => -- catch the outer IO error
+    throw ⟨"Lean error:\n" ++ ex.toString⟩

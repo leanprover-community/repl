@@ -65,48 +65,46 @@ def recordCommandSnapshot (state : CommandSnapshot) : m Nat := do
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
-def runCommand (s : Command) : M (CommandResponse ⊕ Error) := do
-  let (cmdSnapshot?, notFound) ← do match s.env with
-  | none => pure (none, false)
-  | some i => do match (← get).cmdStates[i]? with
-    | some env => pure (some env, false)
-    | none => pure (none, true)
-  if notFound then
-    return .inr ⟨"Unknown environment."⟩
+def runCommand (s : Command) : ResultT M CommandResponse := do
+  let cmdSnapshot? ← s.env.mapM fun i => do
+    let some env := (← get).cmdStates[i]? | throw ⟨"Unknown environment."⟩
+    return env
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (initialCmdState, cmdState, messages, trees) ← try
-    IO.processInput s.cmd initialCmdState?
-  catch ex =>
-    return .inr ⟨ex.toString⟩
+  let (initialCmdState, cmdState, messages, trees) ← do
+    try
+      IO.processInput s.cmd initialCmdState?
+    catch ex : IO.Error =>
+      throw ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees initialCmdState.env none
   let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees initialCmdState.env))
-  | _ => pure sorries
+    | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees initialCmdState.env))
+    | _ => pure sorries
   let tactics ← match s.allTactics with
-  | some true => tactics trees initialCmdState.env
-  | _ => pure []
+    | some true => tactics trees initialCmdState.env
+    | _ => pure []
   let cmdSnapshot :=
-  { cmdState
-    cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
-      { fileName := "",
-        fileMap := default,
-        snap? := none,
-        cancelTk? := none } }
+    { cmdState
+      cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
+        { fileName := "",
+          fileMap := default,
+          snap? := none,
+          cancelTk? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
   let jsonTrees := match s.infotree with
-  | some "full" => trees
-  | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
-  | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
-  | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
-  | _ => []
-  let infotree ← if jsonTrees.isEmpty then
-    pure none
-  else
-    pure <| some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
-  return .inl
+    | some "full" => trees
+    | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
+    | some "original" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainOriginal
+    | some "substantive" => trees.flatMap InfoTree.retainTacticInfo |>.flatMap InfoTree.retainSubstantive
+    | _ => []
+  let infotree ←
+    if jsonTrees.isEmpty then
+      pure none
+    else
+      pure <| some <| Json.arr (← jsonTrees.toArray.mapM fun t => t.toJson none)
+  return show CommandResponse from
     { env,
       messages,
       sorries,
@@ -115,12 +113,10 @@ def runCommand (s : Command) : M (CommandResponse ⊕ Error) := do
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 @[specialize]
-def pickleCommandSnapshot (n : PickleEnvironment) : m (CommandResponse ⊕ Error) := do
-  match (← getCmdSnaps)[n.env]? with
-  | none => return .inr ⟨"Unknown environment."⟩
-  | some env =>
-    discard <| env.pickle n.pickleTo
-    return .inl { env := n.env }
+def pickleCommandSnapshot (n : PickleEnvironment) : ResultT m CommandResponse := do
+  let some env := (← getCmdSnaps)[n.env]? | throw ⟨"Unknown environment."⟩
+  discard <| env.pickle n.pickleTo
+  return { env := n.env }
 
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M CommandResponse := do
