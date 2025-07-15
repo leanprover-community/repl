@@ -26,6 +26,7 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
 /--
 Run a tactic in a proof state.
 -/
+@[repl_request]
 structure ProofStep where
   proofState : Nat
   tactic : String
@@ -54,11 +55,13 @@ instance : ToJson ProofStepResponse where
     [("proofStatus", r.proofStatus)]
   ]
 
+@[repl_request pickleProofSnapshot]
 structure PickleProofState where
   proofState : Nat
   pickleTo : System.FilePath
 deriving ToJson, FromJson
 
+@[repl_request unpickleProofSnapshot]
 structure UnpickleProofState where
   unpickleProofStateFrom : System.FilePath
   env : Option Nat
@@ -209,13 +212,14 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
-@[specialize]
+@[specialize, repl_request_handler PickleProofState]
 def pickleProofSnapshot (n : PickleProofState) : ResultT m ProofStepResponse := do
   let some proofState := (← getProofSnaps)[n.proofState]? | throw ⟨"Unknown proof State."⟩
   discard <| proofState.pickle n.pickleTo
   createProofStepReponse proofState
 
 /-- Unpickle a `ProofSnapshot`, generating a JSON response. -/
+@[repl_request_handler UnpickleProofState]
 def unpickleProofSnapshot (n : UnpickleProofState) : ResultT M ProofStepResponse := do
   let cmdSnapshot? ← n.env.mapM fun i => do
     let some env := (← get).cmdStates[i]? | throw ⟨"Unknown environment."⟩
@@ -227,7 +231,7 @@ def unpickleProofSnapshot (n : UnpickleProofState) : ResultT M ProofStepResponse
 Run a single tactic, returning the id of the new proof statement, and the new goals.
 -/
 -- TODO detect sorries?
-@[specialize]
+@[specialize, repl_request_handler ProofStep]
 def runProofStep (s : ProofStep) : ResultT M ProofStepResponse := do
   let some proofState := (← get).proofStates[s.proofState]? | throw ⟨"Unknown proof state."⟩
   try

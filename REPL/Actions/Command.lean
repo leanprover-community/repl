@@ -20,6 +20,7 @@ structure CommandOptions where
 If `env = none`, starts a new session (in which you can use `import`).
 If `env = some n`, builds on the existing environment `n`.
 -/
+@[repl_request]
 structure Command extends CommandOptions where
   env : Option Nat
   cmd : String
@@ -46,11 +47,13 @@ instance : ToJson CommandResponse where
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 
+@[repl_request]
 structure PickleEnvironment where
   env : Nat
   pickleTo : System.FilePath
 deriving ToJson, FromJson
 
+@[repl_request]
 structure UnpickleEnvironment where
   unpickleEnvFrom : System.FilePath
 deriving ToJson, FromJson
@@ -65,6 +68,7 @@ def recordCommandSnapshot (state : CommandSnapshot) : m Nat := do
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
 -/
+@[repl_request_handler Command]
 def runCommand (s : Command) : ResultT M CommandResponse := do
   let cmdSnapshot? ← s.env.mapM fun i => do
     let some env := (← get).cmdStates[i]? | throw ⟨"Unknown environment."⟩
@@ -112,13 +116,14 @@ def runCommand (s : Command) : ResultT M CommandResponse := do
       infotree }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
-@[specialize]
+@[specialize, repl_request_handler PickleEnvironment]
 def pickleCommandSnapshot (n : PickleEnvironment) : ResultT m CommandResponse := do
   let some env := (← getCmdSnaps)[n.env]? | throw ⟨"Unknown environment."⟩
   discard <| env.pickle n.pickleTo
   return { env := n.env }
 
 /-- Unpickle a `CommandSnapshot`, generating a JSON response. -/
+@[repl_request_handler UnpickleEnvironment]
 def unpickleCommandSnapshot (n : UnpickleEnvironment) : M CommandResponse := do
   let (env, _) ← CommandSnapshot.unpickle n.unpickleEnvFrom
   let env ← recordCommandSnapshot env

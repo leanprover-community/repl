@@ -4,7 +4,6 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
 import REPL.Basic
--- import REPL.JSON
 import REPL.Frontend
 import REPL.Util.Path
 import REPL.Lean.ContextInfo
@@ -73,38 +72,89 @@ local instance [ToJson ε] [ToJson α] : ToJson (Except ε α) where
   | .error e => toJson e
   | .ok a => toJson a
 
-/-- Commands accepted by the REPL. -/
-inductive Input
-  | command : Actions.Command → Input
-  | file : Actions.File → Input
-  | proofStep : Actions.ProofStep → Input
-  | pickleEnvironment : Actions.PickleEnvironment → Input
-  | unpickleEnvironment : Actions.UnpickleEnvironment → Input
-  | pickleProofSnapshot : Actions.PickleProofState → Input
-  | unpickleProofSnapshot : Actions.UnpickleProofState → Input
+def makeFromJson_Input (input_name : Ident) : Command.CommandElabM Unit := do
+  let .inductInfo info ← getConstInfo input_name.getId | throwError "type is not an inductive type"
+  if info.numCtors = 0 then
+    throwError "type must have at least one constructor"
+  if info.numParams != 0 then
+    throwError "type must have no type parameters"
+  if info.numIndices != 0 then
+    throwError "type must have no indices"
+  let ctors ← info.ctors.mapM getConstInfo
+  let ts ← ctors.mapM fun c => do
+    let type := c.type.consumeMData
+    if h : type.isForall then
+      let arity := type.getForallArity
+      if arity != 1 then
+        throwError "constructor {MessageData.ofConstName c.name} has non-singular arity, got {arity}"
+      return type.forallDomain h
+    else
+      throwError "constructor {MessageData.ofConstName c.name} has non-singular arity, got 0"
+  let br ← (ctors.zip ts).mapM fun (x, y) => do
+    let t ← Command.runTermElabM fun _ => PrettyPrinter.delab y
+    `($(mkIdent x.name):ident <$> tryThe $t)
+  let br := br.reverse
+  let ctors ← match br with
+    | [] => unreachable!
+    | [x] => pure x
+    | x :: tail => tail.foldlM (init := x) fun r l => `($l <|> $r)
+  let code ← `(command|
+    instance : FromJson $input_name where
+      fromJson? json := do
+        let rec @[specialize, always_inline] tryThe (α : Type) [FromJson α] : Except String α := fromJson? (α := α) json
+        $ctors:term)
+  trace[REPL.mkInput] "{code}"
+  Command.elabCommand code
+
+local elab "#mkInput " colGt input_name:ident : command => do
+  let names ← Attr.getAllReplRequests
+  let cs ← names.mapM fun (t, c) =>
+    `(Parser.Command.ctor| | $(mkIdent c):ident : $(mkIdent t):ident → $input_name)
+  let code ← `(command|
+    /-- Commands accepted by the REPL. -/
+    inductive $input_name where
+    $cs*)
+  trace[REPL.mkInput] "{code}"
+  Command.elabCommand code
+  makeFromJson_Input input_name
+
+#mkInput Input
+
+local syntax (name := makeReplDispatch) "make_repl_dispatch% " colGt term : term
+
+@[local term_elab makeReplDispatch]
+def elabMakeReplDispatch : Term.TermElab := fun stx type? => do
+  let `(make_repl_dispatch% $input) := stx | throwUnsupportedSyntax
+  let requests ← Attr.getAllReplRequests
+  let rs := RBTree.fromArray requests.unzip.fst Name.cmp
+  let handlers ← Attr.getAllReplRequestHandlers
+  let (r, cf) := handlers.unzip.snd.unzip
+  let r := RBTree.fromArray r Name.cmp
+  for d in RBTree.diff rs r do -- short-circuit by the first throw
+    throwError "no handler found for request type {MessageData.ofConstName d}"
+  let (c, f) := cf.unzip
+  let c := c.map mkIdent
+  let toJson := mkIdent ``toJson
+  let toJsons := Array.replicate c.size toJson
+  let s ← `(
+    match $input:term with
+    $[| .$c:ident r => $toJsons <$> ($f:term r)]*
+    )
+  trace[REPL.make_repl_dispatch] "{s}"
+  Term.withMacroExpansion stx s do
+    Term.elabTerm s type?
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
-  let json := Json.parse query
-  match json with
+  let json? := Json.parse query
+  match json? with
   | .error e => throw <| IO.userError <| toString <| toJson <|
       (⟨"Could not parse JSON:\n" ++ e⟩ : Actions.Error)
-  | .ok j => match fromJson? j with
-    | .ok (r : Actions.ProofStep) => return .proofStep r
-    | .error _ => match fromJson? j with
-    | .ok (r : Actions.PickleEnvironment) => return .pickleEnvironment r
-    | .error _ => match fromJson? j with
-    | .ok (r : Actions.UnpickleEnvironment) => return .unpickleEnvironment r
-    | .error _ => match fromJson? j with
-    | .ok (r : Actions.PickleProofState) => return .pickleProofSnapshot r
-    | .error _ => match fromJson? j with
-    | .ok (r : Actions.UnpickleProofState) => return .unpickleProofSnapshot r
-    | .error _ => match fromJson? j with
-    | .ok (r : Actions.Command) => return .command r
-    | .error _ => match fromJson? j with
-    | .ok (r : Actions.File) => return .file r
+  | .ok j =>
+    match fromJson? (α := Input) j with
     | .error e => throw <| IO.userError <| toString <| toJson <|
         (⟨"Could not parse as a valid JSON command:\n" ++ e⟩ : Actions.Error)
+    | .ok r => return r
 
 /-- Avoid buffering the output. -/
 def printFlush [ToString α] (s : α) : IO Unit := do
@@ -120,14 +170,9 @@ where loop : M Unit := do
   if query = "" then
     return ()
   if query.startsWith "#" || query.startsWith "--" then loop else
-  IO.println <| toString <| ← match ← parse query with
-    | .command r => return toJson (← runCommand r)
-    | .file r => return toJson (← processFile r)
-    | .proofStep r => return toJson (← runProofStep r)
-    | .pickleEnvironment r => return toJson (← pickleCommandSnapshot (m := M) r)
-    | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
-    | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot (m := M) r)
-    | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
+  let input ← parse query
+  let response ← make_repl_dispatch% input
+  IO.println <| toString response
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 
