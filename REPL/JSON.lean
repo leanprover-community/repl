@@ -32,10 +32,11 @@ structure Command extends CommandOptions where
   record : Option Bool := true
 deriving ToJson, FromJson
 
-/-- Process a Lean file in a fresh environment. -/
+/-- Process a Lean file in a fresh environment if `env` is not provided. -/
 structure File extends CommandOptions where
+  env : Option Nat
   path : System.FilePath
-deriving FromJson
+deriving ToJson, FromJson
 
 /--
 Run a tactic in a proof state.

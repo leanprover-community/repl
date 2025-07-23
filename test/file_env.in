@@ -1,0 +1,5 @@
+{"cmd": "def f : Nat := 1"}
+
+{"cmd": "theorem demo (a b: Nat): a + b = b + a := by rw [Nat.add_comm]", "env": 0}
+
+{"path": "test/file_env.lean", "env": 1}

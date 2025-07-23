@@ -1,0 +1,15 @@
+{"env": 0}
+
+{"env": 1}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 6},
+   "data": "demo (a b : Nat) : a + b = b + a"},
+  {"severity": "info",
+   "pos": {"line": 3, "column": 0},
+   "endPos": {"line": 3, "column": 6},
+   "data": "f : Nat"}],
+ "env": 2}
+

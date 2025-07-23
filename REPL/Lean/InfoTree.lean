@@ -65,6 +65,7 @@ def kind : Info → String
   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
   | .ofChoiceInfo         _ => "ChoiceInfo"
   | .ofDelabTermInfo      _ => "DelabTermInfo"
+  | .ofErrorNameInfo      _ => "ErrorNameInfo"
 
 /-- The `Syntax` for a `Lean.Elab.Info`, if there is one. -/
 def stx? : Info → Option Syntax
@@ -82,6 +83,7 @@ def stx? : Info → Option Syntax
   | .ofFieldRedeclInfo    info => info.stx
   | .ofChoiceInfo         info => info.stx
   | .ofDelabTermInfo      info => info.stx
+  | .ofErrorNameInfo      info => info.stx
 
 /-- Is the `Syntax` for this `Lean.Elab.Info` original, or synthetic? -/
 def isOriginal (i : Info) : Bool :=
@@ -115,11 +117,14 @@ def isSubstantive (t : TacticInfo) : Bool :=
   | some ``Lean.Parser.Tactic.paren => false
   | _ => true
 
-def getUsedConstantsAsSet (t : TacticInfo) : NameSet :=
-  t.goalsBefore
-    |>.filterMap t.mctxAfter.getExprAssignmentCore?
-    |>.map Expr.getUsedConstantsAsSet
-    |>.foldl .union .empty
+partial
+def getUsedConstantsAsSet (t : TacticInfo) : NameSet := go t.goalsBefore.toArray t.mctxAfter {}
+where go (mvars : Array MVarId) (mctx : MetavarContext) (acc : NameSet) : NameSet := Id.run do
+  let assignments := mvars.filterMap mctx.getExprAssignmentCore?
+  if assignments.isEmpty then return acc else
+  let usedCs : NameSet := assignments.map Expr.getUsedConstantsAsSet |>.foldl .union {}
+  let childMVars := assignments.map fun expr => (expr.collectMVars {}).result
+  return go childMVars.flatten mctx <| acc.union usedCs
 
 end Lean.Elab.TacticInfo
 

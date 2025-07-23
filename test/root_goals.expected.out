@@ -11,15 +11,7 @@
  [{"severity": "info",
    "pos": {"line": 3, "column": 2},
    "endPos": {"line": 3, "column": 8},
-   "data": "Try this: exact rfl"},
-  {"severity": "info",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 3, "column": 8},
-   "data": "Goals accomplished!"},
-  {"severity": "info",
-   "pos": {"line": 5, "column": 0},
-   "endPos": {"line": 5, "column": 28},
-   "data": "Goals accomplished!"}],
+   "data": "Try this: exact rfl"}],
  "env": 0}
 
 {"proofStatus": "Completed", "proofState": 2, "goals": []}

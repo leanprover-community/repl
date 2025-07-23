@@ -1,0 +1,21 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 15, "column": 2},
+   "goal": "P Q R : Prop\nh1 : P → Q\nh2 : Q → R\np : P\nq : Q\n⊢ Q",
+   "endPos": {"line": 15, "column": 7}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 3, "column": 8},
+   "endPos": {"line": 3, "column": 12},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 6},
+   "data": "demo (P Q R : Prop) : (P → Q) → (Q → R) → P → R"}],
+ "env": 2}
+

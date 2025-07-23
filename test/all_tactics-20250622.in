@@ -1,0 +1,4 @@
+{"cmd": "example (P : Prop) (hp : P) : P := by\n  exact hp\n", "allTactics": true}
+
+{"tactic": "exact hp", "proofState": 0}
+

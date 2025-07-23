@@ -1,0 +1,1 @@
+{"cmd": "theorem show_p (p: Prop) (h : p) : p := by exact h", "infotree": "full"}

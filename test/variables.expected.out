@@ -5,7 +5,7 @@
    "pos": {"line": 1, "column": 12},
    "endPos": {"line": 1, "column": 13},
    "data":
-   "unused variable `y`\nnote: this linter can be disabled with `set_option linter.unusedVariables false`"}],
+   "unused variable `y`\n\nNote: This linter can be disabled with `set_option linter.unusedVariables false`"}],
  "env": 1}
 
 {"sorries":

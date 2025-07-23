@@ -1,4 +1,4 @@
-{"cmd": "import Mathlib.Algebra.BigOperators.Group.Finset.Basic\nimport Mathlib.Data.Real.Basic\nimport Mathlib.Data.Complex.Basic\nimport Mathlib.Data.Nat.Log\nimport Mathlib.Data.Complex.Exponential\nimport Mathlib.NumberTheory.Divisors\nimport Mathlib.Data.ZMod.Defs\nimport Mathlib.Data.ZMod.Basic\nimport Mathlib.Topology.Basic\nimport Mathlib.Data.Nat.Digits\nimport Mathlib.Tactic.NormNum.GCD\nopen BigOperators\nopen Real\nopen Nat\nopen Topology"}
+{"cmd": "import Mathlib.Algebra.BigOperators.Group.Finset.Basic\nimport Mathlib.Data.Real.Basic\nimport Mathlib.Data.Complex.Basic\nimport Mathlib.Data.Nat.Log\nimport Mathlib.Data.Complex.Exponential\nimport Mathlib.NumberTheory.Divisors\nimport Mathlib.Data.ZMod.Defs\nimport Mathlib.Data.ZMod.Basic\nimport Mathlib.Topology.Basic\nimport Mathlib.Data.Nat.Digits.Lemmas\nimport Mathlib.Tactic.NormNum.GCD\nopen BigOperators\nopen Real\nopen Nat\nopen Topology"}
 
 {"cmd": "theorem mathd_numbertheory_188 : Nat.gcd 180 168 = 12 := by norm_num", "env": 0}
 

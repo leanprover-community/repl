@@ -1,0 +1,23 @@
+{"tactics":
+ [{"usedConstants":
+   ["Eq.mpr",
+    "congrArg",
+    "id",
+    "a",
+    "h1",
+    "instHAdd",
+    "b",
+    "HAdd.hAdd",
+    "Nat",
+    "Nat.add_assoc",
+    "instAddNat",
+    "Eq.refl",
+    "Eq",
+    "Nat.add_comm"],
+   "tactic": "rw [Nat.add_assoc, Nat.add_comm y, h1]",
+   "proofState": 0,
+   "pos": {"line": 7, "column": 2},
+   "goals": "x y z : Nat\n⊢ x + y + (z + a) = x + (z + b + y)",
+   "endPos": {"line": 7, "column": 40}}],
+ "env": 0}
+
