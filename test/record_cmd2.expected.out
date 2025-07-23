@@ -9,12 +9,7 @@
    "data": "unsolved goals\n⊢ 2 = 2"}],
  "env": 0}
 
-{"messages":
- [{"severity": "info",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 2, "column": 3},
-   "data": "Goals accomplished!"}],
- "env": 1}
+{"env": 1}
 
 {"messages":
  [{"severity": "error",
@@ -36,9 +31,5 @@
  [{"severity": "info",
    "pos": {"line": 3, "column": 0},
    "endPos": {"line": 3, "column": 6},
-   "data": "Try this: exact h2 (h1 p)"},
-  {"severity": "info",
-   "pos": {"line": 1, "column": 0},
-   "endPos": {"line": 3, "column": 6},
-   "data": "Goals accomplished!"}]}
+   "data": "Try this: exact h2 (h1 p)"}]}
 
