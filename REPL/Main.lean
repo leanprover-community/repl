@@ -362,6 +362,27 @@ def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
     catch ex =>
       return .inr ⟨"Lean error:\n" ++ ex.toString⟩
 
+/--
+Run a task with an optional timeout in milliseconds.
+-/
+def runWithTimeout (timeout? : Option Nat) (task : M IO α) : M IO α :=
+  match timeout? with
+  | none => task
+  | some timeout => do
+    let jobTask ← IO.asTask (prio := .dedicated) (StateT.run task (← get))
+    let timeoutTask : IO (α × State) := do
+      IO.sleep timeout.toUInt32
+      throw <| IO.userError s!"Operation timed out"
+    let timeoutTask ← IO.asTask timeoutTask
+    match ← IO.waitAny [jobTask, timeoutTask] with
+    | .ok (a, state) => do
+      IO.cancel timeoutTask
+      modify fun _ => state
+      return a
+    | .error e =>
+      IO.cancel jobTask
+      throw e
+
 end REPL
 
 open REPL
@@ -426,14 +447,16 @@ where loop : M IO Unit := do
   if query = "" then
     return ()
   if query.startsWith "#" || query.startsWith "--" then loop else
-  IO.println <| toString <| ← match ← parse query with
-  | .command r => return toJson (← runCommand r)
-  | .file r => return toJson (← processFile r)
-  | .proofStep r => return toJson (← runProofStep r)
-  | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
-  | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
-  | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
-  | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
+  IO.println <| toString <| ← try
+      match ← parse query with
+      | .command r => return toJson (← runWithTimeout r.timeout (runCommand r))
+      | .file r => return toJson (← runWithTimeout r.timeout (processFile r))
+      | .proofStep r => return toJson (← runWithTimeout r.timeout (runProofStep r))
+      | .pickleEnvironment r => return toJson (← runWithTimeout r.timeout (pickleCommandSnapshot r))
+      | .unpickleEnvironment r => return toJson (← runWithTimeout r.timeout (unpickleCommandSnapshot r))
+      | .pickleProofSnapshot r => return toJson (← runWithTimeout r.timeout (pickleProofSnapshot r))
+      | .unpickleProofSnapshot r => return toJson (← runWithTimeout r.timeout (unpickleProofSnapshot r))
+    catch e => return toJson (⟨e.toString⟩ : Error)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 
