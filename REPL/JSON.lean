@@ -170,6 +170,11 @@ structure Error where
   message : String
 deriving ToJson, FromJson
 
+/-- Simple success response. -/
+structure SuccessResponse where
+  success : Bool := true
+deriving ToJson, FromJson
+
 structure PickleEnvironment where
   env : Nat
   pickleTo : System.FilePath
@@ -187,6 +192,11 @@ deriving ToJson, FromJson
 structure UnpickleProofState where
   unpickleProofStateFrom : System.FilePath
   env : Option Nat
+deriving ToJson, FromJson
+
+/-- Remove a proof state. -/
+structure RemoveProofState where
+  removeProofState : Nat
 deriving ToJson, FromJson
 
 end REPL
