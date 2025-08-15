@@ -37,5 +37,5 @@
  "goals": ["case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0"]}
 
 {"message":
- "Lean error:\ntactic 'apply' failed, could not unify the type of `?succ`\n  n✝ + 1 = 0\nwith the goal\n  true = true\nn✝ : Nat\n⊢ true = true"}
+ "Lean error:\nTactic `apply` failed: could not unify the type of `?succ`\n  n✝ + 1 = 0\nwith the goal\n  true = true\n\nn✝ : Nat\n⊢ true = true"}
 

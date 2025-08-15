@@ -7,6 +7,6 @@
  [{"severity": "error",
    "pos": {"line": 3, "column": 2},
    "endPos": {"line": 3, "column": 7},
-   "data": "no goals to be solved"}],
+   "data": "No goals to be solved"}],
  "env": 0}
 

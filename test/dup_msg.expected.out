@@ -11,6 +11,6 @@
  [{"severity": "error",
    "pos": {"line": 1, "column": 7},
    "endPos": {"line": 1, "column": 8},
-   "data": "unknown identifier 'g'"}],
+   "data": "Unknown identifier `g`"}],
  "env": 2}
 
