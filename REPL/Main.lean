@@ -141,10 +141,10 @@ def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment
 
 private def collectFVarsAux : Expr → NameSet
   | .fvar fvarId => NameSet.empty.insert fvarId.name
-  | .app fm arg => (collectFVarsAux fm).union $ collectFVarsAux arg
-  | .lam _ binderType body _ => (collectFVarsAux binderType).union $ collectFVarsAux body
-  | .forallE _ binderType body _ => (collectFVarsAux binderType).union $ collectFVarsAux body
-  | .letE _ type value body _ => ((collectFVarsAux type).union $ collectFVarsAux value).union $ collectFVarsAux body
+  | .app fm arg => (collectFVarsAux fm).merge $ collectFVarsAux arg
+  | .lam _ binderType body _ => (collectFVarsAux binderType).merge $ collectFVarsAux body
+  | .forallE _ binderType body _ => (collectFVarsAux binderType).merge $ collectFVarsAux body
+  | .letE _ type value body _ => ((collectFVarsAux type).merge $ collectFVarsAux value).merge $ collectFVarsAux body
   | .mdata _ expr => collectFVarsAux expr
   | .proj _ _ struct => collectFVarsAux struct
   | _ => NameSet.empty

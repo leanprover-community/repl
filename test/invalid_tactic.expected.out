@@ -16,6 +16,6 @@
  [{"severity": "error",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
-   "data": "unknown identifier 'my_fake_premise'"}],
+   "data": "Unknown identifier `my_fake_premise`"}],
  "goals": []}
 

@@ -2,10 +2,11 @@
  [{"severity": "error",
    "pos": {"line": 2, "column": 11},
    "endPos": {"line": 2, "column": 18},
-   "data": "type expected, got\n  (set Nat : ?m.8 PUnit)"},
+   "data": "type expected, got\n  (set Nat : ?m.3 PUnit)"},
   {"severity": "error",
    "pos": {"line": 2, "column": 22},
    "endPos": {"line": 2, "column": 24},
-   "data": "Case tag 'body' not found.\n\nThere are no cases to select."}],
+   "data":
+   "Case tag `body` not found.\n\nNote: There are no cases to select."}],
  "env": 0}
 
