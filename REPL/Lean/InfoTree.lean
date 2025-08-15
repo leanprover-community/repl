@@ -122,9 +122,9 @@ def getUsedConstantsAsSet (t : TacticInfo) : NameSet := go t.goalsBefore.toArray
 where go (mvars : Array MVarId) (mctx : MetavarContext) (acc : NameSet) : NameSet := Id.run do
   let assignments := mvars.filterMap mctx.getExprAssignmentCore?
   if assignments.isEmpty then return acc else
-  let usedCs : NameSet := assignments.map Expr.getUsedConstantsAsSet |>.foldl .union {}
+  let usedCs : NameSet := assignments.map Expr.getUsedConstantsAsSet |>.foldl .merge {}
   let childMVars := assignments.map fun expr => (expr.collectMVars {}).result
-  return go childMVars.flatten mctx <| acc.union usedCs
+  return go childMVars.flatten mctx <| acc.merge usedCs
 
 end Lean.Elab.TacticInfo
 
