@@ -1,0 +1,15 @@
+{"cmd": "theorem aa (x : Nat) (h1 : x  = 2) : x = 2 := by sorry"}
+
+{"tactic": "assumption", "proofState": 0}
+
+{"cmd": "theorem aa (x : Nat) (h1 : x  = 2) : x = 2 := by sorry", "timeout": 1000}
+
+{"tactic": "assumption", "proofState": 2}
+
+{"cmd": "theorem aa (x : Nat) (h1 : x  = 2) : x = 2 := by sorry", "timeout": 1}
+
+{"tactic": "assumption", "proofState": 4}
+
+{"cmd": "theorem aa (x : Nat) (h1 : x  = 2) : x = 2 := by sorry"}
+
+{"tactic": "assumption", "proofState": 4}
