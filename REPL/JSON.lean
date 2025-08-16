@@ -153,6 +153,7 @@ structure ProofStepResponse where
   sorries : List Sorry := []
   traces : List String
   proofStatus : String
+  stepVerification : String
 deriving ToJson, FromJson
 
 instance : ToJson ProofStepResponse where
