@@ -1,0 +1,6 @@
+{"cmd": "#eval 1 + 1"}
+
+{"cmd": "def foo : (fun ((x, y, z) : Nat × Nat × Nat) => x = x) = fun x => True := by sorry", "env": 0}
+
+{"tactic": "simp", "proofState": 0}
+

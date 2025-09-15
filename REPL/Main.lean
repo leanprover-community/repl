@@ -111,29 +111,53 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
         let proofStateId ← proofState.mapM recordProofSnapshot
         return Sorry.of goal pos endPos proofStateId
 
+-- def sorries2 (treeList : List ((List InfoTree) × Command.State)) (rootGoals? : Option (List MVarId))
+-- : M m (List Sorry) := do
+--   -- Create a hash set to track positions we've already seen
+--   let mut seenPositions : Std.HashSet (REPL.Pos × REPL.Pos) := {}
+--   let mut result : List Sorry := []
+
+--   for (trees, cmdState) in treeList do
+--     let newSorries ← sorries trees cmdState.env rootGoals?
+
+--     -- Add only sorries at positions we haven't seen yet
+--     for sorr in newSorries do
+--       let pos := (sorr.pos, sorr.endPos)
+--       unless seenPositions.contains pos do
+--         seenPositions := seenPositions.insert pos
+--         result := sorr :: result
+
+--   return result
+
+def sorries2 (treeList : List ((List InfoTree) × Command.State)) (rootGoals? : Option (List MVarId))
+: M m (List Sorry) :=
+  treeList.flatMapM fun (trees, cmdState) => do sorries trees cmdState.env rootGoals?
+
 def ppTactic (ctx : ContextInfo) (stx : Syntax) : IO Format :=
   ctx.runMetaM {} try
     Lean.PrettyPrinter.ppTactic ⟨stx⟩
   catch _ =>
     pure "<failed to pretty print>"
 
-def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tactic) :=
-  trees.flatMap InfoTree.tactics |>.mapM
-    fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none env? goals rootGoals)
-      let goals := s!"{(← ctx.ppGoals goals)}".trimAscii.toString
-      let tactic := Format.pretty (← ppTactic ctx stx)
-      let proofStateId ← proofState.mapM recordProofSnapshot
-      return Tactic.of goals tactic pos endPos proofStateId ns
+def tactics (treeList : List ((List InfoTree) × Command.State)) : M m (List Tactic) :=
+  treeList.flatMapM fun (trees, cmdState) => do
+    trees.flatMap InfoTree.tactics |>.mapM
+      fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
+        let proofState := some (← ProofSnapshot.create ctx none cmdState.env goals rootGoals)
+        let goals := s!"{(← ctx.ppGoals goals)}".trimAscii.toString
+        let tactic := Format.pretty (← ppTactic ctx stx)
+        let proofStateId ← proofState.mapM recordProofSnapshot
+        return Tactic.of goals tactic pos endPos proofStateId ns
 
-def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment) : M m (List Sorry) := do
-  trees.flatMap InfoTree.rootGoals |>.mapM
-    fun ⟨ctx, goals, pos⟩ => do
-      let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
-      let goals := s!"{(← ctx.ppGoals goals)}".trimAscii.toString
-      let proofStateId ← proofState.mapM recordProofSnapshot
-      return Sorry.of goals pos pos proofStateId
-
+def collectRootGoalsAsSorries (treeList : List ((List InfoTree) × Command.State))
+: M m (List Sorry) := do
+  treeList.flatMapM fun (trees, cmdState) => do
+    trees.flatMap InfoTree.rootGoals |>.mapM
+      fun ⟨ctx, goals, pos⟩ => do
+        let proofState := some (← ProofSnapshot.create ctx none cmdState.env goals goals)
+        let goals := s!"{(← ctx.ppGoals goals)}".trimAscii.toString
+        let proofStateId ← proofState.mapM recordProofSnapshot
+        return Sorry.of goals pos pos proofStateId
 
 private def collectFVarsAux : Expr → NameSet
   | .fvar fvarId => NameSet.empty.insert fvarId.name
@@ -298,19 +322,17 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   if notFound then
     return .inr ⟨"Unknown environment."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
-  let (initialCmdState, cmdState, messages, trees) ← try
+  let (cmdState, messages, trees) ← try
     IO.processInput s.cmd initialCmdState?
   catch ex =>
     return .inr ⟨ex.toString⟩
   let messages ← messages.mapM fun m => Message.of m
-  -- For debugging purposes, sometimes we print out the trees here:
-  -- trees.forM fun t => do IO.println (← t.format)
-  let sorries ← sorries trees initialCmdState.env none
+  let sorries ← sorries2 trees none
   let sorries ← match s.rootGoals with
-  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees initialCmdState.env))
+  | some true => pure (sorries ++ (← collectRootGoalsAsSorries trees))
   | _ => pure sorries
   let tactics ← match s.allTactics with
-  | some true => tactics trees initialCmdState.env
+  | some true => tactics trees
   | _ => pure []
   let cmdSnapshot :=
   { cmdState
@@ -320,6 +342,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
         snap? := none,
         cancelTk? := none } }
   let env ← recordCommandSnapshot cmdSnapshot
+  let trees := (trees.map (·.1)).flatten
+  -- For debugging purposes, sometimes we print out the trees here:
+  -- trees.forM fun t => do IO.println (← t.format)
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
