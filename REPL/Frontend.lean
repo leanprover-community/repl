@@ -64,6 +64,7 @@ Returns:
 3. List of info trees along with Command.State from the incremental processing
 -/
 def processInput (input : String) (cmdState? : Option Command.State)
+    (incrementalState? : Option IncrementalState := none)
     (opts : Options := {}) (fileName : Option String := none) :
     IO (Command.State × List (IncrementalState × Option InfoTree) × List Message) := unsafe do
   Lean.initSearchPath (← Lean.findSysroot)
@@ -76,9 +77,9 @@ def processInput (input : String) (cmdState? : Option Command.State)
     let (header, parserState, messages) ← Parser.parseHeader inputCtx
     let (env, messages) ← processHeader header opts messages inputCtx
     let headerOnlyState := Command.mkState env messages opts
-    let incStates ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState
+    let incStates ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState incrementalState?
     return (headerOnlyState, incStates)
   | some cmdStateBefore => do
     let parserState : Parser.ModuleParserState := {}
-    let incStates ← processCommandsWithInfoTrees inputCtx parserState cmdStateBefore
+    let incStates ← processCommandsWithInfoTrees inputCtx parserState cmdStateBefore incrementalState?
     return (cmdStateBefore, incStates)
