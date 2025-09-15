@@ -369,18 +369,19 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     return .inr ⟨"Unknown environment."⟩
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
 
-  -- Find the best incremental state to reuse based on prefix matching
-  let bestIncrementalState? ← findBestIncrementalState s.cmd s.env
-
-  let (initialCmdState, incStates, messages, headerCache) ← try
-    IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
+  let (initialCmdState, incStates, messages) ← try
+    if s.incrementality.getD false then
+      let bestIncrementalState? ← findBestIncrementalState s.cmd s.env
+      let (initialCmdState, incStates, messages, headerCache) ← IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
+      -- Store the command text and incremental states for future reuse
+      modify fun st => { st with headerCache := headerCache }
+      recordCommandIncrementals s.cmd incStates s.env
+      pure (initialCmdState, incStates, messages)
+    else
+      let (initialCmdState, incStates, messages, _) ← IO.processInput s.cmd initialCmdState? none {}
+      pure (initialCmdState, incStates, messages)
   catch ex =>
     return .inr ⟨ex.toString⟩
-
-  modify fun st => { st with headerCache := headerCache }
-
-  -- Store the command text and incremental states for future reuse
-  recordCommandIncrementals s.cmd incStates s.env
 
   let cmdState := (incStates.getLast?.map (fun c => c.1.commandState)).getD initialCmdState
   let messages ← messages.mapM fun m => Message.of m
