@@ -11,7 +11,7 @@ Inspired by <https://github.com/frenzymath/jixia>
 /-- See `Lean.Parser.Command.declModifiers` and `Lean.Elab.elabModifiers` -/
 def getModifiers (stx : Syntax) (ctx: ContextInfo): DeclModifiers :=
   match stx with
-  | .node _ ``Command.declModifiers args =>
+  | .node _ ``Command.declModifiers _ =>
     { docString := stx[0].getOptional?.map (fun stx =>
         { content := stx.prettyPrint.pretty, range := stx.toRange ctx }),
       visibility := (stx[2].getOptional?.map (·.prettyPrint.pretty.trim)).getD "regular",
@@ -52,7 +52,7 @@ def toBinderViews (stx : Syntax) : Array BinderView :=
     -- `(` binderIdent+ binderType (binderDefault <|> binderTactic)? `)`
     let ids := getBinderIds stx[1]
     let type        := stx[2]
-    let optModifier := stx[3]
+    -- let optModifier := stx[3]
     ids.map fun id => { id := (expandBinderIdent id), type := (expandBinderType id type), binderInfo := "default" }
   else if k == ``Lean.Parser.Term.implicitBinder then
     -- `{` binderIdent+ binderType `}`
@@ -148,7 +148,6 @@ partial def extractDeclarationInfo (cmdInfo : CommandInfo) (infoTree : InfoTree)
     | [] => name
     | a :: _  => a
 
-  let binderViews := binders.getArgs.flatMap toBinderViews
   let binders : Option DeclBinders := match binders.getArgs with
     | #[] => none
     | _ => some { pp := binders.prettyPrint.pretty,
@@ -156,7 +155,7 @@ partial def extractDeclarationInfo (cmdInfo : CommandInfo) (infoTree : InfoTree)
                   map := binders.getArgs.flatMap toBinderViews,
                   range := binders.toRange ctx }
 
-  let a := prevState.env.constants.find! decl[1].getId
+  -- let a := prevState.env.constants.find! decl[1].getId
   -- a.getUsedConstantsAsSet
 
   let extractConstants (stx : Syntax) : Array Name := -- TODO: improve this
