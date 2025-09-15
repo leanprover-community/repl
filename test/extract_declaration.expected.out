@@ -1,0 +1,787 @@
+{"env": 0,
+ "declarations":
+ [{"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 6, "column": 20},
+     "finish": {"line": 7, "column": 25}},
+    "pp": ":=\n  println \"Hello, world!\"",
+    "constants": ["println"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 6, "column": 12},
+     "finish": {"line": 6, "column": 19}},
+    "pp": "IO Unit",
+    "constants": ["IO", "Unit"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 6, "column": 10},
+     "finish": {"line": 6, "column": 19}},
+    "pp": ": IO Unit",
+    "constants": ["IO", "Unit"]},
+   "scope":
+   {"varDecls": [],
+    "openDecl": [{"simple": {"namespace": "IO", "except": []}}],
+    "omitVars": [],
+    "levelNames": [],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 6, "column": 0},
+    "finish": {"line": 7, "column": 25}},
+   "pp": "def hello : IO Unit :=\n  println \"Hello, world!\"",
+   "name": "hello",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "definition",
+   "fullName": "hello",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 12, "column": 57},
+     "finish": {"line": 14, "column": 13}},
+    "pp": ":= by\n  intro h₁ h₂\n  rw [h₁, h₂]",
+    "constants": ["h₂", "h₁"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 12, "column": 35},
+     "finish": {"line": 12, "column": 56}},
+    "pp": "a = b → b = c → c = a",
+    "constants": ["c", "a", "b"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 12, "column": 21},
+     "finish": {"line": 12, "column": 56}},
+    "pp": "{a b c : α} : a = b → b = c → c = a",
+    "constants": ["c", "α", "a", "b"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 12, "column": 0},
+    "finish": {"line": 14, "column": 13}},
+   "pp":
+   "theorem eq_trans_sym {a b c : α} : a = b → b = c → c = a := by\n  intro h₁ h₂\n  rw [h₁, h₂]",
+   "name": "eq_trans_sym",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "theorem",
+   "fullName": "eq_trans_sym",
+   "binders":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 12, "column": 21},
+     "finish": {"line": 12, "column": 32}},
+    "pp": "{a b c : α}",
+    "map":
+    [{"type": "α", "id": "a", "binderInfo": "implicit"},
+     {"type": "α", "id": "b", "binderInfo": "implicit"},
+     {"type": "α", "id": "c", "binderInfo": "implicit"}],
+    "groups": ["{a b c : α}"]}},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 19, "column": 2},
+     "finish": {"line": 20, "column": 27}},
+    "pp": "| .zero => x\n  | .succ n => pow' x n * x",
+    "constants": ["pow'", "succ", "n", "x", "zero"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 18, "column": 27},
+     "finish": {"line": 18, "column": 34}},
+    "pp": "Nat → α",
+    "constants": ["α", "Nat"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 18, "column": 9},
+     "finish": {"line": 18, "column": 34}},
+    "pp": "[Mul α] (x : α) : Nat → α",
+    "constants": ["α", "Mul", "Nat", "x"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 16, "column": 0},
+    "finish": {"line": 20, "column": 27}},
+   "pp":
+   "/-- Docstring test\npow' x n = x ^ (n + 1) -/\ndef pow' [Mul α] (x : α) : Nat → α\n  | .zero => x\n  | .succ n => pow' x n * x",
+   "name": "pow'",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString":
+    {"range":
+     {"synthetic": false,
+      "start": {"line": 16, "column": 0},
+      "finish": {"line": 17, "column": 25}},
+     "content": "/-- Docstring test\npow' x n = x ^ (n + 1) -/"},
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "definition",
+   "fullName": "pow'",
+   "binders":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 18, "column": 9},
+     "finish": {"line": 18, "column": 24}},
+    "pp": "[Mul α] (x : α)",
+    "map":
+    [{"type": "Mul α", "id": "", "binderInfo": "instImplicit"},
+     {"type": "α", "id": "x", "binderInfo": "default"}],
+    "groups": ["[Mul α]", "(x : α)"]}},
+  {"value": null,
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 22, "column": 40},
+     "finish": {"line": 26, "column": 29}},
+    "pp":
+    "where\n  x : Nat\n  y : Nat\n  z : Nat\n  eqn : x ^ k + y ^ k = z ^ k",
+    "constants": ["eqn", "z", "y", "Nat", "k", "x"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 22, "column": 23},
+     "finish": {"line": 26, "column": 29}},
+    "pp":
+    "(k : Nat) : Type where\n  x : Nat\n  y : Nat\n  z : Nat\n  eqn : x ^ k + y ^ k = z ^ k",
+    "constants": ["eqn", "z", "y", "Nat", "k", "x"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 22, "column": 0},
+    "finish": {"line": 26, "column": 29}},
+   "pp":
+   "structure FermatTriple (k : Nat) : Type where\n  x : Nat\n  y : Nat\n  z : Nat\n  eqn : x ^ k + y ^ k = z ^ k",
+   "name": "FermatTriple",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "structure",
+   "fullName": "FermatTriple",
+   "binders":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 22, "column": 23},
+     "finish": {"line": 22, "column": 39}},
+    "pp": "(k : Nat) : Type",
+    "map": [],
+    "groups": ["(k : Nat)", ": Type"]}},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 28, "column": 25},
+     "finish": {"line": 28, "column": 44}},
+    "pp": ":= ⟨ 3, 4, 5, rfl ⟩",
+    "constants": ["rfl"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 28, "column": 10},
+     "finish": {"line": 28, "column": 24}},
+    "pp": "FermatTriple 2",
+    "constants": ["FermatTriple"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 28, "column": 8},
+     "finish": {"line": 28, "column": 24}},
+    "pp": ": FermatTriple 2",
+    "constants": ["FermatTriple"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 28, "column": 0},
+    "finish": {"line": 28, "column": 44}},
+   "pp": "example : FermatTriple 2 := ⟨ 3, 4, 5, rfl ⟩",
+   "name": "_example",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "example",
+   "fullName": "_example",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 33, "column": 2},
+     "finish": {"line": 33, "column": 7}},
+    "pp": "| val",
+    "constants": ["val"]},
+   "type": null,
+   "signature":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 1, "column": 0},
+     "finish": {"line": 1, "column": 0}},
+    "pp": "",
+    "constants": []},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "Demo"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 32, "column": 0},
+    "finish": {"line": 33, "column": 7}},
+   "pp": "inductive MyType\n  | val",
+   "name": "MyType",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "inductive",
+   "fullName": "Demo.MyType",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp":
+    " :=  ParserDescr.trailingNode  `Demo.«term_≋_»  68  69  ParserDescr.binary  `andthen  ParserDescr.symbol  \" ≋ \"  ParserDescr.cat  `term  69 ",
+    "constants":
+    ["ParserDescr.symbol._@._hyg.226",
+     "ParserDescr.binary._@._hyg.226",
+     "ParserDescr.cat._@._hyg.226",
+     "ParserDescr.trailingNode._@._hyg.226"]},
+   "type":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp": " Lean.TrailingParserDescr ",
+    "constants": ["Lean.TrailingParserDescr._@._hyg.226"]},
+   "signature":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp": " :  Lean.TrailingParserDescr ",
+    "constants": ["Lean.TrailingParserDescr._@._hyg.226"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "Demo"},
+   "range":
+   {"synthetic": true,
+    "start": {"line": 35, "column": 0},
+    "finish": {"line": 35, "column": 32}},
+   "pp":
+   " @[ scoped  term_parser  1000  ]  meta  def  «term_≋_»  :  Lean.TrailingParserDescr  :=  ParserDescr.trailingNode  `Demo.«term_≋_»  68  69  ParserDescr.binary  `andthen  ParserDescr.symbol  \" ≋ \"  ParserDescr.cat  `term  69 ",
+   "name": "«term_≋_»",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "meta",
+    "attributes": ["scoped  term_parser  1000"]},
+   "kind": "definition",
+   "fullName": "Demo.«term_≋_»",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp":
+    " :=  fun  |  `(  $  lhs   ≋   $  rhs  )  =>  `  `( BEq.beq\n\n $  lhs  $  rhs  )  |  _  =>  no_error_if_unused%  throw  Lean.Macro.Exception.unsupportedSyntax ",
+    "constants":
+    ["Lean.Macro.Exception.unsupportedSyntax._@._hyg.255",
+     "throw._@._hyg.255",
+     "rhs._@._hyg.223",
+     "BEq.beq",
+     "lhs._@._hyg.223"]},
+   "type":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp": " Macro ",
+    "constants": ["Macro._@._hyg.255"]},
+   "signature":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp": " :  Macro ",
+    "constants": ["Macro._@._hyg.255"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "Demo"},
+   "range":
+   {"synthetic": true,
+    "start": {"line": 35, "column": 0},
+    "finish": {"line": 35, "column": 32}},
+   "pp":
+   " @[  macro  Demo.«term_≋_»  ]  meta  def  «_aux___macroRules_Demo_term_≋__1»  :  Macro  :=  fun  |  `(  $  lhs   ≋   $  rhs  )  =>  `  `( BEq.beq\n\n $  lhs  $  rhs  )  |  _  =>  no_error_if_unused%  throw  Lean.Macro.Exception.unsupportedSyntax ",
+   "name": "«_aux___macroRules_Demo_term_≋__1»",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "meta",
+    "attributes": ["macro  Demo.«term_≋_»"]},
+   "kind": "definition",
+   "fullName": "Demo.«_aux___macroRules_Demo_term_≋__1»",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp":
+    " :=  fun  |  `(  $  f  :  ident  $  lhs  $  rhs  )  =>  withRef  f  `(  $  lhs   ≋   $  rhs  )  |  _  =>  throw  (  ) ",
+    "constants":
+    ["throw._@._hyg.225",
+     "rhs._@._hyg.223",
+     "lhs._@._hyg.223",
+     "f._@._hyg.225",
+     "withRef._@._hyg.225"]},
+   "type":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp": " Lean.PrettyPrinter.Unexpander ",
+    "constants": ["Lean.PrettyPrinter.Unexpander._@._hyg.225"]},
+   "signature":
+   {"range":
+    {"synthetic": true,
+     "start": {"line": 35, "column": 0},
+     "finish": {"line": 35, "column": 32}},
+    "pp": " :  Lean.PrettyPrinter.Unexpander ",
+    "constants": ["Lean.PrettyPrinter.Unexpander._@._hyg.225"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "Demo"},
+   "range":
+   {"synthetic": true,
+    "start": {"line": 35, "column": 0},
+    "finish": {"line": 35, "column": 32}},
+   "pp":
+   " @[ scoped  app_unexpander  BEq.beq  ]  meta  def  _aux___unexpand_BEq_beq_1  :  Lean.PrettyPrinter.Unexpander  :=  fun  |  `(  $  f  :  ident  $  lhs  $  rhs  )  =>  withRef  f  `(  $  lhs   ≋   $  rhs  )  |  _  =>  throw  (  ) ",
+   "name": "_aux___unexpand_BEq_beq_1",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "meta",
+    "attributes": ["scoped  app_unexpander  BEq.beq"]},
+   "kind": "definition",
+   "fullName": "Demo._aux___unexpand_BEq_beq_1",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 37, "column": 29},
+     "finish": {"line": 38, "column": 17}},
+    "pp": "where\n  beq _ _ := true",
+    "constants": ["beq", "true"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 37, "column": 18},
+     "finish": {"line": 37, "column": 28}},
+    "pp": "BEq MyType",
+    "constants": ["MyType", "BEq"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 37, "column": 16},
+     "finish": {"line": 37, "column": 28}},
+    "pp": ": BEq MyType",
+    "constants": ["MyType", "BEq"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "Demo"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 37, "column": 0},
+    "finish": {"line": 38, "column": 17}},
+   "pp": "scoped instance : BEq MyType where\n  beq _ _ := true",
+   "name": "[anonymous]",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "instance",
+   "fullName": "Demo.instBEqMyType",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 47, "column": 32},
+     "finish": {"line": 53, "column": 38}},
+    "pp":
+    ":= do\n  let x : Demo.MyType := Demo.MyType.val\n  let y : Demo.MyType := Demo.MyType.val\n  if x ≋ y then\n    IO.println \"x and y are equal\"\n  else\n    IO.println \"x and y are not equal\"",
+    "constants": ["IO.println", "Demo.MyType.val", "y", "Demo.MyType", "x"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 47, "column": 24},
+     "finish": {"line": 47, "column": 31}},
+    "pp": "IO Unit",
+    "constants": ["IO", "Unit"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 47, "column": 22},
+     "finish": {"line": 47, "column": 31}},
+    "pp": ": IO Unit",
+    "constants": ["IO", "Unit"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 47, "column": 0},
+    "finish": {"line": 53, "column": 38}},
+   "pp":
+   "def open_scoped_test1 : IO Unit := do\n  let x : Demo.MyType := Demo.MyType.val\n  let y : Demo.MyType := Demo.MyType.val\n  if x ≋ y then\n    IO.println \"x and y are equal\"\n  else\n    IO.println \"x and y are not equal\"",
+   "name": "open_scoped_test1",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "definition",
+   "fullName": "open_scoped_test1",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 58, "column": 41},
+     "finish": {"line": 59, "column": 7}},
+    "pp": ":=\n  a * a",
+    "constants": ["a"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 58, "column": 37},
+     "finish": {"line": 58, "column": 40}},
+    "pp": "Nat",
+    "constants": ["Nat"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 58, "column": 25},
+     "finish": {"line": 58, "column": 40}},
+    "pp": "(a : Nat) : Nat",
+    "constants": ["a", "Nat"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 58, "column": 0},
+    "finish": {"line": 59, "column": 7}},
+   "pp": "private def private_test (a : Nat) : Nat :=\n  a * a",
+   "name": "private_test",
+   "modifiers":
+   {"visibility": "private",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "definition",
+   "fullName": "_private.0.private_test",
+   "binders":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 58, "column": 25},
+     "finish": {"line": 58, "column": 34}},
+    "pp": "(a : Nat)",
+    "map": [{"type": "Nat", "id": "a", "binderInfo": "default"}],
+    "groups": ["(a : Nat)"]}},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 61, "column": 62},
+     "finish": {"line": 61, "column": 66}},
+    "pp": ":= a",
+    "constants": ["a"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 61, "column": 58},
+     "finish": {"line": 61, "column": 61}},
+    "pp": "Nat",
+    "constants": ["Nat"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 61, "column": 46},
+     "finish": {"line": 61, "column": 61}},
+    "pp": "(a : Nat) : Nat",
+    "constants": ["a", "Nat"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 61, "column": 0},
+    "finish": {"line": 61, "column": 66}},
+   "pp": "private noncomputable def non_computable_test (a : Nat) : Nat := a",
+   "name": "non_computable_test",
+   "modifiers":
+   {"visibility": "private",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "noncomputable",
+    "attributes": []},
+   "kind": "definition",
+   "fullName": "_private.0.non_computable_test",
+   "binders":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 61, "column": 46},
+     "finish": {"line": 61, "column": 55}},
+    "pp": "(a : Nat)",
+    "map": [{"type": "Nat", "id": "a", "binderInfo": "default"}],
+    "groups": ["(a : Nat)"]}},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 66, "column": 52},
+     "finish": {"line": 66, "column": 56}},
+    "pp": ":= a",
+    "constants": ["a"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 66, "column": 48},
+     "finish": {"line": 66, "column": 51}},
+    "pp": "Nat",
+    "constants": ["Nat"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 66, "column": 36},
+     "finish": {"line": 66, "column": 51}},
+    "pp": "(a : Nat) : Nat",
+    "constants": ["a", "Nat"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "Example"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 64, "column": 0},
+    "finish": {"line": 66, "column": 56}},
+   "pp":
+   "/--\n dododo-/\nprotected partial def prot_part_def (a : Nat) : Nat := a",
+   "name": "prot_part_def",
+   "modifiers":
+   {"visibility": "protected",
+    "recKind": "partial",
+    "isUnsafe": false,
+    "docString":
+    {"range":
+     {"synthetic": false,
+      "start": {"line": 64, "column": 0},
+      "finish": {"line": 65, "column": 9}},
+     "content": "/--\n dododo-/"},
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "definition",
+   "fullName": "Example.prot_part_def",
+   "binders":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 66, "column": 36},
+     "finish": {"line": 66, "column": 45}},
+    "pp": "(a : Nat)",
+    "map": [{"type": "Nat", "id": "a", "binderInfo": "default"}],
+    "groups": ["(a : Nat)"]}},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 69, "column": 30},
+     "finish": {"line": 69, "column": 35}},
+    "pp": ":= 42",
+    "constants": []},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 69, "column": 26},
+     "finish": {"line": 69, "column": 29}},
+    "pp": "Nat",
+    "constants": ["Nat"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 69, "column": 24},
+     "finish": {"line": 69, "column": 29}},
+    "pp": ": Nat",
+    "constants": ["Nat"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 69, "column": 0},
+    "finish": {"line": 69, "column": 35}},
+   "pp": "@[simp, instance] def t : Nat := 42",
+   "name": "t",
+   "modifiers":
+   {"visibility": "regular",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": ["simp", "instance"]},
+   "kind": "definition",
+   "fullName": "t",
+   "binders": null},
+  {"value":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 72, "column": 39},
+     "finish": {"line": 73, "column": 7}},
+    "pp": ":=\n  a + t",
+    "constants": ["t", "a"]},
+   "type":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 72, "column": 35},
+     "finish": {"line": 72, "column": 38}},
+    "pp": "Nat",
+    "constants": ["Nat"]},
+   "signature":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 72, "column": 23},
+     "finish": {"line": 72, "column": 38}},
+    "pp": "(a : Nat) : Nat",
+    "constants": ["a", "Nat"]},
+   "scope":
+   {"varDecls": ["variable {α : Type u}", "variable {β : Type u}"],
+    "openDecl": [],
+    "omitVars": [],
+    "levelNames": ["u"],
+    "includeVars": [],
+    "currNamespace": "[anonymous]"},
+   "range":
+   {"synthetic": false,
+    "start": {"line": 72, "column": 0},
+    "finish": {"line": 73, "column": 7}},
+   "pp": "public def public_test (a : Nat) : Nat :=\n  a + t",
+   "name": "public_test",
+   "modifiers":
+   {"visibility": "public",
+    "recKind": "default",
+    "isUnsafe": false,
+    "docString": null,
+    "computeKind": "regular",
+    "attributes": []},
+   "kind": "definition",
+   "fullName": "public_test",
+   "binders":
+   {"range":
+    {"synthetic": false,
+     "start": {"line": 72, "column": 23},
+     "finish": {"line": 72, "column": 32}},
+    "pp": "(a : Nat)",
+    "map": [{"type": "Nat", "id": "a", "binderInfo": "default"}],
+    "groups": ["(a : Nat)"]}}]}
+
