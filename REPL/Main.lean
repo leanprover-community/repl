@@ -371,15 +371,16 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let initialCmdState? := cmdSnapshot?.map fun c => c.cmdState
 
   let (initialCmdState, incStates, messages) ← try
+    let opts := s.setOptions.getD {}
     if s.incrementality.getD false then
       let bestIncrementalState? ← findBestIncrementalState s.cmd s.env
-      let (initialCmdState, incStates, messages, headerCache) ← IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
+      let (initialCmdState, incStates, messages, headerCache) ← IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache opts
       -- Store the command text and incremental states for future reuse
       modify fun st => { st with headerCache := headerCache }
       recordCommandIncrementals s.cmd incStates s.env
       pure (initialCmdState, incStates, messages)
     else
-      let (initialCmdState, incStates, messages, _) ← IO.processInput s.cmd initialCmdState? none {}
+      let (initialCmdState, incStates, messages, _) ← IO.processInput s.cmd initialCmdState? none {} opts
       pure (initialCmdState, incStates, messages)
   catch ex =>
     return .inr ⟨ex.toString⟩
