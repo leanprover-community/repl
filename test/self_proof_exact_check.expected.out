@@ -3,7 +3,7 @@
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 10},
    "data":
-   "fail to show termination for\n  ex\nwith errors\nfailed to infer structural recursion:\nno parameters suitable for structural recursion\n\nwell-founded recursion cannot be used, 'ex' does not take any (non-fixed) arguments"}],
+   "fail to show termination for\n  ex\nwith errors\nfailed to infer structural recursion:\nno parameters suitable for structural recursion\n\nwell-founded recursion cannot be used, `ex` does not take any (non-fixed) arguments"}],
  "env": 0}
 
 {"sorries":

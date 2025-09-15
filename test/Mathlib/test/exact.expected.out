@@ -18,7 +18,7 @@
  [{"severity": "info",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
-   "data": "Try this: exact Nat.one_pos"}],
+   "data": "Try this:\n  exact Nat.one_pos"}],
  "goals": []}
 
 {"sorries":
