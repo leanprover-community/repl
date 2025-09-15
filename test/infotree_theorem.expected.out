@@ -121,20 +121,6 @@
      {"stx":
       {"range":
        {"synthetic": false,
-        "start": {"line": 1, "column": 8},
-        "finish": {"line": 1, "column": 14}},
-       "pp": "show_p",
-       "kind": "Lean.Parser.Command.declId",
-       "argKinds": ["ident", "null"]},
-      "isBinder": true,
-      "expr": "show_p",
-      "elaborator": null},
-     "kind": "TermInfo",
-     "children": []},
-    {"node":
-     {"stx":
-      {"range":
-       {"synthetic": false,
         "start": {"line": 1, "column": 16},
         "finish": {"line": 1, "column": 17}},
        "pp": "p",
@@ -272,6 +258,20 @@
        "pp": "show_p",
        "kind": "ident",
        "argKinds": []},
+      "isBinder": true,
+      "expr": "show_p",
+      "elaborator": null},
+     "kind": "TermInfo",
+     "children": []},
+    {"node":
+     {"stx":
+      {"range":
+       {"synthetic": false,
+        "start": {"line": 1, "column": 8},
+        "finish": {"line": 1, "column": 14}},
+       "pp": "show_p",
+       "kind": "Lean.Parser.Command.declId",
+       "argKinds": ["ident", "null"]},
       "isBinder": true,
       "expr": "show_p",
       "elaborator": null},
