@@ -11,6 +11,7 @@ import REPL.Lean.Environment
 import REPL.Lean.InfoTree
 import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
+import REPL.Util.Trie
 import Lean.Data.Trie
 import Std.Data.HashMap
 
@@ -110,7 +111,7 @@ def addCommandToTrie (cmdText : String)
   for (incState, _) in incStates do
     let prefixPos := incState.cmdPos.byteIdx
     let cmdPrefix : String := (cmdText.take prefixPos).trim
-    newTrie := newTrie.insert cmdPrefix incState
+    newTrie := REPL.Util.Trie.insert newTrie cmdPrefix incState
 
   modify fun s => { s with envTries := s.envTries.insert envId? newTrie }
 
@@ -133,7 +134,7 @@ def findBestIncrementalState (newCmd : String) (envId? : Option Nat) : M m (Opti
   match trie? with
   | none => return none
   | some trie =>
-    match trie.matchPrefix trimmedCmd 0 with
+    match REPL.Util.Trie.matchPrefix trie trimmedCmd 0 with
     | some incState => return some incState
     | none => return none
 
