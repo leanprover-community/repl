@@ -128,9 +128,10 @@ deriving ToJson
 /-- See `Lean.Elab.Modifiers` -/
 structure DeclModifiers where
   docString : Option DocString := none
-  visibility : String := "regular" -- "regular", "private", "protected", or "public"
+  visibility : String := "regular" -- "regular", "private", or "public"
   computeKind : String := "regular" -- "regular", "meta", or "noncomputable"
   recKind : String := "default" -- "default", "partial", or "nonrec"
+  isProtected : Bool := false
   isUnsafe : Bool := false
   attributes : List String := []
 deriving ToJson
