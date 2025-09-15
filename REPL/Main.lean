@@ -11,6 +11,8 @@ import REPL.Lean.Environment
 import REPL.Lean.InfoTree
 import REPL.Lean.InfoTree.ToJson
 import REPL.Snapshots
+import Lean.Data.Trie
+import Std.Data.HashMap
 
 /-!
 # A REPL for Lean.
@@ -73,16 +75,16 @@ structure State where
   -/
   proofStates : Array ProofSnapshot := #[]
   /--
-  Stores the command text and incremental states for each command, indexed by command ID.
-  Used for prefix matching to enable incremental processing reuse.
+  Trie-based storage for fast prefix matching, organized by environment ID.
+  Map from environment ID (None for fresh env) to trie of command prefixes with incremental states.
   -/
-  cmdTexts : Array String := #[]
-  cmdIncrementalStates : Array (List (IncrementalState × Option InfoTree)) := #[]
+  envTries : Std.HashMap (Option Nat) (Lean.Data.Trie IncrementalState) := Std.HashMap.emptyWithCapacity 8
   /--
-  Stores the environment ID that each command was built upon.
-  Used to ensure prefix matching only considers compatible environment chains.
+  Cache for processed headers (import statements) to avoid reprocessing the same imports repeatedly.
+  Maps import raw string to the processed command state.
   -/
-  cmdEnvChain : Array (Option Nat) := #[]
+  headerCache : Std.HashMap String Command.State := Std.HashMap.emptyWithCapacity 8
+
 /--
 The Lean REPL monad.
 
@@ -98,13 +100,24 @@ def recordCommandSnapshot (state : CommandSnapshot) : M m Nat := do
   modify fun s => { s with cmdStates := s.cmdStates.push state }
   return id
 
+/-- Add all incremental states of a command to the trie at their corresponding prefix positions -/
+def addCommandToTrie (cmdText : String)
+    (incStates : List (IncrementalState × Option InfoTree)) (envId? : Option Nat) : M m Unit := do
+  let state ← get
+  let currentTrie := state.envTries.get? envId? |>.getD Lean.Data.Trie.empty
+
+  let mut newTrie := currentTrie
+  for (incState, _) in incStates do
+    let prefixPos := incState.cmdPos.byteIdx
+    let cmdPrefix : String := (cmdText.take prefixPos).trim
+    newTrie := newTrie.insert cmdPrefix incState
+
+  modify fun s => { s with envTries := s.envTries.insert envId? newTrie }
+
 /-- Record command text and incremental states for prefix matching reuse. -/
 def recordCommandIncrementals (cmdText : String)
     (incStates : List (IncrementalState × Option InfoTree)) (envId? : Option Nat) : M m Unit := do
-  modify fun s => { s with
-    cmdTexts := s.cmdTexts.push cmdText
-    cmdIncrementalStates := s.cmdIncrementalStates.push incStates
-    cmdEnvChain := s.cmdEnvChain.push envId? }
+  addCommandToTrie cmdText incStates envId?
 
 /-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
 def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
@@ -112,65 +125,17 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   modify fun s => { s with proofStates := s.proofStates.push proofState }
   return id
 
-/-- Find the longest common prefix between two strings. -/
-def longestCommonPrefix (s1 s2 : String) : Nat :=
-  let chars1 := s1.toList
-  let chars2 := s2.toList
-  let rec loop (acc : Nat) : List Char → List Char → Nat
-    | [], _ => acc
-    | _, [] => acc
-    | c1 :: cs1, c2 :: cs2 =>
-      if c1 = c2 then loop (acc + 1) cs1 cs2 else acc
-  loop 0 chars1 chars2
-
-/-- Check if two commands start from the exact same base environment. -/
-def haveSameBaseEnv (envId1? envId2? : Option Nat) : Bool :=
-  match envId1?, envId2? with
-  | none, none => true  -- Both are from fresh environments
-  | some id1, some id2 => id1 = id2  -- Same environment ID
-  | _, _ => false  -- One fresh, one inherited - different base environments
-
-/-- Find the best incremental state to reuse based on longest prefix matching from commands with the same base environment. -/
+/-- Find the best incremental state using trie-based prefix matching -/
 def findBestIncrementalState (newCmd : String) (envId? : Option Nat) : M m (Option IncrementalState) := do
   let state ← get
-  if state.cmdTexts.isEmpty then
-    return none
-
-  -- Find the command with the longest common prefix in the same environment chain
-  let mut bestPrefix := 0
-  let mut bestIncrState : Option IncrementalState := none
-
-  for i in [:state.cmdTexts.size] do
-    -- Check if this command starts from the same base environment
-    let cmdEnvId := if i < state.cmdEnvChain.size then state.cmdEnvChain[i]! else none
-    let hasSameBase := haveSameBaseEnv envId? cmdEnvId
-
-    if hasSameBase then
-      let cmdText := state.cmdTexts[i]!
-      let prefixLen := longestCommonPrefix newCmd cmdText
-
-      -- Only consider significant prefixes (at least 10 characters to avoid noise)
-      if prefixLen > bestPrefix && prefixLen ≥ 10 then
-        let incStates := state.cmdIncrementalStates[i]!
-        -- Find the latest incremental state that doesn't exceed our prefix
-        for (incState, _) in incStates.reverse do
-          -- Convert string prefix length to byte position for comparison
-          let prefixBytes := (cmdText.take prefixLen).utf8ByteSize
-          if incState.cmdPos.byteIdx ≤ prefixBytes then
-            bestPrefix := prefixLen
-            bestIncrState := some incState
-            break
-
-  -- Print debug information about reuse
-  match bestIncrState with
-  | some _ => IO.println s!"Found incremental state to reuse (prefix length: {bestPrefix}, env chain compatible)"
-  | none =>
-    if state.cmdTexts.isEmpty then
-      IO.println "No previous commands available for reuse"
-    else
-      IO.println "No suitable incremental state found for reuse (considering environment chain compatibility)"
-
-  return bestIncrState
+  let trimmedCmd := newCmd.trim
+  let trie? := state.envTries.get? envId?
+  match trie? with
+  | none => return none
+  | some trie =>
+    match trie.matchPrefix trimmedCmd 0 with
+    | some incState => return some incState
+    | none => return none
 
 def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Option (List MVarId))
 : M m (List Sorry) :=
@@ -406,21 +371,15 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   -- Find the best incremental state to reuse based on prefix matching
   let bestIncrementalState? ← findBestIncrementalState s.cmd s.env
 
-  let (initialCmdState, incStates, messages) ← try
-    IO.processInput s.cmd initialCmdState? (incrementalState? := bestIncrementalState?)
+  let (initialCmdState, incStates, messages, headerCache) ← try
+    IO.processInput s.cmd initialCmdState? bestIncrementalState? (← get).headerCache
   catch ex =>
     return .inr ⟨ex.toString⟩
 
+  modify fun st => { st with headerCache := headerCache }
+
   -- Store the command text and incremental states for future reuse
   recordCommandIncrementals s.cmd incStates s.env
-
-  -- showcase the input string for each incremental state
-  let mut prevPos := 0
-  for (incState, _) in incStates do
-    let endPos := incState.cmdPos
-    let processedText := incState.inputCtx.input.extract prevPos endPos
-    IO.println s!"Processing incremental state [pos: {prevPos}..{endPos}]:\n```lean4\n{processedText}\n```"
-    prevPos := endPos
 
   let cmdState := (incStates.getLast?.map (fun c => c.1.commandState)).getD initialCmdState
   let messages ← messages.mapM fun m => Message.of m

@@ -4,6 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Scott Morrison
 -/
 import Lean.Elab.Frontend
+import Std.Data.HashMap
 
 open Lean Elab Language
 
@@ -57,29 +58,40 @@ def processCommandsWithInfoTrees
 
 /--
 Process some text input, with or without an existing command state.
+Supports header caching to avoid reprocessing the same imports repeatedly.
 
 Returns:
 1. The resulting command state after processing the entire input
 2. List of messages
 3. List of info trees along with Command.State from the incremental processing
+4. Updated header cache mapping import keys to Command.State
 -/
 def processInput (input : String) (cmdState? : Option Command.State)
     (incrementalState? : Option IncrementalState := none)
+    (headerCache : Std.HashMap String Command.State)
     (opts : Options := {}) (fileName : Option String := none) :
-    IO (Command.State × List (IncrementalState × Option InfoTree) × List Message) := unsafe do
+    IO (Command.State × List (IncrementalState × Option InfoTree) × List Message × (Std.HashMap String Command.State)) := unsafe do
   Lean.initSearchPath (← Lean.findSysroot)
   enableInitializersExecution
   let fileName   := fileName.getD "<input>"
   let inputCtx   := Parser.mkInputContext input fileName
   match cmdState? with
   | none => do
-    -- Split the processing into two phases to prevent self-reference in proofs in tactic mode
     let (header, parserState, messages) ← Parser.parseHeader inputCtx
-    let (env, messages) ← processHeader header opts messages inputCtx
-    let headerOnlyState := Command.mkState env messages opts
-    let incStates ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState incrementalState?
-    return (headerOnlyState, incStates)
+    let importKey := (input.take parserState.pos.byteIdx).trim
+    match headerCache.get? importKey with
+    | some cachedHeaderState => do
+      -- Header is cached, use it as the base command state
+      let (incStates, messages) ← processCommandsWithInfoTrees inputCtx parserState cachedHeaderState incrementalState?
+      return (cachedHeaderState, incStates, messages, headerCache)
+    | none => do
+      -- Header not cached, process it and cache the result
+      let (env, messages) ← processHeader header opts messages inputCtx
+      let headerOnlyState := Command.mkState env messages opts
+      let headerCache := headerCache.insert importKey headerOnlyState
+      let (incStates, messages) ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState incrementalState?
+      return (headerOnlyState, incStates, messages, headerCache)
   | some cmdStateBefore => do
     let parserState : Parser.ModuleParserState := {}
-    let incStates ← processCommandsWithInfoTrees inputCtx parserState cmdStateBefore incrementalState?
-    return (cmdStateBefore, incStates)
+    let (incStates, messages) ← processCommandsWithInfoTrees inputCtx parserState cmdStateBefore incrementalState?
+    return (cmdStateBefore, incStates, messages, headerCache)
