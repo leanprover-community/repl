@@ -1,0 +1,49 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 21},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 26}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 9},
+   "data": "declaration uses 'sorry'"},
+  {"severity": "info",
+   "pos": {"line": 2, "column": 22},
+   "endPos": {"line": 2, "column": 28},
+   "data": "Try this: exact x"},
+  {"severity": "info",
+   "pos": {"line": 2, "column": 0},
+   "endPos": {"line": 2, "column": 28},
+   "data": "Goals accomplished!"}],
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 1,
+   "pos": {"line": 1, "column": 21},
+   "goal": "⊢ False",
+   "endPos": {"line": 1, "column": 26}},
+  {"proofState": 2,
+   "pos": {"line": 2, "column": 19},
+   "goal": "⊢ False",
+   "endPos": {"line": 2, "column": 24}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 9},
+   "data": "declaration uses 'sorry'"},
+  {"severity": "warning",
+   "pos": {"line": 2, "column": 0},
+   "endPos": {"line": 2, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofStatus": "Completed",
+ "proofState": 3,
+ "messages":
+ [{"severity": "info",
+   "pos": {"line": 0, "column": 0},
+   "endPos": {"line": 0, "column": 0},
+   "data": "Try this: exact x"}],
+ "goals": []}
+
