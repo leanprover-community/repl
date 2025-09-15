@@ -302,24 +302,24 @@
     "pp":
     " :=  ParserDescr.trailingNode  `Demo.«term_≋_»  68  69  ParserDescr.binary  `andthen  ParserDescr.symbol  \" ≋ \"  ParserDescr.cat  `term  69 ",
     "constants":
-    ["ParserDescr.cat._@._hyg.202",
-     "ParserDescr.symbol._@._hyg.202",
-     "ParserDescr.binary._@._hyg.202",
-     "ParserDescr.trailingNode._@._hyg.202"]},
+    ["ParserDescr.binary._@.3937598925._hygCtx._hyg.4",
+     "ParserDescr.trailingNode._@.3937598925._hygCtx._hyg.4",
+     "ParserDescr.symbol._@.3937598925._hygCtx._hyg.4",
+     "ParserDescr.cat._@.3937598925._hygCtx._hyg.4"]},
    "type":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " Lean.TrailingParserDescr ",
-    "constants": ["Lean.TrailingParserDescr._@._hyg.202"]},
+    "constants": ["Lean.TrailingParserDescr._@.3937598925._hygCtx._hyg.4"]},
    "signature":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " :  Lean.TrailingParserDescr ",
-    "constants": ["Lean.TrailingParserDescr._@._hyg.202"]},
+    "constants": ["Lean.TrailingParserDescr._@.3937598925._hygCtx._hyg.4"]},
    "scope":
    {"varDecls": ["variable {α : Type u}"],
     "openDecl": [],
@@ -332,10 +332,10 @@
     "start": {"line": 35, "column": 0},
     "finish": {"line": 35, "column": 32}},
    "pp":
-   " @[ scoped  term_parser  1000  ]  meta  def  «term_≋_»  :  Lean.TrailingParserDescr  :=  ParserDescr.trailingNode  `Demo.«term_≋_»  68  69  ParserDescr.binary  `andthen  ParserDescr.symbol  \" ≋ \"  ParserDescr.cat  `term  69 ",
+   " @[ scoped  term_parser  1000  ]  public  meta  def  «term_≋_»  :  Lean.TrailingParserDescr  :=  ParserDescr.trailingNode  `Demo.«term_≋_»  68  69  ParserDescr.binary  `andthen  ParserDescr.symbol  \" ≋ \"  ParserDescr.cat  `term  69 ",
    "name": "«term_≋_»",
    "modifiers":
-   {"visibility": "regular",
+   {"visibility": "public",
     "recKind": "default",
     "isUnsafe": false,
     "isProtected": false,
@@ -353,25 +353,25 @@
     "pp":
     " :=  fun  |  `(  $  lhs   ≋   $  rhs  )  =>  `  `( BEq.beq\n\n $  lhs  $  rhs  )  |  _  =>  no_error_if_unused%  throw  Lean.Macro.Exception.unsupportedSyntax ",
     "constants":
-    ["rhs._@._hyg.199",
-     "throw._@._hyg.221",
-     "Lean.Macro.Exception.unsupportedSyntax._@._hyg.221",
+    ["throw._@.3937598925._hygCtx._hyg.9",
+     "lhs._@.3937598925._hygCtx._hyg.3",
      "BEq.beq",
-     "lhs._@._hyg.199"]},
+     "rhs._@.3937598925._hygCtx._hyg.3",
+     "Lean.Macro.Exception.unsupportedSyntax._@.3937598925._hygCtx._hyg.9"]},
    "type":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " Macro ",
-    "constants": ["Macro._@._hyg.221"]},
+    "constants": ["Macro._@.3937598925._hygCtx._hyg.9"]},
    "signature":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " :  Macro ",
-    "constants": ["Macro._@._hyg.221"]},
+    "constants": ["Macro._@.3937598925._hygCtx._hyg.9"]},
    "scope":
    {"varDecls": ["variable {α : Type u}"],
     "openDecl": [],
@@ -384,16 +384,16 @@
     "start": {"line": 35, "column": 0},
     "finish": {"line": 35, "column": 32}},
    "pp":
-   " @[  macro  Demo.«term_≋_»  ]  meta  def  «_aux___macroRules_Demo_term_≋__1»  :  Macro  :=  fun  |  `(  $  lhs   ≋   $  rhs  )  =>  `  `( BEq.beq\n\n $  lhs  $  rhs  )  |  _  =>  no_error_if_unused%  throw  Lean.Macro.Exception.unsupportedSyntax ",
+   " @[ scoped  macro  Demo.«term_≋_»  ]  public  meta  def  «_aux___macroRules_Demo_term_≋__1»  :  Macro  :=  fun  |  `(  $  lhs   ≋   $  rhs  )  =>  `  `( BEq.beq\n\n $  lhs  $  rhs  )  |  _  =>  no_error_if_unused%  throw  Lean.Macro.Exception.unsupportedSyntax ",
    "name": "«_aux___macroRules_Demo_term_≋__1»",
    "modifiers":
-   {"visibility": "regular",
+   {"visibility": "public",
     "recKind": "default",
     "isUnsafe": false,
     "isProtected": false,
     "docString": null,
     "computeKind": "meta",
-    "attributes": ["macro  Demo.«term_≋_»"]},
+    "attributes": ["scoped  macro  Demo.«term_≋_»"]},
    "kind": "definition",
    "fullName": "Demo.«_aux___macroRules_Demo_term_≋__1»",
    "binders": null},
@@ -405,26 +405,28 @@
     "pp":
     " :=  fun  |  `(  $  f  :  ident  $  lhs  $  rhs  )  =>  withRef  f  `(  $  lhs   ≋   $  rhs  )  |  _  =>  throw  (    ) ",
     "constants":
-    ["rhs._@._hyg.199",
-     "throw._@._hyg.201",
-     "_@._hyg.201",
-     "withRef._@._hyg.201",
-     "f._@._hyg.201",
-     "lhs._@._hyg.199"]},
+    ["throw._@.3937598925._hygCtx._hyg.4",
+     "f._@.3937598925._hygCtx._hyg.4",
+     "lhs._@.3937598925._hygCtx._hyg.3",
+     "_@.3937598925._hygCtx._hyg.4",
+     "rhs._@.3937598925._hygCtx._hyg.3",
+     "withRef._@.3937598925._hygCtx._hyg.4"]},
    "type":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " Lean.PrettyPrinter.Unexpander ",
-    "constants": ["Lean.PrettyPrinter.Unexpander._@._hyg.201"]},
+    "constants":
+    ["Lean.PrettyPrinter.Unexpander._@.3937598925._hygCtx._hyg.4"]},
    "signature":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " :  Lean.PrettyPrinter.Unexpander ",
-    "constants": ["Lean.PrettyPrinter.Unexpander._@._hyg.201"]},
+    "constants":
+    ["Lean.PrettyPrinter.Unexpander._@.3937598925._hygCtx._hyg.4"]},
    "scope":
    {"varDecls": ["variable {α : Type u}"],
     "openDecl": [],
@@ -437,10 +439,10 @@
     "start": {"line": 35, "column": 0},
     "finish": {"line": 35, "column": 32}},
    "pp":
-   " @[ scoped  app_unexpander  BEq.beq  ]  meta  def  _aux___unexpand_BEq_beq_1  :  Lean.PrettyPrinter.Unexpander  :=  fun  |  `(  $  f  :  ident  $  lhs  $  rhs  )  =>  withRef  f  `(  $  lhs   ≋   $  rhs  )  |  _  =>  throw  (    ) ",
+   " @[ scoped  app_unexpander  BEq.beq  ]  public  meta  def  _aux___unexpand_BEq_beq_1  :  Lean.PrettyPrinter.Unexpander  :=  fun  |  `(  $  f  :  ident  $  lhs  $  rhs  )  =>  withRef  f  `(  $  lhs   ≋   $  rhs  )  |  _  =>  throw  (    ) ",
    "name": "_aux___unexpand_BEq_beq_1",
    "modifiers":
-   {"visibility": "regular",
+   {"visibility": "public",
     "recKind": "default",
     "isUnsafe": false,
     "isProtected": false,
