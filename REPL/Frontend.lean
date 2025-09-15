@@ -78,7 +78,7 @@ def processInput (input : String) (cmdState? : Option Command.State)
   match cmdState? with
   | none => do
     let (header, parserState, messages) ← Parser.parseHeader inputCtx
-    let importKey := (input.take parserState.pos.byteIdx).trim
+    let importKey := toString header.raw -- do not contain comments and whitespace
     match headerCache.get? importKey with
     | some cachedHeaderState => do
       -- Header is cached, use it as the base command state
