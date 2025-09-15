@@ -125,4 +125,65 @@ partial def InfoTree.toJson (t : InfoTree) (ctx? : Option ContextInfo) : IO Json
      return Lean.toJson (InfoTree.HoleJson.mk (← ctx.runMetaM {} (do Meta.ppGoal mvarId)).pretty)
     else throw <| IO.userError "No `ContextInfo` available."
 
+instance : ToJson DataValue where
+  toJson (v : DataValue) : Json :=
+    match v with
+    | .ofString s => toJson s
+    | .ofBool b   => toJson b
+    | .ofName n   => toJson n
+    | .ofNat n    => toJson n
+    | .ofInt i    => toJson i
+    | .ofSyntax _ => "<syntax>" -- TODO: syntax to json
+
+instance KVMapToJson : ToJson KVMap where
+  toJson (m : KVMap) : Json :=
+    Json.mkObj <| m.entries.map fun (k, v) => (k.toString, toJson v)
+
+instance : ToJson Options where
+  toJson (opts : Options) : Json := KVMapToJson.toJson opts
+
+def arrStrToName (arr : Array String) : Name :=
+  if arr.isEmpty then Name.anonymous
+  else
+    arr.foldl (init := Name.anonymous) fun acc s =>
+      if s.isEmpty then acc
+      else acc.append (Name.mkSimple s)
+
+instance : FromJson DataValue where
+  fromJson? (j : Json) : Except String DataValue :=
+    match j with
+    | .str s => Except.ok <| DataValue.ofString s
+    | .bool b => Except.ok <| DataValue.ofBool b
+    | .num _ => match j.getNat? with
+      | Except.ok n => Except.ok <| DataValue.ofNat n
+      | Except.error _ => match j.getInt? with
+        | Except.ok i => Except.ok <| DataValue.ofInt i
+        | Except.error _ => Except.error "Invalid number format"
+    | .arr a => -- we parse array of strings as a Name
+      if a.all fun e => e.getStr? |>.isOk then
+        Except.ok <| DataValue.ofName (arrStrToName (a.map fun e => e.getStr?.toOption.getD ""))
+      else
+        Except.error "Unsupported JSON type for DataValue"
+    | _ => Except.error "Unsupported JSON type for DataValue"
+
+instance KVMapFromJson : FromJson KVMap where
+  fromJson? (j : Json) : Except String KVMap :=
+    match j with
+    | .arr a => do -- array of (Name × DataValue) pairs to be converted to KVMap
+      let entries: Array (Name × DataValue) ← a.mapM fun e => do
+        match e with
+        | .arr #[.arr k, v] => do
+          let kName ← (if k.all fun e => e.getStr? |>.isOk then
+            Except.ok <| (arrStrToName (k.map fun e => e.getStr?.toOption.getD ""))
+          else
+            Except.error "Expected array of strings for Name")
+          let vData ← fromJson? v
+          return (kName, vData)
+        | _ => Except.error "Expected array of pairs for KVMap"
+      Except.ok <| KVMap.mk entries.toList
+    | _ => Except.error "Expected JSON object for KVMap"
+
+instance : FromJson Options where
+  fromJson? (j : Json) : Except String Options := KVMapFromJson.fromJson? j
+
 end Lean.Elab
