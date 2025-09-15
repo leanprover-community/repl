@@ -6,6 +6,7 @@ Authors: Scott Morrison
 import REPL.JSON
 import REPL.Frontend
 import REPL.Util.Path
+import REPL.Extract.Declaration
 import REPL.Lean.ContextInfo
 import REPL.Lean.Environment
 import REPL.Lean.InfoTree
@@ -392,6 +393,9 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
   let tactics ← match s.allTactics with
   | some true => tacticsCmd incStates initialCmdState.env
   | _ => pure []
+  let declarations := match s.declarations with
+  | some true => extractAllDeclarationInfos incStates initialCmdState
+  | _ => []
   let cmdSnapshot :=
   { cmdState
     cmdContext := (cmdSnapshot?.map fun c => c.cmdContext).getD
@@ -417,7 +421,8 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
     { env,
       messages,
       sorries,
-      tactics
+      tactics,
+      declarations,
       infotree }
 
 def processFile (s : File) : M IO (CommandResponse ⊕ Error) := do
