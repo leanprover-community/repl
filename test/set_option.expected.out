@@ -1,0 +1,21 @@
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 8, "column": 0},
+   "endPos": {"line": 8, "column": 8},
+   "data": "Elab.async = false"}],
+ "env": 0}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 10, "column": 0},
+   "endPos": {"line": 10, "column": 8},
+   "data": "Elab.async = true"}],
+ "env": 1}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 8, "column": 0},
+   "endPos": {"line": 8, "column": 8},
+   "data": "Elab.async = true"}],
+ "env": 2}
+
