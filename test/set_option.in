@@ -1,0 +1,6 @@
+{"cmd": "import Lean\nopen Lean Elab Command\n\nelab \"#show_pp\" : command => do\n  let o ← getOptions\n  logInfo m!\"Elab.async = {Elab.async.get o}\"\n\n#show_pp"}
+
+{"cmd": "import Lean\nopen Lean Elab Command\n\nset_option Elab.async true\n\nelab \"#show_pp\" : command => do\n  let o ← getOptions\n  logInfo m!\"Elab.async = {Elab.async.get o}\"\n\n#show_pp"}
+
+{"cmd": "import Lean\nopen Lean Elab Command\n\nelab \"#show_pp\" : command => do\n  let o ← getOptions\n  logInfo m!\"Elab.async = {Elab.async.get o}\"\n\n#show_pp", "setOptions":[[["Elab","async"],true]]}
+
