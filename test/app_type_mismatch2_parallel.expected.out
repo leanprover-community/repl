@@ -1,0 +1,41 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data":
+   "(kernel) application type mismatch\n  @Eq.ndrec Nat (n✝ + 1) (fun x => x = 0)\n    (have this := of_decide_eq_true (id (Eq.refl true));\n    of_decide_eq_true (id (Eq.refl true)))\nargument has type\n  true = true\nbut function has type\n  (fun x => x = 0) (n✝ + 1) → ∀ {b : Nat}, n✝ + 1 = b → (fun x => x = 0) b"}],
+ "env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 19},
+   "goal": "⊢ 1 = 0",
+   "endPos": {"line": 1, "column": 24}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals": ["case zero\n⊢ 0 = 0", "case succ\nn✝ : Nat\n⊢ n✝ + 1 = 0"]}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 2,
+ "goals": ["case succ\nn✝ : Nat\n⊢ n✝ + 1 = 0"]}
+
+{"proofStatus":
+ "Error: kernel type check failed: (kernel) application type mismatch\n  @Eq.ndrec Nat (n✝ + 1) (fun x => x = 0)\n    (have this := of_decide_eq_true (id (Eq.refl true));\n    of_decide_eq_true (id (Eq.refl true)))\nargument has type\n  true = true\nbut function has type\n  (fun x => x = 0) (n✝ + 1) → ∀ {b : Nat}, n✝ + 1 = b → (fun x => x = 0) b",
+ "proofState": 3,
+ "goals": []}
+
+{"sorries": [{"proofState": 4, "goal": "n✝ : Nat\n⊢ true = true"}],
+ "proofStatus": "Incomplete: open goals remain",
+ "proofState": 5,
+ "goals": ["case succ\nn✝ : Nat\nthis : true = true\n⊢ n✝ + 1 = 0"]}
+
+{"message":
+ "Lean error:\nTactic `apply` failed: could not unify the type of `?succ`\n  n✝ + 1 = 0\nwith the goal\n  true = true\n\nn✝ : Nat\n⊢ true = true"}
+
