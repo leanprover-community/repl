@@ -1,0 +1,46 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 49},
+   "goal": "x : Nat\nh1 : x = 2\n⊢ x = 2",
+   "endPos": {"line": 1, "column": 54}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 0}
+
+{"proofStatus": "Completed", "proofState": 1, "goals": []}
+
+{"sorries":
+ [{"proofState": 2,
+   "pos": {"line": 1, "column": 49},
+   "goal": "x : Nat\nh1 : x = 2\n⊢ x = 2",
+   "endPos": {"line": 1, "column": 54}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"proofStatus": "Completed", "proofState": 3, "goals": []}
+
+{"message": "Operation timed out"}
+
+{"message": "Unknown proof state."}
+
+{"sorries":
+ [{"proofState": 4,
+   "pos": {"line": 1, "column": 49},
+   "goal": "x : Nat\nh1 : x = 2\n⊢ x = 2",
+   "endPos": {"line": 1, "column": 54}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 10},
+   "data": "declaration uses 'sorry'"}],
+ "env": 2}
+
+{"proofStatus": "Completed", "proofState": 5, "goals": []}
+

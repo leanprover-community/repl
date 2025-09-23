@@ -1,0 +1,27 @@
+{"env": 0}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 2, "column": 83},
+   "goal":
+   "u v : ℕ → ℕ\nh₀ : ∀ (n : ℕ), u n = 2 * n + 2\nh₁ : ∀ (n : ℕ), v n = 2 * n + 1\n⊢ ∑ k ∈ Finset.range 2003, u k - ∑ k ∈ Finset.range 2003, v k = 2003",
+   "endPos": {"line": 2, "column": 88}}],
+ "messages":
+ [{"severity": "info",
+   "pos": {"line": 2, "column": 6},
+   "endPos": {"line": 2, "column": 7},
+   "data":
+   "The '∑ x in s, f x' notation is deprecated: please use '∑ x ∈ s, f x' instead:\n∑ k ∈ Finset.range 2003, u k"},
+  {"severity": "info",
+   "pos": {"line": 2, "column": 39},
+   "endPos": {"line": 2, "column": 40},
+   "data":
+   "The '∑ x in s, f x' notation is deprecated: please use '∑ x ∈ s, f x' instead:\n∑ k ∈ Finset.range 2003, v k"},
+  {"severity": "warning",
+   "pos": {"line": 1, "column": 8},
+   "endPos": {"line": 1, "column": 22},
+   "data": "declaration uses 'sorry'"}],
+ "env": 1}
+
+{"message": "Operation timed out"}
+
