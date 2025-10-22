@@ -185,33 +185,44 @@ def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
 /-- Pretty print the current goals in the `ProofSnapshot`. -/
 def ppGoals (p : ProofSnapshot) : IO (List Format) :=
   Prod.fst <$> p.runMetaM do p.tacticState.goals.mapM (Meta.ppGoal ·)
+
 /--
 Construct a `ProofSnapshot` from a `ContextInfo` and optional `LocalContext`, and a list of goals.
-
 For convenience, we also allow a list of `Expr`s, and these are appended to the goals
 as fresh metavariables with the given types.
 -/
 def create (ctx : ContextInfo) (lctx? : Option LocalContext) (env? : Option Environment)
     (goals : List MVarId) (rootGoals? : Option (List MVarId)) (types : List Expr := [])
     : IO ProofSnapshot := do
-  ctx.runMetaM (lctx?.getD {}) do
-    let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
-    let s ← getThe Core.State
-    let s := match env? with
-    | none => s
-    | some env => { s with env }
-    pure <|
-    { coreState := s
-      coreContext := ← readThe Core.Context
-      metaState := ← getThe Meta.State
-      metaContext := ← readThe Meta.Context
-      termState := {}
-      termContext := {}
-      tacticState := { goals }
-      tacticContext := { elaborator := .anonymous }
-      rootGoals := match rootGoals? with
-        | none => goals
-        | some gs => gs }
+  -- Get the local context from the goals if not provided.
+  let lctx ← match lctx? with
+  | none => match goals with
+    | g :: _ => ctx.runMetaM {} do pure (← g.getDecl).lctx
+    | [] => match rootGoals? with
+      | some (g :: _) => ctx.runMetaM {} do pure (← g.getDecl).lctx
+      | _ => pure {}
+  | some lctx => pure lctx
+
+  ctx.runMetaM lctx do
+    -- update local instances, which is necessary when `types` is non-empty
+    Meta.withLocalInstances (lctx.decls.toList.filterMap id) do
+      let goals := goals ++ (← types.mapM fun t => Expr.mvarId! <$> Meta.mkFreshExprMVar (some t))
+      let s ← getThe Core.State
+      let s := match env? with
+      | none => s
+      | some env => { s with env }
+      pure <|
+      { coreState := s
+        coreContext := ← readThe Core.Context
+        metaState := ← getThe Meta.State
+        metaContext := ← readThe Meta.Context
+        termState := {}
+        termContext := {}
+        tacticState := { goals }
+        tacticContext := { elaborator := .anonymous }
+        rootGoals := match rootGoals? with
+          | none => goals
+          | some gs => gs }
 
 open Lean.Core in
 /-- A copy of `Core.State` with the `Environment`, caches, and logging omitted. -/
