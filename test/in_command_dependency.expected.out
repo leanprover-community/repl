@@ -11,7 +11,7 @@
   {"severity": "info",
    "pos": {"line": 2, "column": 22},
    "endPos": {"line": 2, "column": 28},
-   "data": "Try this:\n  exact x"}],
+   "data": "Try this:\n  [apply] exact x"}],
  "env": 0}
 
 {"sorries":
@@ -40,6 +40,6 @@
  [{"severity": "info",
    "pos": {"line": 0, "column": 0},
    "endPos": {"line": 0, "column": 0},
-   "data": "Try this:\n  exact x"}],
+   "data": "Try this:\n  [apply] exact x"}],
  "goals": []}
 
