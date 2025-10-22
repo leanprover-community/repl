@@ -103,7 +103,7 @@ and return the associated value, implemented iteratively to avoid stack overflow
 
 Note the argument order is `(t s i)` to match usages in `Main.lean`.
 -/
-def matchPrefix {α} (t : Lean.Data.Trie α) (s : String) (i : String.Pos) : Option α :=
+def matchPrefix {α} (t : Lean.Data.Trie α) (s : String) (i : String.Pos.Raw) : Option α :=
   Id.run do
     let bytes := s.toUTF8
     let n := bytes.size
