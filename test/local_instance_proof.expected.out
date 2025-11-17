@@ -1,0 +1,62 @@
+{"env": 0}
+
+{"env": 1}
+
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 42},
+   "goal": "α : Type\ninst✝ : Inhabited α\n⊢ α",
+   "endPos": {"line": 1, "column": 47}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 9},
+   "data": "declaration uses 'sorry'"}],
+ "env": 2}
+
+{"proofStatus": "Completed", "proofState": 1, "goals": []}
+
+{"sorries":
+ [{"proofState": 2,
+   "pos": {"line": 1, "column": 45},
+   "goal": "α : Type\ninst✝ : Inhabited α\n⊢ α",
+   "endPos": {"line": 1, "column": 50}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 9},
+   "data": "declaration uses 'sorry'"}],
+ "env": 3}
+
+{"proofStatus": "Completed", "proofState": 3, "goals": []}
+
+{"env": 4}
+
+{"sorries":
+ [{"proofState": 4,
+   "pos": {"line": 1, "column": 17},
+   "goal": "α : Type\ns : Inhabited α\n⊢ α",
+   "endPos": {"line": 1, "column": 22}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 9},
+   "data": "declaration uses 'sorry'"}],
+ "env": 5}
+
+{"proofStatus": "Completed", "proofState": 5, "goals": []}
+
+{"sorries":
+ [{"proofState": 6,
+   "pos": {"line": 1, "column": 20},
+   "goal": "α : Type\ns : Inhabited α\n⊢ α",
+   "endPos": {"line": 1, "column": 25}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 4},
+   "endPos": {"line": 1, "column": 9},
+   "data": "declaration uses 'sorry'"}],
+ "env": 6}
+
+{"proofStatus": "Completed", "proofState": 7, "goals": []}
+
