@@ -122,7 +122,7 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
 
 structure DocString where
   content : String
-  range : Syntax.Range
+  range : Elab.Syntax.Range
 deriving ToJson
 
 /-- See `Lean.Elab.Modifiers` -/
@@ -139,7 +139,7 @@ deriving ToJson
 structure DeclSignature where
   pp : String
   constants : Array Name
-  range : Syntax.Range
+  range : Elab.Syntax.Range
 deriving ToJson
 
 structure BinderView where
@@ -159,19 +159,19 @@ structure DeclBinders where
   pp : String
   groups : Array String
   map : Array BinderView
-  range : Syntax.Range
+  range : Elab.Syntax.Range
 deriving ToJson
 
 structure DeclType where
   pp : String
   constants : Array Name
-  range : Syntax.Range
+  range : Elab.Syntax.Range
 deriving ToJson
 
 structure DeclValue where
   pp : String
   constants : Array Name
-  range : Syntax.Range
+  range : Elab.Syntax.Range
 deriving ToJson
 
 local instance : ToJson OpenDecl where
@@ -194,7 +194,7 @@ deriving ToJson
 
 structure DeclarationInfo where
   pp: String
-  range : Syntax.Range
+  range : Elab.Syntax.Range
   scope : ScopeInfo
   name : Name
   fullName : Name
