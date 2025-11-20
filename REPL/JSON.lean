@@ -23,10 +23,13 @@ structure CommandOptions where
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).
 If `env = some n`, builds on the existing environment `n`.
+Setting `record = false` will discard the environment after execution, useful for memory management.
+When `record = false`, the response's `env` field will be `none`.
 -/
 structure Command extends CommandOptions where
   env : Option Nat
   cmd : String
+  record : Option Bool := true
 deriving ToJson, FromJson
 
 /-- Process a Lean file in a fresh environment if `env` is not provided. -/
@@ -41,6 +44,7 @@ Run a tactic in a proof state.
 structure ProofStep where
   proofState : Nat
   tactic : String
+  record: Option Bool := true
 deriving ToJson, FromJson
 
 /-- Line and column information for error messages and sorries. -/
@@ -122,7 +126,7 @@ A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
 -/
 structure CommandResponse where
-  env : Nat
+  env : Option Nat := none
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
@@ -133,9 +137,13 @@ def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Jso
   | [] => []
   | l  => [⟨k, toJson l⟩]
 
+def Json.optField [ToJson α] (k : String) : Option α → List (String × Json)
+  | none => []
+  | some v => [(k, toJson v)]
+
 instance : ToJson CommandResponse where
   toJson r := Json.mkObj <| .flatten [
-    [("env", r.env)],
+    Json.optField "env" r.env,
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
@@ -147,7 +155,7 @@ A response to a Lean tactic.
 `proofState` can be used in later calls, to run further tactics.
 -/
 structure ProofStepResponse where
-  proofState : Nat
+  proofState : Option Nat
   goals : List String
   messages : List Message := []
   sorries : List Sorry := []
@@ -157,7 +165,7 @@ deriving ToJson, FromJson
 
 instance : ToJson ProofStepResponse where
   toJson r := Json.mkObj <| .flatten [
-    [("proofState", r.proofState)],
+    Json.optField "proofState" r.proofState,
     [("goals", toJson r.goals)],
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
