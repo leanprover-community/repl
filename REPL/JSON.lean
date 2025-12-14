@@ -70,7 +70,7 @@ def Message.of (m : Lean.Message) : IO Message := do pure <|
     | .information => .info
     | .warning => .warning
     | .error => .error,
-    data := (← m.data.toString).trim }
+    data := (← m.data.toString).trimAscii.toString }
 
 /-- A Lean `sorry`. -/
 structure Sorry where

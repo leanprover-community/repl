@@ -125,7 +125,7 @@ def tactics (trees : List InfoTree) (env? : Option Environment) : M m (List Tact
   trees.flatMap InfoTree.tactics |>.mapM
     fun ⟨ctx, stx, rootGoals, goals, pos, endPos, ns⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none env? goals rootGoals)
-      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let goals := s!"{(← ctx.ppGoals goals)}".trimAscii.toString
       let tactic := Format.pretty (← ppTactic ctx stx)
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Tactic.of goals tactic pos endPos proofStateId ns
@@ -134,7 +134,7 @@ def collectRootGoalsAsSorries (trees : List InfoTree) (env? : Option Environment
   trees.flatMap InfoTree.rootGoals |>.mapM
     fun ⟨ctx, goals, pos⟩ => do
       let proofState := some (← ProofSnapshot.create ctx none env? goals goals)
-      let goals := s!"{(← ctx.ppGoals goals)}".trim
+      let goals := s!"{(← ctx.ppGoals goals)}".trimAscii.toString
       let proofStateId ← proofState.mapM recordProofSnapshot
       return Sorry.of goals pos pos proofStateId
 
@@ -369,10 +369,10 @@ open REPL
 /-- Get lines from stdin until a blank line is entered. -/
 partial def getLines : IO String := do
   let line ← (← IO.getStdin).getLine
-  if line.trim.isEmpty then
+  if line.trimAscii.isEmpty then
     return line
   else
-    return line.trimRight ++ (← getLines)
+    return line.trimAsciiEnd.toString ++ (← getLines)
 
 instance [ToJson α] [ToJson β] : ToJson (α ⊕ β) where
   toJson x := match x with

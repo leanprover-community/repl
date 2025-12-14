@@ -161,11 +161,11 @@ def runTacticM' (p : ProofSnapshot) (t : TacticM α) : IO ProofSnapshot :=
 def newTraces (new : ProofSnapshot) (old? : Option ProofSnapshot := none) : IO (List String) :=
   match old? with
   | none => (·.1) <$> new.runCoreM (do
-     (← getTraces).toList.mapM fun t => do pure (← t.msg.toString).trim)
+     (← getTraces).toList.mapM fun t => do pure (← t.msg.toString).trimAscii.toString)
   | some old => do
     let oldCount ← (·.1) <$> old.runCoreM (return (← getTraces).size)
     (·.1) <$> new.runCoreM (do
-     ((← getTraces).toList.drop oldCount).mapM fun t => do pure (← t.msg.toString).trim)
+     ((← getTraces).toList.drop oldCount).mapM fun t => do pure (← t.msg.toString).trimAscii.toString)
 
 /--
 Evaluate a `Syntax` into a `TacticM` tactic, and run it in the current `ProofSnapshot`.
