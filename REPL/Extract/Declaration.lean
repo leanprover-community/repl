@@ -14,11 +14,11 @@ def getModifiers (stx : Syntax) (ctx: ContextInfo): DeclModifiers :=
   | .node _ ``Command.declModifiers _ =>
     { docString := stx[0].getOptional?.map (fun stx =>
         { content := stx.prettyPrint.pretty, range := stx.toRange ctx }),
-      visibility := (stx[2].getOptional?.map (·.prettyPrint.pretty.trim)).getD "regular",
-      computeKind := (stx[4].getOptional?.map (·.prettyPrint.pretty.trim)).getD "regular",
+      visibility := (stx[2].getOptional?.map (·.prettyPrint.pretty.trimAscii.toString)).getD "regular",
+      computeKind := (stx[4].getOptional?.map (·.prettyPrint.pretty.trimAscii.toString)).getD "regular",
       isProtected := !stx[3].isNone,
       isUnsafe := !stx[5].isNone,
-      recKind := (stx[6].getOptional?.map (·.prettyPrint.pretty.trim)).getD "default",
+      recKind := (stx[6].getOptional?.map (·.prettyPrint.pretty.trimAscii.toString)).getD "default",
       attributes := stx[1].getArgs.toList.flatMap parseAttributes, }
   | _ => {}
   where
@@ -32,7 +32,7 @@ def getModifiers (stx : Syntax) (ctx: ContextInfo): DeclModifiers :=
         if args.size > 1 then
           args[1]!.getArgs.toList.flatMap fun inst =>
             match inst with
-            | .node _ ``Term.attrInstance _ => [inst.prettyPrint.pretty.trim]
+            | .node _ ``Term.attrInstance _ => [inst.prettyPrint.pretty.trimAscii.toString]
             | _ => []
         else []
       | _ => []
