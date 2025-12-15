@@ -110,7 +110,7 @@ def addCommandToTrie (cmdText : String)
   let mut newTrie := currentTrie
   for (incState, _) in incStates do
     let prefixPos := incState.cmdPos.byteIdx
-    let cmdPrefix : String := (cmdText.take prefixPos).trim
+    let cmdPrefix : String := (cmdText.take prefixPos).trimAscii.toString
     newTrie := REPL.Util.Trie.insert newTrie cmdPrefix incState
 
   modify fun s => { s with envTries := s.envTries.insert envId? newTrie }
@@ -129,7 +129,7 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
 /-- Find the best incremental state using trie-based prefix matching -/
 def findBestIncrementalState (newCmd : String) (envId? : Option Nat) : M m (Option IncrementalState) := do
   let state ← get
-  let trimmedCmd := newCmd.trim
+  let trimmedCmd := newCmd.trimAscii.toString
   let trie? := state.envTries.get? envId?
   match trie? with
   | none => return none
