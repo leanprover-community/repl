@@ -162,7 +162,8 @@ instance : ToJson ProofStepResponse where
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "traces" r.traces,
-    [("proofStatus", r.proofStatus)]
+    [("proofStatus", r.proofStatus)],
+    [("stepVerification", r.stepVerification)]
   ]
 
 /-- Json wrapper for an error. -/
