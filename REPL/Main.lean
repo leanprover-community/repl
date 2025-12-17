@@ -229,81 +229,88 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
 
     | _ => return "Incomplete: open goals remain"
 
+def replaceMVarsWithSorry (e : Expr) : MetaM Expr := do
+  match e with
+  | .mvar _ => do
+    let mvarType ← Meta.inferType e
+    let sorryTerm ← Meta.mkSorry mvarType false
+    return sorryTerm
+  | .forallE _ d b _ => let d ← replaceMVarsWithSorry d; let b ← replaceMVarsWithSorry b; return e.updateForallE! d b
+  | .lam _ d b _     => let d ← replaceMVarsWithSorry d; let b ← replaceMVarsWithSorry b; return e.updateLambdaE! d b
+  | .mdata _ b       => let b ← replaceMVarsWithSorry b; return e.updateMData! b
+  | .letE _ t v b nonDep  => let t ← replaceMVarsWithSorry t; let v ← replaceMVarsWithSorry v; let b ← replaceMVarsWithSorry b; return e.updateLet! t v b nonDep
+  | .app f a         => let f ← replaceMVarsWithSorry f; let a ← replaceMVarsWithSorry a; return e.updateApp! f a
+  | .proj _ _ b      => let b ← replaceMVarsWithSorry b; return e.updateProj! b
+  | e                => return e
+
+def checkAssignment (proofState : ProofSnapshot) (oldGoal : MVarId) (pf : Expr) : MetaM String := do
+  let occursCheck ← Lean.occursCheck oldGoal pf
+  if !occursCheck then
+    return s!"Error: Goal {oldGoal.name} assignment is circular"
+
+  -- Check that all MVars in the proof are goals in new state
+  let mvars ← Meta.getMVars pf
+
+  -- Loop through all unassigned metavariables recursively (note that delayed assigned ones are included).
+  for mvar in mvars do
+    let delayedAssigned ← mvar.isDelayedAssigned
+    -- We only care about the leaf metavariables, so we skip delayed assigned ones.
+    if delayedAssigned then
+      continue
+
+    -- If the metavariable in the assignment is a new goal, it's fine.
+    if proofState.tacticState.goals.contains mvar then
+      continue
+
+    return s!"Error: Goal {oldGoal.name} assignment contains unassigned metavariables"
+
+  return "OK"
+
 /--
 Verifies that all goals from the old state are properly handled in the new state.
 Returns either "OK" or an error message describing the first failing goal.
 -/
-def verifyGoalAssignment (ctx : ContextInfo) (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
+def verifyGoalAssignment (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
     M m String := do
   match oldProofState? with
-  | none => return "OK"  -- Nothing to verify
-  | some oldState => do
-    let mut allOk := true
+  | none       => return "OK"  -- Nothing to verify
+  | some oldSt => do
     let mut errorMsg := ""
-
-    for oldGoal in oldState.tacticState.goals do
-      -- If the goal is still present in the new proofState, we don't need to verify it yet.
+    for oldGoal in oldSt.tacticState.goals do
+      -- skip goals that are still open
       if proofState.tacticState.goals.contains oldGoal then
         continue
 
+      -- run checks and build closed declaration inside the goal's local context
       let (res, _) ← proofState.runMetaM do
-        -- Check if goal is assigned in new state
-        match proofState.metaState.mctx.getExprAssignmentCore? oldGoal with
-        | none => return s!"Goal {oldGoal.name} was not solved"
-        | some pf => do
-          let pf ← instantiateMVars pf
+        -- switch to the local context of the goal
+        oldGoal.withContext do
+        match ← getExprMVarAssignment? oldGoal with
+        | none       => return s!"Error: Goal {oldGoal.name} was not solved"
+        | some pfRaw => do
+          let pf ← instantiateMVars pfRaw
+          -- First check that the proof has the expected type
           let pft ← Meta.inferType pf >>= instantiateMVars
-
-          -- Check that all MVars in the proof are goals in new state
-          let (_, mvars) ← ctx.runMetaM proofState.metaContext.lctx ((Meta.collectMVars pf).run {})
-          -- IO.println s!"Goal {oldGoal.name} = {pf} ({mvars.result.map (·.name)})"
-          let mut pfWithSorries := pf
-          for mvar in mvars.result do
-            -- If the metavariable in the assignment is a new goal, it's fine.
-            unless proofState.tacticState.goals.contains mvar do
-              return s!"Goal {oldGoal.name} assignment contains metavariables"
-
-            -- If the metavariable is a new goal, replace it with sorry so that we can check the proof.
-            let sorryTerm ← Meta.mkSorry pft false
-            pfWithSorries ← pure $ pfWithSorries.replace (
-              fun e => if e == mkMVar mvar then some sorryTerm else none
-            )
-          let pf := pfWithSorries
-          -- IO.println s!"Goal with sorries {oldGoal.name} = {pf}"
-
-          -- Check that proof has expected type
           let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
           unless (← Meta.isDefEq pft expectedType) do
-            return s!"Error: proof has type {pft} but goal has type {expectedType}"
+            return s!"Error: step assignment has type {pft} but goal has type {expectedType}"
 
-          let pf ← oldGoal.withContext $ abstractAllLambdaFVars pf
-          let pft ← Meta.inferType pf >>= instantiateMVars
+          let chk ← checkAssignment proofState oldGoal pf
+          if chk != "OK" then return chk
 
-          -- Find level parameters
-          let usedLevels := collectLevelParams {} pft
-          let usedLevels := collectLevelParams usedLevels pf
-
-          let decl := Declaration.defnDecl {
-            name := Name.anonymous,
-            type := pft,
-            value := pf,
-            levelParams := usedLevels.params.toList,
-            hints := ReducibilityHints.opaque,
-            safety := DefinitionSafety.safe
-          }
-
+          let pf ← instantiateMVars pfRaw
+          let pf ← replaceMVarsWithSorry pf
           try
-            let _ ← addDecl decl
+            _ ← Lean.Meta.check pf
             return "OK"
           catch ex =>
             return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
 
       if res != "OK" then
-        allOk := false
         errorMsg := res
         break
 
-    return if allOk then "OK" else errorMsg
+    return if errorMsg == "" then "OK" else errorMsg
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
@@ -322,7 +329,6 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none (some proofState.rootGoals)
   let id ← recordProofSnapshot proofState
-  let (ctx, _) ← proofState.runMetaM do return { ← CommandContextInfo.save with }
   return {
     proofState := id
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
@@ -330,7 +336,7 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     sorries
     traces
     proofStatus := (← getProofStatus proofState)
-    stepVerification := (← verifyGoalAssignment ctx proofState old?)  }
+    stepVerification := (← verifyGoalAssignment proofState old?)  }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
