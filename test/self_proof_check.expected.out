@@ -15,7 +15,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 10},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 1}
 
 {"message":
@@ -30,7 +30,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 10},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 2}
 
 {"message":
@@ -62,7 +62,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 10},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 3}
 
 {"message":
@@ -81,7 +81,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 10},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 4}
 
 {"message":

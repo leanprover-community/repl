@@ -9,7 +9,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 4},
    "endPos": {"line": 1, "column": 5},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 1}
 
 {"proofStatus": "Incomplete: open goals remain",

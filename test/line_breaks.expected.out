@@ -7,7 +7,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 11},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 0}
 
 {"env": 1}
