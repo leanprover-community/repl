@@ -7,7 +7,7 @@
  [{"severity": "warning",
    "pos": {"line": 2, "column": 0},
    "endPos": {"line": 2, "column": 7},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 0}
 
 {"sorries": [{"proofState": 1, "goal": "x : Int\nh0 : x > 0\n⊢ x > 0"}],
