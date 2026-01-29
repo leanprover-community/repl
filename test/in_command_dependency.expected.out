@@ -7,7 +7,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 9},
-   "data": "declaration uses 'sorry'"},
+   "data": "declaration uses `sorry`"},
   {"severity": "info",
    "pos": {"line": 2, "column": 22},
    "endPos": {"line": 2, "column": 28},
@@ -27,11 +27,11 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 9},
-   "data": "declaration uses 'sorry'"},
+   "data": "declaration uses `sorry`"},
   {"severity": "warning",
    "pos": {"line": 2, "column": 0},
    "endPos": {"line": 2, "column": 7},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 1}
 
 {"proofStatus": "Completed",
