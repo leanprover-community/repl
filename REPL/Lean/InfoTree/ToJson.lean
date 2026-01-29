@@ -137,10 +137,19 @@ instance : ToJson DataValue where
 
 instance KVMapToJson : ToJson KVMap where
   toJson (m : KVMap) : Json :=
-    Json.mkObj <| m.entries.map fun (k, v) => (k.toString, toJson v)
+    -- Array of pairs: [ [ ["Elab","async"], false ], ... ]
+    Json.arr <| m.entries.toArray.map fun (k, v) =>
+      Json.arr #[toJson k, toJson v]
 
 instance : ToJson Options where
-  toJson (opts : Options) : Json := KVMapToJson.toJson opts
+  toJson (opts : Options) : Json :=
+    -- `Options` does not expose its internal map, but it *does* provide a `ForIn`
+    -- instance, so we can iterate over all (Name × DataValue) pairs.
+    Id.run do
+      let mut entries : Array Json := #[]
+      for (k, v) in opts do
+        entries := entries.push (Json.arr #[toJson k, toJson v])
+      return Json.arr entries
 
 def arrStrToName (arr : Array String) : Name :=
   if arr.isEmpty then Name.anonymous
@@ -181,9 +190,12 @@ instance KVMapFromJson : FromJson KVMap where
           return (kName, vData)
         | _ => Except.error "Expected array of pairs for KVMap"
       Except.ok <| KVMap.mk entries.toList
-    | _ => Except.error "Expected JSON object for KVMap"
+    | _ => Except.error "Expected JSON array for KVMap"
 
 instance : FromJson Options where
-  fromJson? (j : Json) : Except String Options := KVMapFromJson.fromJson? j
+  fromJson? (j : Json) : Except String Options := do
+    let kv ← KVMapFromJson.fromJson? j
+    Except.ok <| kv.entries.foldl (init := Options.empty) fun opts (k, v) =>
+      opts.insert k v
 
 end Lean.Elab
