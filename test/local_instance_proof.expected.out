@@ -11,7 +11,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 4},
    "endPos": {"line": 1, "column": 9},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 2}
 
 {"proofStatus": "Completed", "proofState": 1, "goals": []}
@@ -25,7 +25,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 4},
    "endPos": {"line": 1, "column": 9},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 3}
 
 {"proofStatus": "Completed", "proofState": 3, "goals": []}
@@ -41,7 +41,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 4},
    "endPos": {"line": 1, "column": 9},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 5}
 
 {"proofStatus": "Completed", "proofState": 5, "goals": []}
@@ -55,7 +55,7 @@
  [{"severity": "warning",
    "pos": {"line": 1, "column": 4},
    "endPos": {"line": 1, "column": 9},
-   "data": "declaration uses 'sorry'"}],
+   "data": "declaration uses `sorry`"}],
  "env": 6}
 
 {"proofStatus": "Completed", "proofState": 7, "goals": []}
