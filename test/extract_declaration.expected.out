@@ -1,4 +1,10 @@
-{"env": 0,
+{"messages":
+ [{"severity": "warning",
+   "pos": {"line": 69, "column": 8},
+   "endPos": {"line": 69, "column": 16},
+   "data":
+   "instance `t` must be marked with `@[reducible]` or `@[instance_reducible]`"}],
+ "env": 0,
  "declarations":
  [{"value":
    {"range":
