@@ -19,7 +19,7 @@
  "env": 1}
 
 {"proofStatus":
- "Error: kernel type check failed: (kernel) declaration has free variables '[anonymous]'",
+ "Error: kernel type check failed: (kernel) declaration has free variables '[anonymous]', expression: \n  Eq.mpr (id (congrArg (fun _a => _a = 0) _fvar.78)) (Eq.refl 0)",
  "proofState": 1,
  "goals": []}
 
