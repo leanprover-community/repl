@@ -1,0 +1,11 @@
+{"cmd": "example : 1=1 := by sorry", "record": false}
+
+{"cmd": "example : 1=1 := by sorry", "record": true}
+
+{"cmd": "example : 1=1 := by sorry"}
+
+{"tactic": "rfl", "proofState": 0}
+
+{"tactic": "rfl", "proofState": 1}
+
+{"tactic": "rfl", "proofState": 2}

@@ -231,8 +231,8 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
     | _ => return "Incomplete: open goals remain"
 
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
-def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
-    M m ProofStepResponse := do
+def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none)
+  (record : Option Bool := true) : M m ProofStepResponse := do
   let messages := proofState.newMessages old?
   let messages ← messages.mapM fun m => Message.of m
   let traces ← proofState.newTraces old?
@@ -246,7 +246,9 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
   -- For debugging purposes, sometimes we print out the trees here:
   -- trees.forM fun t => do IO.println (← t.format)
   let sorries ← sorries trees none (some proofState.rootGoals)
-  let id ← recordProofSnapshot proofState
+  let id ← match record with
+  | some false => pure none
+  | _ => some <$> recordProofSnapshot proofState
   return {
     proofState := id
     goals := (← proofState.ppGoals).map fun s => s!"{s}"
@@ -323,7 +325,12 @@ def runCommand (s : Command) : M IO (CommandResponse ⊕ Error) := do
         fileMap := default,
         snap? := none,
         cancelTk? := none } }
-  let env ← recordCommandSnapshot cmdSnapshot
+  let env ← match s.record with
+  | some false => do pure none
+  | _ =>
+    let id ← recordCommandSnapshot cmdSnapshot
+    pure (some id)
+
   let jsonTrees := match s.infotree with
   | some "full" => trees
   | some "tactics" => trees.flatMap InfoTree.retainTacticInfo
@@ -358,7 +365,7 @@ def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
   | some proofState =>
     try
       let proofState' ← proofState.runString s.tactic
-      return .inl (← createProofStepReponse proofState' proofState)
+      return .inl (← createProofStepReponse proofState' proofState s.record)
     catch ex =>
       return .inr ⟨"Lean error:\n" ++ ex.toString⟩
 
@@ -419,23 +426,28 @@ def printFlush [ToString α] (s : α) : IO Unit := do
   out.flush -- Flush the output
 
 /-- Read-eval-print loop for Lean. -/
-unsafe def repl : IO Unit :=
-  StateT.run' loop {}
-where loop : M IO Unit := do
-  let query ← getLines
-  if query = "" then
-    return ()
-  if query.startsWith "#" || query.startsWith "--" then loop else
-  IO.println <| toString <| ← match ← parse query with
-  | .command r => return toJson (← runCommand r)
-  | .file r => return toJson (← processFile r)
-  | .proofStep r => return toJson (← runProofStep r)
-  | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
-  | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
-  | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
-  | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
-  printFlush "\n" -- easier to parse the output if there are blank lines
-  loop
+unsafe def repl : IO Unit := do
+  let rec loop (s : State) : IO Unit := do
+    let query ← getLines
+    if query = "" then
+      return ()
+    else if query.startsWith "#" || query.startsWith "--" then
+      loop s
+    else
+      let (result, s') ← StateT.run (do
+        match ← parse query with
+        | .command r => pure <| toJson (← runCommand r)
+        | .file r => pure <| toJson (← processFile r)
+        | .proofStep r => pure <| toJson (← runProofStep r)
+        | .pickleEnvironment r => pure <| toJson (← pickleCommandSnapshot r)
+        | .unpickleEnvironment r => pure <| toJson (← unpickleCommandSnapshot r)
+        | .pickleProofSnapshot r => pure <| toJson (← pickleProofSnapshot r)
+        | .unpickleProofSnapshot r => pure <| toJson (← unpickleProofSnapshot r)
+      ) s
+      IO.println (toString result)
+      printFlush "\n" -- easier to parse the output if there are blank lines
+      loop s'
+  loop {}
 
 /-- Main executable function, run as `lake exe repl`. -/
 unsafe def main (_ : List String) : IO Unit := do
