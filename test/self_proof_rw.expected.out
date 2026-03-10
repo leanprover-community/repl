@@ -8,18 +8,18 @@
 
 {"sorries":
  [{"proofState": 0,
-   "pos": {"line": 1, "column": 39},
+   "pos": {"line": 1, "column": 78},
    "goal": "⊢ 1 = 0",
-   "endPos": {"line": 1, "column": 44}}],
+   "endPos": {"line": 1, "column": 83}}],
  "messages":
  [{"severity": "warning",
-   "pos": {"line": 1, "column": 8},
-   "endPos": {"line": 1, "column": 24},
+   "pos": {"line": 1, "column": 47},
+   "endPos": {"line": 1, "column": 63},
    "data": "declaration uses `sorry`"}],
  "env": 1}
 
 {"proofStatus":
- "Error: kernel type check failed: (kernel) declaration has free variables '[anonymous]', expression: \n  Eq.mpr (id (congrArg (fun _a => _a = 0) _fvar.122)) (Eq.refl 0)",
+ "Error: kernel type check failed: (kernel) declaration has free variables '[anonymous]', expression: \n  Eq.mpr (id (congrArg (fun _a => _a = 0) _fvar._)) (Eq.refl 0)",
  "proofState": 1,
  "goals": []}
 
