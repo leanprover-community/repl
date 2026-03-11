@@ -1,0 +1,35 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 20},
+   "endPos": null,
+   "data": "unexpected end of input; expected '{'"},
+  {"severity": "error",
+   "pos": {"line": 1, "column": 18},
+   "endPos": {"line": 1, "column": 20},
+   "data": "unsolved goals\n⊢ 2 = 2"}],
+ "env": 0}
+
+{"env": 1}
+
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 66},
+   "endPos": null,
+   "data": "unexpected end of input; expected '{'"},
+  {"severity": "error",
+   "pos": {"line": 1, "column": 64},
+   "endPos": {"line": 1, "column": 66},
+   "data": "unsolved goals\nP Q R : Prop\n⊢ (P → Q) → (Q → R) → P → R"}]}
+
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 64},
+   "endPos": {"line": 2, "column": 13},
+   "data": "unsolved goals\nP Q R : Prop\nh1 : P → Q\nh2 : Q → R\np : P\n⊢ R"}]}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 3, "column": 0},
+   "endPos": {"line": 3, "column": 6},
+   "data": "Try this: exact h2 (h1 p)"}]}
+
