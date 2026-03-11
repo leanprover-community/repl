@@ -418,6 +418,44 @@ def printFlush [ToString α] (s : α) : IO Unit := do
   out.putStr (toString s)
   out.flush -- Flush the output
 
+/-- Parses command-line arguments of the form:
+    --flag-name value1 value2 ... --other-flag val ...
+    into a map from flag name to list of values.
+
+    example usage:
+    #eval parseFlagArgs ["--dog", "adjak", "a;lskda;l"] -- Std.HashMap.ofList [("dog", ["adjak", "a;lskda;l"])]
+    #eval parseFlagArgs ["--dog", "adjak", "a;lskda;l", "--cat", "ads"] -- Std.HashMap.ofList [("dog", ["adjak", "a;lskda;l"]), ("cat", ["ads"])]
+    #eval parseFlagArgs ["--dog", "adjak", "a;lskda;l",  "--cat", "ads", "--dog", "womp"] -- Std.HashMap.ofList [("dog", ["adjak", "a;lskda;l", "womp"]), ("cat", ["ads"])]
+    #eval parseFlagArgs ["--dog", "as"] -- Std.HashMap.ofList [("dog", ["as"])]
+    #eval parseFlagArgs ["--dog"] -- Std.HashMap.ofList [("dog", [])]
+    #eval parseFlagArgs ["asd"] -- Std.HashMap.ofList []
+-/
+def parseFlagArgs (args : List String) : Std.HashMap String (List String) :=
+  let rec go (args : List String) (cur : Option String) (acc : Std.HashMap String (List String)) :=
+    match args with
+    | [] =>
+      match cur with
+      | some flag => acc.insert flag (acc.getD flag [])  -- ensure it's inserted even if no values
+      | none => acc
+    | arg :: rest =>
+      if arg.startsWith "--" then
+        let acc :=
+          match cur with
+          | some flag => acc.insert flag (acc.getD flag [])  -- close previous flag if it had no values
+          | none => acc
+        let newFlag := arg.drop 2
+        go rest (some newFlag) acc
+      else
+        match cur with
+        | some flag =>
+          let updated := acc.insert flag (arg :: acc.getD flag [])
+          go rest (some flag) updated
+        | none =>
+          -- positional value with no preceding flag (ignored)
+          go rest none acc
+  let raw := go args none {}
+  raw.map (fun _ x => List.reverse x)
+
 /-- Read-eval-print loop for Lean. -/
 unsafe def repl : IO Unit :=
   StateT.run' loop {}
@@ -438,6 +476,13 @@ where loop : M IO Unit := do
   loop
 
 /-- Main executable function, run as `lake exe repl`. -/
-unsafe def main (_ : List String) : IO Unit := do
+unsafe def main (args : List String) : IO Unit := do
+  let flagMap := parseFlagArgs args
+  
+  let dynlibs := flagMap.getD "dynlib" []
+  for lib in dynlibs do
+    IO.println s!"Loading dynlib: {lib}"
+    Lean.loadDynlib lib
+
   initSearchPath (← Lean.findSysroot)
   repl
