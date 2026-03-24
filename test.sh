@@ -6,6 +6,10 @@ EXPECTED_DIR="test"
 
 lake build
 
+# Initialize variables to track failures
+failed_tests=()
+failure_count=0
+
 # ignore locale to ensure test `bla` runs before `bla2`
 export LC_COLLATE=C
 
@@ -36,11 +40,28 @@ for infile in $IN_DIR/*.in; do
         echo "$base: FAILED"
         # Rename the temporary file instead of removing it
         mv "$tmpfile" "${expectedfile/.expected.out/.produced.out}"
-        exit 1
+        failed_tests+=("$base")
+        ((failure_count++))
     fi
-
 done
+
+# Print summary of failures
+if [ ${#failed_tests[@]} -ne 0 ]; then
+    echo -e "\n=== Test Summary ==="
+    echo "Failed tests:"
+    for test in "${failed_tests[@]}"; do
+        echo "✗ $test"
+    done
+    echo -e "\nTotal: $failure_count failed"
+    echo "=================="
+fi
 
 # Run the Mathlib tests
 cp lean-toolchain test/Mathlib/
 cd test/Mathlib/ && ./test.sh
+mathlib_exit_code=$?
+
+# Exit with error if any test failed or if Mathlib tests failed
+if [ $failure_count -gt 0 ] || [ $mathlib_exit_code -ne 0 ]; then
+    exit 1
+fi

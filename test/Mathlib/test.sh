@@ -4,6 +4,10 @@
 IN_DIR="test"
 EXPECTED_DIR="test"
 
+# Initialize variables to track failures
+failed_tests=()
+failure_count=0
+
 lake exe cache get > /dev/null
 lake build Mathlib
 
@@ -34,8 +38,21 @@ for infile in $IN_DIR/*.in; do
         echo "$base: FAILED"
         # Rename the temporary file instead of removing it
         mv "$tmpfile" "${expectedfile/.expected.out/.produced.out}"
-        exit 1
+        failed_tests+=("$base")
+        ((failure_count++))
     fi
-
 done
 
+# Print summary of failures
+if [ ${#failed_tests[@]} -ne 0 ]; then
+    echo -e "\n=== Mathlib Test Summary ==="
+    echo "Failed tests:"
+    for test in "${failed_tests[@]}"; do
+        echo "✗ $test"
+    done
+    echo -e "\nTotal: $failure_count failed"
+    echo "========================"
+    exit 1
+fi
+
+exit 0
