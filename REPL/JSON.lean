@@ -47,7 +47,7 @@ deriving ToJson, FromJson
 structure Pos where
   line : Nat
   column : Nat
-deriving ToJson, FromJson
+deriving ToJson, FromJson, BEq, Hashable
 
 /-- Severity of a message. -/
 inductive Severity
