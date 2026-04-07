@@ -4,7 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Kim Morrison
 -/
 import REPL.Util.Pickle
-import Lean.Replay
+import REPL.Lean.Replay
 
 open System (FilePath)
 
@@ -30,7 +30,8 @@ and then replace the new constants.
 -/
 def unpickle (path : FilePath) : IO (Environment × CompactedRegion) := unsafe do
   let ((imports, map₂), region) ← _root_.unpickle (Array Import × PHashMap Name ConstantInfo) path
+  enableInitializersExecution
   let env ← importModules imports {} 0 (loadExts := true)
-  return (← env.replay (Std.HashMap.ofList map₂.toList), region)
+  return (replayToElabEnv env (Std.HashMap.ofList map₂.toList), region)
 
 end Lean.Environment
