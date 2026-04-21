@@ -426,7 +426,7 @@ where loop : M IO Unit := do
   if query = "" then
     return ()
   if query.startsWith "#" || query.startsWith "--" then loop else
-  IO.println <| toString <| ← match ← parse query with
+  IO.println <| compress <| ← match ← parse query with
   | .command r => return toJson (← runCommand r)
   | .file r => return toJson (← processFile r)
   | .proofStep r => return toJson (← runProofStep r)
