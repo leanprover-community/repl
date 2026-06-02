@@ -1,14 +1,25 @@
+{"messages":
+ [{"severity": "error",
+   "pos": {"line": 1, "column": 23},
+   "endPos": {"line": 1, "column": 25},
+   "data": "unsolved goals\n⊢ 1 = 1"},
+  {"severity": "error",
+   "pos": {"line": 2, "column": 0},
+   "endPos": {"line": 2, "column": 5},
+   "data": "unexpected token 'sorry'; expected command"}],
+ "env": 0}
+
 {"sorries":
  [{"proofState": 0,
-   "pos": {"line": 2, "column": 0},
+   "pos": {"line": 2, "column": 2},
    "goal": "⊢ 1 = 1",
-   "endPos": {"line": 2, "column": 5}}],
+   "endPos": {"line": 2, "column": 7}}],
  "messages":
  [{"severity": "warning",
    "pos": {"line": 1, "column": 8},
    "endPos": {"line": 1, "column": 11},
    "data": "declaration uses `sorry`"}],
- "env": 0}
+ "env": 1}
 
-{"env": 1}
+{"env": 2}
 
