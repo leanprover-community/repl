@@ -1,0 +1,17 @@
+{"env": 0}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 5},
+   "data": "true"}]}
+
+{"message": "Unknown environment."}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 5},
+   "data": "37"}],
+ "env": 1}
+

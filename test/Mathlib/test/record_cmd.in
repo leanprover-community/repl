@@ -1,0 +1,9 @@
+{"cmd": "import Mathlib"}
+
+{"cmd": "theorem mathd_numbertheory_345 : (2000 + 2001 + 2002 + 2003 + 2004 + 2005 + 2006) % 7 = 0 := sorry", "env":0, "record": false}
+
+{"tactic": "norm_num", "proofState": 0}
+
+{"cmd": "theorem mathd_numbertheory_345 : (2000 + 2001 + 2002 + 2003 + 2004 + 2005 + 2006) % 7 = 0 := sorry", "env":0}
+
+{"tactic": "norm_num", "proofState": 2}
