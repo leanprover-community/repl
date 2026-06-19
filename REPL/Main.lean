@@ -427,13 +427,13 @@ where loop : M IO Unit := do
     return ()
   if query.startsWith "#" || query.startsWith "--" then loop else
   IO.println <| toString <| ← match ← parse query with
-  | .command r => return toJson (← runCommand r)
-  | .file r => return toJson (← processFile r)
-  | .proofStep r => return toJson (← runProofStep r)
-  | .pickleEnvironment r => return toJson (← pickleCommandSnapshot r)
-  | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
-  | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
-  | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
+  | .command r => pure <| toJson (← runCommand r)
+  | .file r => pure <| toJson (← processFile r)
+  | .proofStep r => pure <| toJson (← runProofStep r)
+  | .pickleEnvironment r => pure <| toJson (← pickleCommandSnapshot r)
+  | .unpickleEnvironment r => pure <| toJson (← unpickleCommandSnapshot r)
+  | .pickleProofSnapshot r => pure <| toJson (← pickleProofSnapshot r)
+  | .unpickleProofSnapshot r => pure <| toJson (← unpickleProofSnapshot r)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 
