@@ -1,0 +1,5 @@
+{ "cmd": "import Dynlib" }
+
+{"env": 0}
+
+{ "cmd": "#eval add 2 2", "env": 0 }
