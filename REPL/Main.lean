@@ -71,7 +71,7 @@ structure State where
   Declarations with containing `sorry` record a proof state at each sorry,
   and report the numerical index for the recorded state at each sorry.
   -/
-  proofStates : Array ProofSnapshot := #[]
+  proofStates : Array (Option ProofSnapshot) := #[]
 
 /--
 The Lean REPL monad.
@@ -91,7 +91,7 @@ def recordCommandSnapshot (state : CommandSnapshot) : M m Nat := do
 /-- Record a `ProofSnapshot` into the REPL state, returning its index for future use. -/
 def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
   let id := (← get).proofStates.size
-  modify fun s => { s with proofStates := s.proofStates.push proofState }
+  modify fun s => { s with proofStates := s.proofStates.push (some proofState) }
   return id
 
 def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Option (List MVarId))
@@ -272,7 +272,7 @@ def unpickleCommandSnapshot (n : UnpickleEnvironment) : M IO CommandResponse := 
 /-- Pickle a `ProofSnapshot`, generating a JSON response. -/
 -- This generates a new identifier, which perhaps is not what we want?
 def pickleProofSnapshot (n : PickleProofState) : M m (ProofStepResponse ⊕ Error) := do
-  match (← get).proofStates[n.proofState]? with
+  match (← get).proofStates[n.proofState]?.join with
   | none => return .inr ⟨"Unknown proof State."⟩
   | some proofState =>
     discard <| proofState.pickle n.pickleTo
@@ -289,6 +289,14 @@ def unpickleProofSnapshot (n : UnpickleProofState) : M IO (ProofStepResponse ⊕
     return .inr ⟨"Unknown environment."⟩
   let (proofState, _) ← ProofSnapshot.unpickle n.unpickleProofStateFrom cmdSnapshot?
   Sum.inl <$> createProofStepReponse proofState
+
+/-- Remove a proof state from the REPL state. -/
+def removeProofState (n : RemoveProofState) : M m (SuccessResponse ⊕ Error) := do
+  match (← get).proofStates[n.removeProofState]?.join with
+  | none => return .inr ⟨"Unknown proof state."⟩
+  | some _ =>
+    modify fun s => { s with proofStates := s.proofStates.set! n.removeProofState none }
+    return .inl (SuccessResponse.mk true)
 
 /--
 Run a command, returning the id of the new environment, and any messages and sorries.
@@ -353,7 +361,7 @@ Run a single tactic, returning the id of the new proof statement, and the new go
 -/
 -- TODO detect sorries?
 def runProofStep (s : ProofStep) : M IO (ProofStepResponse ⊕ Error) := do
-  match (← get).proofStates[s.proofState]? with
+  match (← get).proofStates[s.proofState]?.join with
   | none => return .inr ⟨"Unknown proof state."⟩
   | some proofState =>
     try
@@ -388,6 +396,7 @@ inductive Input
 | unpickleEnvironment : REPL.UnpickleEnvironment → Input
 | pickleProofSnapshot : REPL.PickleProofState → Input
 | unpickleProofSnapshot : REPL.UnpickleProofState → Input
+| removeProofState : REPL.RemoveProofState → Input
 
 /-- Parse a user input string to an input command. -/
 def parse (query : String) : IO Input := do
@@ -405,6 +414,8 @@ def parse (query : String) : IO Input := do
     | .ok (r : REPL.PickleProofState) => return .pickleProofSnapshot r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.UnpickleProofState) => return .unpickleProofSnapshot r
+    | .error _ => match fromJson? j with
+    | .ok (r : REPL.RemoveProofState) => return .removeProofState r
     | .error _ => match fromJson? j with
     | .ok (r : REPL.Command) => return .command r
     | .error _ => match fromJson? j with
@@ -434,6 +445,7 @@ where loop : M IO Unit := do
   | .unpickleEnvironment r => return toJson (← unpickleCommandSnapshot r)
   | .pickleProofSnapshot r => return toJson (← pickleProofSnapshot r)
   | .unpickleProofSnapshot r => return toJson (← unpickleProofSnapshot r)
+  | .removeProofState r => return toJson (← removeProofState r)
   printFlush "\n" -- easier to parse the output if there are blank lines
   loop
 
