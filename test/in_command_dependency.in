@@ -1,0 +1,6 @@
+{"cmd": "theorem x : False := sorry\nexample : False := by exact?"}
+
+{"cmd": "theorem x : False := sorry\nexample : False := sorry"}
+
+{"proofState": 2, "tactic": "exact?"}
+
