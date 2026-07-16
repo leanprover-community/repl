@@ -1,5 +1,6 @@
 name = "REPL"
 defaultTargets = ["repl"]
+testDriver = "test"
 
 [[lean_lib]]
 name = "REPL"
