@@ -1,0 +1,21 @@
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 6},
+   "data": "1 : Nat"}],
+ "env": 0}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 2, "column": 0},
+   "endPos": {"line": 2, "column": 6},
+   "data": "(1 : Nat) : Nat"}],
+ "env": 1}
+
+{"messages":
+ [{"severity": "info",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 6},
+   "data": "(1 : Nat) : Nat"}],
+ "env": 2}
+
