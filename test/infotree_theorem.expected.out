@@ -148,8 +148,7 @@
     {"node": null,
      "kind": "CustomInfo",
      "children":
-     [{"node": null, "kind": "PartialTermInfo", "children": []},
-      {"node":
+     [{"node":
        {"stx":
         {"range":
          {"synthetic": false,
