@@ -1,0 +1,3 @@
+{ "cmd": "@[extern \"add\"]\nopaque add' (a b : UInt32) : UInt32" }
+
+{ "cmd": "#eval add' 2 2", "env": 0 }
