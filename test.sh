@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Define the paths
 IN_DIR="test"
@@ -42,5 +42,6 @@ for infile in $IN_DIR/*.in; do
 done
 
 # Run the Mathlib tests
+rm -f test/Mathlib/lean-toolchain
 cp lean-toolchain test/Mathlib/
 cd test/Mathlib/ && ./test.sh
