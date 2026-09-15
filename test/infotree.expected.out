@@ -1,5 +1,10 @@
 {"messages":
  [{"severity": "warning",
+   "pos": {"line": 1, "column": 28},
+   "endPos": {"line": 1, "column": 39},
+   "data":
+   "Tactic `constructor` applied constructor `Nat.zero`, but `Nat.succ` also matches the goal.\n\nHint: Use `constructor!` to apply the first matching constructor without this warning:\n  [apply] constructor!"},
+  {"severity": "warning",
    "pos": {"line": 1, "column": 7},
    "endPos": {"line": 1, "column": 8},
    "data":
@@ -13,7 +18,7 @@
       "finish": {"line": 1, "column": 39}},
      "pp": "constructor",
      "kind": "Lean.Parser.Tactic.constructor",
-     "argKinds": ["constructor"]},
+     "argKinds": ["constructor", "Lean.Parser.Tactic.optConfig"]},
     "name": "Lean.Parser.Tactic.constructor",
     "goalsBefore": ["h : Int\n⊢ Nat"],
     "goalsAfter": []},
