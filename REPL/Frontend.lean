@@ -19,8 +19,9 @@ def processCommandsWithInfoTrees
     (inputCtx : Parser.InputContext) (parserState : Parser.ModuleParserState)
     (commandState : Command.State) : IO (Command.State × List Message × List InfoTree) := do
   let commandState := { commandState with infoState.enabled := true }
+  let oldMessages := commandState.messages.toList
   let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
-  pure (s, s.messages.toList, s.infoState.trees.toList)
+  pure (s, oldMessages ++ s.messages.toList, s.infoState.trees.toList)
 
 /--
 Process some text input, with or without an existing command state.
