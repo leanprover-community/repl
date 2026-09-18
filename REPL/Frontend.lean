@@ -5,9 +5,41 @@ Authors: Scott Morrison
 -/
 import Lean.Elab.Frontend
 
-open Lean Elab
+open Lean Elab Language
 
 namespace Lean.Elab.IO
+
+partial def IO.processCommandsIncrementally' (inputCtx : Parser.InputContext)
+    (parserState : Parser.ModuleParserState) (commandState : Command.State)
+    (old? : Option IncrementalState) :
+    BaseIO (List (IncrementalState × Option InfoTree)) := do
+  let task ← Language.Lean.processCommands inputCtx parserState commandState
+    (old?.map fun old => (old.inputCtx, old.initialSnap))
+  return go task.get task #[]
+where
+  go initialSnap t commands :=
+    let snap := t.get
+    let commands := commands.push snap
+    -- Opting into reuse also enables incremental reporting, so make sure to collect messages from
+    -- all snapshots
+    let messages := toSnapshotTree initialSnap
+      |>.getAll.map (·.diagnostics.msgLog)
+      |>.foldl (· ++ ·) {}
+    -- In contrast to messages, we should collect info trees only from the top-level command
+    -- snapshots as they subsume any info trees reported incrementally by their children.
+    let trees := commands.map (·.elabSnap.infoTreeSnap.get.infoTree?) |>.filterMap id |>.toPArray'
+    let result : (IncrementalState × Option InfoTree) :=
+      ({ commandState := { snap.elabSnap.resultSnap.get.cmdState with messages, infoState.trees := trees }
+         , parserState := snap.parserState
+         , cmdPos := snap.parserState.pos
+         , commands := commands.map (·.stx)
+         , inputCtx := inputCtx
+         , initialSnap := initialSnap
+       }, snap.elabSnap.infoTreeSnap.get.infoTree?)
+    if let some next := snap.nextCmdSnap? then
+      result :: go initialSnap next.task commands
+    else
+      [result]
 
 /--
 Wrapper for `IO.processCommands` that enables info states, and returns
@@ -17,41 +49,36 @@ Wrapper for `IO.processCommands` that enables info states, and returns
 -/
 def processCommandsWithInfoTrees
     (inputCtx : Parser.InputContext) (parserState : Parser.ModuleParserState)
-    (commandState : Command.State) : IO (Command.State × List Message × List InfoTree) := do
+    (commandState : Command.State) (incrementalState? : Option IncrementalState := none)
+    : IO (List (IncrementalState × Option InfoTree) × List Message) := do
   let commandState := { commandState with infoState.enabled := true }
-  let s ← IO.processCommands inputCtx parserState commandState <&> Frontend.State.commandState
-  pure (s, s.messages.toList, s.infoState.trees.toList)
+  let incStates ← IO.processCommandsIncrementally' inputCtx parserState commandState incrementalState?
+  pure (incStates, (incStates.getLast?.map (·.1.commandState.messages.toList)).getD {})
 
 /--
 Process some text input, with or without an existing command state.
-If there is no existing environment, we parse the input for headers (e.g. import statements),
-and create a new environment.
-Otherwise, we add to the existing environment.
 
 Returns:
-1. The header-only command state (only useful when cmdState? is none)
-2. The resulting command state after processing the entire input
-3. List of messages
-4. List of info trees
+1. The resulting command state after processing the entire input
+2. List of messages
+3. List of info trees along with Command.State from the incremental processing
 -/
 def processInput (input : String) (cmdState? : Option Command.State)
     (opts : Options := {}) (fileName : Option String := none) :
-    IO (Command.State × Command.State × List Message × List InfoTree) := unsafe do
+    IO (Command.State × List (IncrementalState × Option InfoTree) × List Message) := unsafe do
   Lean.initSearchPath (← Lean.findSysroot)
   enableInitializersExecution
   let fileName   := fileName.getD "<input>"
   let inputCtx   := Parser.mkInputContext input fileName
-
   match cmdState? with
   | none => do
     -- Split the processing into two phases to prevent self-reference in proofs in tactic mode
     let (header, parserState, messages) ← Parser.parseHeader inputCtx
     let (env, messages) ← processHeader header opts messages inputCtx
     let headerOnlyState := Command.mkState env messages opts
-    let (cmdState, messages, trees) ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState
-    return (headerOnlyState, cmdState, messages, trees)
-
+    let incStates ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState
+    return (headerOnlyState, incStates)
   | some cmdStateBefore => do
     let parserState : Parser.ModuleParserState := {}
-    let (cmdStateAfter, messages, trees) ← processCommandsWithInfoTrees inputCtx parserState cmdStateBefore
-    return (cmdStateBefore, cmdStateAfter, messages, trees)
+    let incStates ← processCommandsWithInfoTrees inputCtx parserState cmdStateBefore
+    return (cmdStateBefore, incStates)
