@@ -230,6 +230,89 @@ def getProofStatus (proofState : ProofSnapshot) : M m String := do
 
     | _ => return "Incomplete: open goals remain"
 
+def replaceMVarsWithSorry (e : Expr) : MetaM Expr := do
+  match e with
+  | .mvar _ => do
+    let mvarType ← Meta.inferType e
+    let sorryTerm ← Meta.mkSorry mvarType false
+    return sorryTerm
+  | .forallE _ d b _ => let d ← replaceMVarsWithSorry d; let b ← replaceMVarsWithSorry b; return e.updateForallE! d b
+  | .lam _ d b _     => let d ← replaceMVarsWithSorry d; let b ← replaceMVarsWithSorry b; return e.updateLambdaE! d b
+  | .mdata _ b       => let b ← replaceMVarsWithSorry b; return e.updateMData! b
+  | .letE _ t v b nonDep  => let t ← replaceMVarsWithSorry t; let v ← replaceMVarsWithSorry v; let b ← replaceMVarsWithSorry b; return e.updateLet! t v b nonDep
+  | .app f a         => let f ← replaceMVarsWithSorry f; let a ← replaceMVarsWithSorry a; return e.updateApp! f a
+  | .proj _ _ b      => let b ← replaceMVarsWithSorry b; return e.updateProj! b
+  | e                => return e
+
+def checkAssignment (proofState : ProofSnapshot) (oldGoal : MVarId) (pf : Expr) : MetaM String := do
+  let occursCheck ← Lean.occursCheck oldGoal pf
+  if !occursCheck then
+    return s!"Error: Goal {oldGoal.name} assignment is circular"
+
+  -- Check that all MVars in the proof are goals in new state
+  let mvars ← Meta.getMVars pf
+
+  -- Loop through all unassigned metavariables recursively (note that delayed assigned ones are included).
+  for mvar in mvars do
+    let delayedAssigned ← mvar.isDelayedAssigned
+    -- We only care about the leaf metavariables, so we skip delayed assigned ones.
+    if delayedAssigned then
+      continue
+
+    -- If the metavariable in the assignment is a new goal, it's fine.
+    if proofState.tacticState.goals.contains mvar then
+      continue
+
+    return s!"Error: Goal {oldGoal.name} assignment contains unassigned metavariables"
+
+  return "OK"
+
+/--
+Verifies that all goals from the old state are properly handled in the new state.
+Returns either "OK" or an error message describing the first failing goal.
+-/
+def verifyGoalAssignment (proofState : ProofSnapshot) (oldProofState? : Option ProofSnapshot := none) :
+    M m String := do
+  match oldProofState? with
+  | none       => return "OK"  -- Nothing to verify
+  | some oldSt => do
+    let mut errorMsg := ""
+    for oldGoal in oldSt.tacticState.goals do
+      -- skip goals that are still open
+      if proofState.tacticState.goals.contains oldGoal then
+        continue
+
+      -- run checks and build closed declaration inside the goal's local context
+      let (res, _) ← proofState.runMetaM do
+        -- switch to the local context of the goal
+        oldGoal.withContext do
+        match ← getExprMVarAssignment? oldGoal with
+        | none       => return s!"Error: Goal {oldGoal.name} was not solved"
+        | some pfRaw => do
+          let pf ← instantiateMVars pfRaw
+          -- First check that the proof has the expected type
+          let pft ← Meta.inferType pf >>= instantiateMVars
+          let expectedType ← Meta.inferType (mkMVar oldGoal) >>= instantiateMVars
+          unless (← Meta.isDefEq pft expectedType) do
+            return s!"Error: step assignment has type {pft} but goal has type {expectedType}"
+
+          let chk ← checkAssignment proofState oldGoal pf
+          if chk != "OK" then return chk
+
+          let pf ← instantiateMVars pfRaw
+          let pf ← replaceMVarsWithSorry pf
+          try
+            _ ← Lean.Meta.check pf
+            return "OK"
+          catch ex =>
+            return s!"Error: kernel type check failed: {← ex.toMessageData.toString}"
+
+      if res != "OK" then
+        errorMsg := res
+        break
+
+    return if errorMsg == "" then "OK" else errorMsg
+
 /-- Record a `ProofSnapshot` and generate a JSON response for it. -/
 def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnapshot := none) :
     M m ProofStepResponse := do
@@ -253,7 +336,8 @@ def createProofStepReponse (proofState : ProofSnapshot) (old? : Option ProofSnap
     messages
     sorries
     traces
-    proofStatus := (← getProofStatus proofState) }
+    proofStatus := (← getProofStatus proofState)
+    stepVerification := (← verifyGoalAssignment proofState old?)  }
 
 /-- Pickle a `CommandSnapshot`, generating a JSON response. -/
 def pickleCommandSnapshot (n : PickleEnvironment) : M m (CommandResponse ⊕ Error) := do
