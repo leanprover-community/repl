@@ -6,6 +6,7 @@ Authors: Scott Morrison
 import Lean.Data.Json
 import Lean.Message
 import Lean.Elab.InfoTree.Main
+import REPL.Lean.InfoTree.ToJson
 
 open Lean Elab InfoTree
 
@@ -13,12 +14,15 @@ namespace REPL
 
 structure CommandOptions where
   allTactics : Option Bool := none
+  declarations: Option Bool := none
   rootGoals : Option Bool := none
   /--
   Should be "full", "tactics", "original", or "substantive".
   Anything else is ignored.
   -/
   infotree : Option String
+  incrementality : Option Bool := none -- whether to use incremental mode optimization
+  setOptions : Option Options := none
 
 /-- Run Lean commands.
 If `env = none`, starts a new session (in which you can use `import`).
@@ -47,7 +51,7 @@ deriving ToJson, FromJson
 structure Pos where
   line : Nat
   column : Nat
-deriving ToJson, FromJson
+deriving ToJson, FromJson, BEq, Hashable
 
 /-- Severity of a message. -/
 inductive Severity
@@ -117,6 +121,92 @@ def Tactic.of (goals tactic : String) (pos endPos : Lean.Position) (proofState :
     proofState,
     usedConstants }
 
+structure DocString where
+  content : String
+  range : Elab.Syntax.Range
+deriving ToJson
+
+/-- See `Lean.Elab.Modifiers` -/
+structure DeclModifiers where
+  docString : Option DocString := none
+  visibility : String := "regular" -- "regular", "private", or "public"
+  computeKind : String := "regular" -- "regular", "meta", or "noncomputable"
+  recKind : String := "default" -- "default", "partial", or "nonrec"
+  isProtected : Bool := false
+  isUnsafe : Bool := false
+  attributes : List String := []
+deriving ToJson
+
+structure DeclSignature where
+  pp : String
+  constants : Array Name
+  range : Elab.Syntax.Range
+deriving ToJson
+
+structure BinderView where
+  id   : Syntax
+  type : Syntax
+  binderInfo : String
+
+instance : ToJson BinderView where
+  toJson (bv : BinderView) : Json :=
+    Json.mkObj [
+      ("id", toString bv.id.prettyPrint),
+      ("type", toString bv.type.prettyPrint),
+      ("binderInfo", bv.binderInfo)
+    ]
+
+structure DeclBinders where
+  pp : String
+  groups : Array String
+  map : Array BinderView
+  range : Elab.Syntax.Range
+deriving ToJson
+
+structure DeclType where
+  pp : String
+  constants : Array Name
+  range : Elab.Syntax.Range
+deriving ToJson
+
+structure DeclValue where
+  pp : String
+  constants : Array Name
+  range : Elab.Syntax.Range
+deriving ToJson
+
+local instance : ToJson OpenDecl where
+  toJson
+  | .simple ns except => json%{
+    simple: { «namespace»: $ns, except: $except }
+  }
+  | .explicit id declName => json%{
+    rename: { name: $declName, as: $id }
+  }
+
+structure ScopeInfo where
+  varDecls : Array String
+  includeVars : Array Name
+  omitVars : Array Name
+  levelNames : Array Name
+  currNamespace : Name
+  openDecl : List OpenDecl
+deriving ToJson
+
+structure DeclarationInfo where
+  pp: String
+  range : Elab.Syntax.Range
+  scope : ScopeInfo
+  name : Name
+  fullName : Name
+  kind : String
+  modifiers : DeclModifiers
+  signature: DeclSignature
+  binders : Option DeclBinders := none
+  type : Option DeclType := none
+  value : Option DeclValue := none
+deriving ToJson
+
 /--
 A response to a Lean command.
 `env` can be used in later calls, to build on the stored environment.
@@ -126,8 +216,8 @@ structure CommandResponse where
   messages : List Message := []
   sorries : List Sorry := []
   tactics : List Tactic := []
+  declarations: List DeclarationInfo := []
   infotree : Option Json := none
-deriving FromJson
 
 def Json.nonemptyList [ToJson α] (k : String) : List α → List (String × Json)
   | [] => []
@@ -139,6 +229,7 @@ instance : ToJson CommandResponse where
     Json.nonemptyList "messages" r.messages,
     Json.nonemptyList "sorries" r.sorries,
     Json.nonemptyList "tactics" r.tactics,
+    Json.nonemptyList "declarations" r.declarations,
     match r.infotree with | some j => [("infotree", j)] | none => []
   ]
 
