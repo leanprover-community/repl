@@ -64,6 +64,7 @@ def kind : Info → String
   | .ofFVarAliasInfo      _ => "FVarAliasInfo"
   | .ofFieldRedeclInfo    _ => "FieldRedeclInfo"
   | .ofChoiceInfo         _ => "ChoiceInfo"
+  | .ofChoiceResolutionInfo _ => "ChoiceResolutionInfo"
   | .ofDelabTermInfo      _ => "DelabTermInfo"
   | .ofErrorNameInfo      _ => "ErrorNameInfo"
   | .ofDocElabInfo        _ => "DocElabInfo"
@@ -84,6 +85,7 @@ def stx? : Info → Option Syntax
   | .ofFVarAliasInfo      _    => none
   | .ofFieldRedeclInfo    info => info.stx
   | .ofChoiceInfo         info => info.stx
+  | .ofChoiceResolutionInfo info => info.stx
   | .ofDelabTermInfo      info => info.stx
   | .ofErrorNameInfo      info => info.stx
   | .ofDocElabInfo        info => info.stx
