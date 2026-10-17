@@ -83,14 +83,14 @@ def processInput (input : String) (cmdState? : Option Command.State)
     | some cachedHeaderState => do
       -- Header is cached, use it as the base command state
       let (incStates, messages) ← processCommandsWithInfoTrees inputCtx parserState cachedHeaderState incrementalState?
-      return (cachedHeaderState, incStates, messages, headerCache)
+      return (cachedHeaderState, incStates, cachedHeaderState.messages.toList ++ messages, headerCache)
     | none => do
       -- Header not cached, process it and cache the result
       let (env, messages) ← processHeader header opts messages inputCtx
       let headerOnlyState := Command.mkState env messages opts
-      let headerCache := headerCache.insert importKey headerOnlyState
-      let (incStates, messages) ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState incrementalState?
-      return (headerOnlyState, incStates, messages, headerCache)
+      let headerCache := if !messages.hasErrors then headerCache.insert importKey headerOnlyState else headerCache
+      let (incStates, cmdMessages) ← processCommandsWithInfoTrees inputCtx parserState headerOnlyState incrementalState?
+      return (headerOnlyState, incStates, messages.toList ++ cmdMessages, headerCache)
   | some cmdStateBefore => do
     let parserState : Parser.ModuleParserState := {}
     let (incStates, messages) ← processCommandsWithInfoTrees inputCtx parserState cmdStateBefore incrementalState?
