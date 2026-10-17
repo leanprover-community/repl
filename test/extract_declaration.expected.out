@@ -359,25 +359,25 @@
     "pp":
     " :=  fun  |  `(  $  lhs   ≋   $  rhs  )  =>  `  `( BEq.beq\n\n $  lhs  $  rhs  )  |  _  =>  no_error_if_unused%  throw  Lean.Macro.Exception.unsupportedSyntax ",
     "constants":
-    ["throw._@.3937598925._hygCtx._hyg.9",
+    ["throw._@.3937598925._hygCtx._hyg.10",
      "lhs._@.3937598925._hygCtx._hyg.3",
+     "Lean.Macro.Exception.unsupportedSyntax._@.3937598925._hygCtx._hyg.10",
      "BEq.beq",
-     "rhs._@.3937598925._hygCtx._hyg.3",
-     "Lean.Macro.Exception.unsupportedSyntax._@.3937598925._hygCtx._hyg.9"]},
+     "rhs._@.3937598925._hygCtx._hyg.3"]},
    "type":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " Macro ",
-    "constants": ["Macro._@.3937598925._hygCtx._hyg.9"]},
+    "constants": ["Macro._@.3937598925._hygCtx._hyg.10"]},
    "signature":
    {"range":
     {"synthetic": true,
      "start": {"line": 35, "column": 0},
      "finish": {"line": 35, "column": 32}},
     "pp": " :  Macro ",
-    "constants": ["Macro._@.3937598925._hygCtx._hyg.9"]},
+    "constants": ["Macro._@.3937598925._hygCtx._hyg.10"]},
    "scope":
    {"varDecls": ["variable {α : Type u}"],
     "openDecl": [],
