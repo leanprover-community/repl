@@ -215,7 +215,7 @@ def create (ctx : ContextInfo) (lctx? : Option LocalContext) (prevEnv? : Option 
       | some env => { s with env }
       let coreCtx ← readThe Core.Context
       -- Ensure tactic snapshots run synchronously.
-      let coreCtx := { coreCtx with options := coreCtx.options.insert `Elab.async false }
+      let coreCtx := coreCtx.setOptions (coreCtx.options.insert `Elab.async false)
       pure <|
       { coreState := s
         coreContext := coreCtx
