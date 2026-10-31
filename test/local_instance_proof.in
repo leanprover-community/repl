@@ -1,0 +1,21 @@
+{"cmd": "def test (α : Type) [s : Inhabited α] : α := @Inhabited.default α s"}
+
+{"cmd": "def test2 (α : Type) [Inhabited α] : α := test α", "env": 0}
+
+{"cmd": "def test2 (α : Type) [Inhabited α] : α := sorry", "env": 0}
+
+{"tactic": "exact test α", "proofState": 0}
+
+{"cmd": "def test2 (α : Type) [Inhabited α] : α := by sorry", "env": 0}
+
+{"tactic": "exact test α", "proofState": 2}
+
+{"cmd": "variable (α : Type) [s : Inhabited α]", "env": 0}
+
+{"cmd": "def test2 : α := sorry", "env": 4}
+
+{"tactic": "exact test α", "proofState": 4}
+
+{"cmd": "def test2 : α := by sorry", "env": 4}
+
+{"tactic": "exact test α", "proofState": 6}
