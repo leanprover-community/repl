@@ -1,0 +1,3 @@
+{"cmd": "#check sorry"}
+
+{"cmd": "#eval (1 : Nat) + sorry"}
