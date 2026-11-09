@@ -51,7 +51,7 @@ The results are of the form
  "env": 6}
  ```
  showing any messages generated, or sorries with their goal states.
- Information is generated for tactic mode sorries, but not for term mode sorries.
+ Information is generated for both tactic mode and term mode sorries.
 -/
 
 open Lean Elab
@@ -96,9 +96,7 @@ def recordProofSnapshot (proofState : ProofSnapshot) : M m Nat := do
 
 def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Option (List MVarId))
 : M m (List Sorry) :=
-  trees.flatMap InfoTree.sorries |>.filter (fun t => match t.2.1 with
-    | .term _ none => false
-    | _ => true ) |>.mapM
+  trees.flatMap InfoTree.sorries |>.mapM
       fun ⟨ctx, g, pos, endPos⟩ => do
         let (goal, proofState) ← match g with
         | .tactic g => do
@@ -108,10 +106,15 @@ def sorries (trees : List InfoTree) (env? : Option Environment) (rootGoals? : Op
               | none => throwError "unknown metavariable '{g}'"
           let s ← ProofSnapshot.create ctx lctx env? [g] rootGoals?
           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
-        | .term lctx (some t) => do
+        | .term lctx e expectedType? => do
+          -- A `sorry` elaborated in a position without an expected type
+          -- (e.g. the `sorry` in `#check sorry`) has `expectedType? = none`;
+          -- fall back to the type of the elaborated term.
+          let t ← match expectedType? with
+            | some t => pure t
+            | none => ctx.runMetaM lctx do instantiateMVars (← Meta.inferType e)
           let s ← ProofSnapshot.create ctx lctx env? [] rootGoals? [t]
           pure ("\n".intercalate <| (← s.ppGoals).map fun s => s!"{s}", some s)
-        | .term _ none => unreachable!
         let proofStateId ← proofState.mapM recordProofSnapshot
         return Sorry.of goal pos endPos proofStateId
 

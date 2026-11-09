@@ -239,7 +239,14 @@ def findSorryTermNodes (t : InfoTree) : List (TermInfo × ContextInfo) :=
 
 inductive SorryType
 | tactic : MVarId → SorryType
-| term : LocalContext → Option Expr → SorryType
+/--
+A `sorry` term: the `LocalContext` at the `sorry`, the elaborated expression,
+and the expected type, if there was one.
+
+The expected type is absent when the `sorry` is elaborated in a position
+without one, e.g. the `sorry` in `#check sorry`.
+-/
+| term : LocalContext → Expr → Option Expr → SorryType
 deriving Inhabited
 
 /--
@@ -255,7 +262,7 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
     ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, .tactic i.goalsBefore.head!,
       stxRange ctx.fileMap i.stx)) ++
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
-    (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
+    (ctx, .term i.lctx i.expr i.expectedType?, stxRange ctx.fileMap i.stx))
 
 def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × List MVarId × Position × Position × Array Name) :=
     -- HACK: creating a child ngen
