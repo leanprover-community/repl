@@ -180,7 +180,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
 partial def findAllInfoTactics (t : InfoTree) (ctx? : Option ContextInfo) (rootGoals : List MVarId := []) :
   List (Info × Option ContextInfo × List MVarId) :=
   match t with
-  | .context ctx t => t.findAllInfoTactics ctx? rootGoals
+  | .context ctx t => t.findAllInfoTactics (ctx.mergeIntoOuter? ctx?) rootGoals
   | .node info ts =>
     let tInfo := match info with
     | .ofTacticInfo i =>
