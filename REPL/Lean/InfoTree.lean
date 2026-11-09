@@ -293,7 +293,7 @@ def range (info : TacticInfo) (ctx : ContextInfo) : Position × Position := ctx.
 /-- Pretty print a tactic. -/
 def pp (info : TacticInfo) (ctx : ContextInfo) : IO Format :=
   ctx.runMetaM {} try
-    Lean.PrettyPrinter.ppTactic ⟨stx⟩
+    Lean.PrettyPrinter.ppTactic ⟨info.stx⟩
   catch _ =>
     pure "<failed to pretty print>"
 
