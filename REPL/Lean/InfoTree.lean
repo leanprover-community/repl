@@ -180,7 +180,7 @@ partial def findAllInfo (t : InfoTree) (ctx? : Option ContextInfo) (p : Info →
 partial def findAllInfoTactics (t : InfoTree) (ctx? : Option ContextInfo) (rootGoals : List MVarId := []) :
   List (Info × Option ContextInfo × List MVarId) :=
   match t with
-  | .context ctx t => t.findAllInfoTactics (ctx.mergeIntoOuter? ctx?) rootGoals
+  | .context ctx t => t.findAllInfoTactics ctx? rootGoals
   | .node info ts =>
     let tInfo := match info with
     | .ofTacticInfo i =>
@@ -239,7 +239,14 @@ def findSorryTermNodes (t : InfoTree) : List (TermInfo × ContextInfo) :=
 
 inductive SorryType
 | tactic : MVarId → SorryType
-| term : LocalContext → Option Expr → SorryType
+/--
+A `sorry` term: the `LocalContext` at the `sorry`, the elaborated expression,
+and the expected type, if there was one.
+
+The expected type is absent when the `sorry` is elaborated in a position
+without one, e.g. the `sorry` in `#check sorry`.
+-/
+| term : LocalContext → Expr → Option Expr → SorryType
 deriving Inhabited
 
 /--
@@ -255,7 +262,7 @@ def sorries (t : InfoTree) : List (ContextInfo × SorryType × Position × Posit
     ({ ctx with mctx := i.mctxBefore, ngen := ctx.ngen.mkChild.1 }, .tactic i.goalsBefore.head!,
       stxRange ctx.fileMap i.stx)) ++
   (t.findSorryTermNodes.map fun ⟨i, ctx⟩ =>
-    (ctx, .term i.lctx i.expectedType?, stxRange ctx.fileMap i.stx))
+    (ctx, .term i.lctx i.expr i.expectedType?, stxRange ctx.fileMap i.stx))
 
 def tactics (t : InfoTree) : List (ContextInfo × Syntax × List MVarId × List MVarId × Position × Position × Array Name) :=
     -- HACK: creating a child ngen
@@ -286,7 +293,7 @@ def range (info : TacticInfo) (ctx : ContextInfo) : Position × Position := ctx.
 /-- Pretty print a tactic. -/
 def pp (info : TacticInfo) (ctx : ContextInfo) : IO Format :=
   ctx.runMetaM {} try
-    Lean.PrettyPrinter.ppTactic ⟨info.stx⟩
+    Lean.PrettyPrinter.ppTactic ⟨stx⟩
   catch _ =>
     pure "<failed to pretty print>"
 
