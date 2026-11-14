@@ -178,11 +178,20 @@ def runSyntax (p : ProofSnapshot) (t : Syntax) : IO ProofSnapshot :=
 /--
 Parse a string into a `Syntax`, evaluate it as a `TacticM` tactic,
 and run it in the current `ProofSnapshot`.
+
+The input is first parsed with the `tactic` category, which accepts a single tactic.
+If that fails, we retry with the input parenthesised, so that a `;`-separated sequence
+(e.g. `constructor; exact h`) parses as a `tacticSeq` inside a `paren` node, mirroring how
+the same text behaves in a `by` block. If the parenthesised parse also fails,
+the original error is reported.
 -/
-def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot :=
+def runString (p : ProofSnapshot) (t : String) : IO ProofSnapshot := do
   match Parser.runParserCategory p.coreState.env `tactic t with
-  | .error e => throw (IO.userError e)
   | .ok stx => p.runSyntax stx
+  | .error e =>
+    match Parser.runParserCategory p.coreState.env `tactic ("(" ++ t ++ ")") with
+    | .ok stx => p.runSyntax stx
+    | .error _ => throw (IO.userError e)
 
 /-- Pretty print the current goals in the `ProofSnapshot`. -/
 def ppGoals (p : ProofSnapshot) : IO (List Format) :=
@@ -266,7 +275,7 @@ When pickling the `Environment`, we do so relative to its imports.
 def pickle (p : ProofSnapshot) (path : FilePath) : IO Unit := do
   let env := p.coreState.env
   let p' := { p with coreState := { p.coreState with env := ← mkEmptyEnvironment }}
-  let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaContext p'.metaState
+  let (cfg, _) ← Lean.Meta.getConfig.toIO p'.coreContext p'.coreState p'.metaState p'.metaContext
   _root_.pickle path
     (env.header.imports,
      env.constants.map₂,
