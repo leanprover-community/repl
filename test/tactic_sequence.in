@@ -1,0 +1,5 @@
+{"cmd": "example (p q : Prop) (hp : p) (hq : q) : p /\\ q := by sorry"}
+
+{"tactic": "constructor", "proofState": 0}
+
+{"tactic": "exact hp; exact hq", "proofState": 1}

@@ -1,0 +1,20 @@
+{"sorries":
+ [{"proofState": 0,
+   "pos": {"line": 1, "column": 54},
+   "goal": "p q : Prop\nhp : p\nhq : q\n⊢ p ∧ q",
+   "endPos": {"line": 1, "column": 59}}],
+ "messages":
+ [{"severity": "warning",
+   "pos": {"line": 1, "column": 0},
+   "endPos": {"line": 1, "column": 7},
+   "data": "declaration uses `sorry`"}],
+ "env": 0}
+
+{"proofStatus": "Incomplete: open goals remain",
+ "proofState": 1,
+ "goals":
+ ["case left\np q : Prop\nhp : p\nhq : q\n⊢ p",
+  "case right\np q : Prop\nhp : p\nhq : q\n⊢ q"]}
+
+{"proofStatus": "Completed", "proofState": 2, "goals": []}
+
