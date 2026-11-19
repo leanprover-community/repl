@@ -1,4 +1,15 @@
-{"env": 0}
+{"messages":
+ [{"severity": "warning",
+   "pos": {"line": 2, "column": 0},
+   "endPos": null,
+   "data":
+   "'Mathlib.Data.Real.Basic' has been deprecated: please replace this import by\n\nimport Mathlib.Basic.Real.Basic"},
+  {"severity": "warning",
+   "pos": {"line": 3, "column": 0},
+   "endPos": null,
+   "data":
+   "'Mathlib.Data.Complex.Basic' has been deprecated: please replace this import by\n\nimport Mathlib.Basic.Complex.Basic"}],
+ "env": 0}
 
 {"env": 1}
 
