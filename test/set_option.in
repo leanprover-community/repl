@@ -1,0 +1,6 @@
+{"cmd": "#check 1"}
+
+{"cmd": "set_option pp.numericTypes true\n#check 1"}
+
+{"cmd": "#check 1", "setOptions":[[["pp","numericTypes"],true]]}
+
